@@ -6,14 +6,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const secret = process.env.CRON_SECRET!;
     
     console.log(`Vercel Cron triggered: ${new Date().toISOString()}`);
-    console.log(`Target URL: ${base}/api/cron/price-update?secret=${secret}`);
     
-    // Vercel CronからRemixルートを呼び出す
-    const response = await fetch(`${base}/api/cron/price-update?secret=${secret}`, {
+    // 無限ループを回避: 異なるパスでRemixルートを呼び出す
+    // /api/cron/price-update (Serverless Function) → /webhooks/cron/execute (Remix Route)
+    const targetUrl = `${base}/webhooks/cron/execute?secret=${secret}`;
+    console.log(`Target URL: ${targetUrl}`);
+    
+    const response = await fetch(targetUrl, {
       method: "POST",
       headers: { 
         "content-type": "application/json",
-        "user-agent": "vercel-cron/1.0"
+        "user-agent": "vercel-cron/1.0",
+        "x-vercel-cron": "true"
       },
     });
     
