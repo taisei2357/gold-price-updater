@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "app/routes/api.cron.price-update.tsx": {
-      "maxDuration": 300
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/price-update",
