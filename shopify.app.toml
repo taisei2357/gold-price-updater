@@ -3,7 +3,7 @@
 client_id = "3bbfc06c8062c45b10a3e3d5807c6b2c"
 name = "gold-price-auto"
 handle = "gold-price-auto"
-application_url = "https://moderators-bill-portsmouth-depend.trycloudflare.com"
+application_url = "https://gold-price-updater.vercel.app"
 embedded = true
 
 [build]
@@ -26,7 +26,7 @@ api_version = "2025-07"
 scopes = "write_products"
 
 [auth]
-redirect_urls = ["https://moderators-bill-portsmouth-depend.trycloudflare.com/auth/callback", "https://moderators-bill-portsmouth-depend.trycloudflare.com/auth/shopify/callback", "https://moderators-bill-portsmouth-depend.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://gold-price-updater.vercel.app/auth/callback", "https://gold-price-updater.vercel.app/auth/shopify/callback", "https://gold-price-updater.vercel.app/api/auth/callback"]
 
 [pos]
 embedded = false
