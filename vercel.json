@@ -1,6 +1,7 @@
 {
-  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
   "crons": [
-    { "path": "/api/cron/run", "schedule": "0 1 * * 1-5" }
+    { "path": "/api/cron/price-update", "schedule": "0 1 * * 1-5" }
   ]
 }
