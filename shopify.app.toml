@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "2f40bebdf8ef160d9aa4cf3f915a6a75"
-name = "gold-price-auto"
-handle = "gold-price-auto"
+name = "gold-price-updater-2024"
+handle = "gold-price-updater-2024"
 application_url = "https://gold-price-updater-pb8o.vercel.app"
 embedded = true
 
