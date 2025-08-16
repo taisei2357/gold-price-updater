@@ -1,0 +1,79 @@
+# .github/workflows/price-update-scheduler.yml
+# 平日朝10時（JST）に自動価格更新を実行するGitHub Actions
+
+name: 自動価格更新スケジューラー
+
+on:
+  # 平日朝1時（UTC）= 日本時間朝10時に実行
+  schedule:
+    - cron: '0 1 * * 1-5'  # 月曜日-金曜日 UTC 1:00
+  
+  # 手動実行も可能
+  workflow_dispatch:
+    inputs:
+      force_execution:
+        description: '強制実行（祝日でも実行）'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  price-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📅 実行時刻をJSTで表示
+        run: |
+          echo "🕙 実行時刻（UTC）: $(date -u)"
+          echo "🕙 実行時刻（JST）: $(TZ=Asia/Tokyo date)"
+      
+      - name: 🏃 自動価格更新を実行
+        run: |
+          echo "🚀 価格更新APIを呼び出し中..."
+          
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/cron/price-update")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          echo "📡 HTTPステータス: $http_code"
+          echo "📄 レスポンス: $body"
+          
+          if [ "$http_code" != "200" ]; then
+            echo "❌ 価格更新に失敗しました"
+            echo "$body"
+            exit 1
+          else
+            echo "✅ 価格更新が完了しました"
+            echo "$body" | jq '.' || echo "$body"
+          fi
+
+      - name: 📊 実行結果をSlackに通知（オプション）
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            emoji="✅"
+            color="good"
+            message="価格自動更新が正常に完了しました"
+          else
+            emoji="❌"
+            color="danger"
+            message="価格自動更新でエラーが発生しました"
+          fi
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"attachments\": [{
+                \"color\": \"$color\",
+                \"title\": \"$emoji $message\",
+                \"fields\": [
+                  {\"title\": \"実行時刻\", \"value\": \"$(TZ=Asia/Tokyo date)\", \"short\": true},
+                  {\"title\": \"ステータス\", \"value\": \"${{ job.status }}\", \"short\": true}
+                ]
+              }]
+            }" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
