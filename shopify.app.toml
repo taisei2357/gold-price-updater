@@ -3,12 +3,12 @@
 client_id = "2f40bebdf8ef160d9aa4cf3f915a6a75"
 name = "gold-price-auto"
 handle = "gold-price-auto"
-application_url = "https://gold-price-updater.vercel.app"
+application_url = "https://gold-price-updater-pb8o.vercel.app"
 embedded = true
 
 [build]
-include_config_on_deploy = true
-automatically_update_urls_on_dev = true
+include_config_on_deploy = false          # 誤上書きを避けるためfalse
+automatically_update_urls_on_dev = false  # CLI使わない運用のためfalse
 
 [webhooks]
 api_version = "2025-07"
@@ -23,10 +23,10 @@ api_version = "2025-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = ["https://gold-price-updater.vercel.app/auth/callback", "https://gold-price-updater.vercel.app/auth/shopify/callback", "https://gold-price-updater.vercel.app/api/auth/callback"]
+redirect_urls = ["https://gold-price-updater-pb8o.vercel.app/auth/callback"]
 
 [pos]
 embedded = false
