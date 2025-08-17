@@ -19,6 +19,7 @@ import {
   InlineStack,
   Badge,
   Icon,
+  Box,
 } from "@shopify/polaris";
 import {
   ProductIcon,

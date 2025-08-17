@@ -11,7 +11,6 @@ import {
   InlineStack,
   Icon,
   Box,
-  Filters,
   TextField,
   Select,
   Button,

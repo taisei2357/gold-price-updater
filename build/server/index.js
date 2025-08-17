@@ -1796,7 +1796,7 @@ var styles$G = {
   "visuallyHidden": "Polaris-Box--visuallyHidden",
   "printHidden": "Polaris-Box--printHidden"
 };
-const Box$1 = /* @__PURE__ */ forwardRef(({
+const Box = /* @__PURE__ */ forwardRef(({
   as = "div",
   background,
   borderColor,
@@ -1895,7 +1895,7 @@ const Box$1 = /* @__PURE__ */ forwardRef(({
     ...restProps
   }, children);
 });
-Box$1.displayName = "Box";
+Box.displayName = "Box";
 const Card = ({
   children,
   background = "bg-surface",
@@ -1913,7 +1913,7 @@ const Card = ({
     boxShadow: "100",
     borderRadius: hasBorderRadius ? defaultBorderRadius : "0",
     zIndex: "32"
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     background,
     padding,
     overflowX: "clip",
@@ -3040,7 +3040,7 @@ function Item$4({
   } else if (ellipsis) {
     contentText = `${content}…`;
   }
-  const contentMarkup = helpText ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Box$1, null, contentText), /* @__PURE__ */ React.createElement(Text$1, {
+  const contentMarkup = helpText ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Box, null, contentText), /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodySm",
     tone: active || disabled ? void 0 : "subdued"
@@ -3054,7 +3054,7 @@ function Item$4({
   }, /* @__PURE__ */ React.createElement(Badge, {
     tone: badge.tone
   }, badge.content));
-  const suffixMarkup = suffix && /* @__PURE__ */ React.createElement(Box$1, null, /* @__PURE__ */ React.createElement("span", {
+  const suffixMarkup = suffix && /* @__PURE__ */ React.createElement(Box, null, /* @__PURE__ */ React.createElement("span", {
     className: styles$D.Suffix
   }, suffix));
   const textMarkup = /* @__PURE__ */ React.createElement("span", {
@@ -3069,7 +3069,7 @@ function Item$4({
     gap: "150",
     wrap: false
   }, prefixMarkup, textMarkup, badgeMarkup, suffixMarkup);
-  const contentWrapper = /* @__PURE__ */ React.createElement(Box$1, {
+  const contentWrapper = /* @__PURE__ */ React.createElement(Box, {
     width: "100%"
   }, contentElement);
   const scrollMarkup = active ? /* @__PURE__ */ React.createElement(Scrollable.ScrollTo, null) : null;
@@ -3108,7 +3108,7 @@ const TruncateText = ({
   const text = /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     truncate: true
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     width: "100%",
     ref: textRef
   }, children));
@@ -3152,7 +3152,7 @@ function Section$3({
       role: actionRole,
       onAction: handleAction(onAction)
     }, item));
-    return /* @__PURE__ */ React.createElement(Box$1, {
+    return /* @__PURE__ */ React.createElement(Box, {
       as: "li",
       key: `${content}-${index}`,
       role: actionRole === "menuitem" ? "presentation" : void 0
@@ -3162,7 +3162,7 @@ function Section$3({
   });
   let titleMarkup = null;
   if (section.title) {
-    titleMarkup = typeof section.title === "string" ? /* @__PURE__ */ React.createElement(Box$1, {
+    titleMarkup = typeof section.title === "string" ? /* @__PURE__ */ React.createElement(Box, {
       paddingBlockStart: "300",
       paddingBlockEnd: "100",
       paddingInlineStart: "300",
@@ -3170,7 +3170,7 @@ function Section$3({
     }, /* @__PURE__ */ React.createElement(Text$1, {
       as: "p",
       variant: "headingSm"
-    }, section.title)) : /* @__PURE__ */ React.createElement(Box$1, {
+    }, section.title)) : /* @__PURE__ */ React.createElement(Box, {
       padding: "200",
       paddingInlineEnd: "150"
     }, section.title);
@@ -3187,7 +3187,7 @@ function Section$3({
       sectionRole = void 0;
       break;
   }
-  const sectionMarkup = /* @__PURE__ */ React.createElement(React.Fragment, null, titleMarkup, /* @__PURE__ */ React.createElement(Box$1, Object.assign({
+  const sectionMarkup = /* @__PURE__ */ React.createElement(React.Fragment, null, titleMarkup, /* @__PURE__ */ React.createElement(Box, Object.assign({
     as: "div",
     padding: "150"
   }, hasMultipleSections && {
@@ -3200,7 +3200,7 @@ function Section$3({
   }, sectionRole && {
     role: sectionRole
   }), actionMarkup)));
-  return hasMultipleSections ? /* @__PURE__ */ React.createElement(Box$1, Object.assign({
+  return hasMultipleSections ? /* @__PURE__ */ React.createElement(Box, Object.assign({
     as: "li",
     role: "presentation",
     borderColor: "border-secondary"
@@ -4080,7 +4080,7 @@ function ActionList({
   }, [filteredSections]);
   const totalActions = (finalSections == null ? void 0 : finalSections.reduce((acc, section) => acc + section.items.length, 0)) || 0;
   const hasManyActions = totalActions >= FILTER_ACTIONS_THRESHOLD;
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, (allowFiltering || filterActions) && hasManyActions && isFilterable && /* @__PURE__ */ React.createElement(Box$1, {
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, (allowFiltering || filterActions) && hasManyActions && isFilterable && /* @__PURE__ */ React.createElement(Box, {
     padding: "200",
     paddingBlockEnd: totalFilteredActions > 0 ? "0" : "200"
   }, /* @__PURE__ */ React.createElement(TextField, {
@@ -4095,7 +4095,7 @@ function ActionList({
       source: SearchIcon
     }),
     onClearButtonClick: () => setSearchText("")
-  })), /* @__PURE__ */ React.createElement(Box$1, {
+  })), /* @__PURE__ */ React.createElement(Box, {
     as: hasMultipleSections ? "ul" : "div",
     ref: actionListRef,
     role: elementRole,
@@ -4195,7 +4195,7 @@ function Section$2({
 }) {
   return /* @__PURE__ */ React.createElement("div", {
     className: styles$p.Section
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     paddingInlineStart: "300",
     paddingInlineEnd: "300",
     paddingBlockStart: "200",
@@ -5584,11 +5584,11 @@ function DefaultBanner({
     smUp
   } = useBreakpoints();
   const hasContent = children || actionButtons;
-  return /* @__PURE__ */ React.createElement(Box$1, {
+  return /* @__PURE__ */ React.createElement(Box, {
     width: "100%"
   }, /* @__PURE__ */ React.createElement(BlockStack, {
     align: "space-between"
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     background: backgroundColor,
     color: textColor,
     borderStartStartRadius: smUp ? "300" : void 0,
@@ -5604,7 +5604,7 @@ function DefaultBanner({
   }, /* @__PURE__ */ React.createElement(InlineStack, {
     gap: "100",
     wrap: false
-  }, bannerIcon, bannerTitle), dismissButton)), hasContent && /* @__PURE__ */ React.createElement(Box$1, {
+  }, bannerIcon, bannerTitle), dismissButton)), hasContent && /* @__PURE__ */ React.createElement(Box, {
     padding: {
       xs: "300",
       md: "400"
@@ -5634,7 +5634,7 @@ function InlineIconBanner({
   }, []);
   useEffect(() => handleResize(), [handleResize]);
   useEventListener("resize", handleResize);
-  return /* @__PURE__ */ React.createElement(Box$1, {
+  return /* @__PURE__ */ React.createElement(Box, {
     width: "100%",
     padding: "300",
     borderRadius: "300"
@@ -5642,7 +5642,7 @@ function InlineIconBanner({
     align: "space-between",
     blockAlign,
     wrap: false
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     width: "100%"
   }, /* @__PURE__ */ React.createElement(InlineStack, {
     gap: "200",
@@ -5650,11 +5650,11 @@ function InlineIconBanner({
     blockAlign
   }, bannerIcon ? /* @__PURE__ */ React.createElement("div", {
     ref: iconNode
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     background: backgroundColor,
     borderRadius: "200",
     padding: "100"
-  }, bannerIcon)) : null, /* @__PURE__ */ React.createElement(Box$1, {
+  }, bannerIcon)) : null, /* @__PURE__ */ React.createElement(Box, {
     ref: contentNode,
     width: "100%"
   }, /* @__PURE__ */ React.createElement(BlockStack, {
@@ -5673,7 +5673,7 @@ function WithinContentContainerBanner({
   dismissButton,
   children
 }) {
-  return /* @__PURE__ */ React.createElement(Box$1, {
+  return /* @__PURE__ */ React.createElement(Box, {
     width: "100%",
     background: backgroundColor,
     padding: "200",
@@ -5687,7 +5687,7 @@ function WithinContentContainerBanner({
   }, /* @__PURE__ */ React.createElement(InlineStack, {
     gap: "150",
     wrap: false
-  }, bannerIcon, /* @__PURE__ */ React.createElement(Box$1, {
+  }, bannerIcon, /* @__PURE__ */ React.createElement(Box, {
     width: "100%"
   }, /* @__PURE__ */ React.createElement(BlockStack, {
     gap: "200"
@@ -6078,7 +6078,7 @@ function Pagination({
     handler: nextURL ? handleCallback(clickPaginationLink("nextURL", node)) : handleCallback(nextHandler)
   }));
   if (type === "table") {
-    const labelMarkup2 = label ? /* @__PURE__ */ React.createElement(Box$1, {
+    const labelMarkup2 = label ? /* @__PURE__ */ React.createElement(Box, {
       padding: "300",
       paddingBlockStart: "0",
       paddingBlockEnd: "0"
@@ -6091,7 +6091,7 @@ function Pagination({
       "aria-label": navLabel,
       ref: node,
       className: classNames(styles$d.Pagination, styles$d.table)
-    }, previousButtonEvents, nextButtonEvents, /* @__PURE__ */ React.createElement(Box$1, {
+    }, previousButtonEvents, nextButtonEvents, /* @__PURE__ */ React.createElement(Box, {
       background: "bg-surface-secondary",
       paddingBlockStart: "150",
       paddingBlockEnd: "150",
@@ -6109,7 +6109,7 @@ function Pagination({
     tone: "subdued",
     as: "span"
   }, label);
-  const labelMarkup = label ? /* @__PURE__ */ React.createElement(Box$1, {
+  const labelMarkup = label ? /* @__PURE__ */ React.createElement(Box, {
     padding: "300",
     paddingBlockStart: "0",
     paddingBlockEnd: "0"
@@ -7079,7 +7079,7 @@ function Group({
   let titleId;
   if (helpText) {
     helpTextId = `${id}HelpText`;
-    helpTextElement = /* @__PURE__ */ React.createElement(Box$1, {
+    helpTextElement = /* @__PURE__ */ React.createElement(Box, {
       id: helpTextId,
       color: "text-secondary"
     }, helpText);
@@ -7145,7 +7145,7 @@ function Section$1({
   const className = classNames(styles$9.Section, titleHidden && styles$9.titleHidden);
   return /* @__PURE__ */ React.createElement("div", {
     className
-  }, /* @__PURE__ */ React.createElement(Box$1, Object.assign({
+  }, /* @__PURE__ */ React.createElement(Box, Object.assign({
     as: "section",
     padding: flush ? "0" : "400"
   }, titleHidden && {
@@ -7359,7 +7359,7 @@ function Header$1({
   const headerPaddingInline = "400";
   const headerPaddingBlock = "400";
   if (titleHidden || !children) {
-    return /* @__PURE__ */ React.createElement(Box$1, {
+    return /* @__PURE__ */ React.createElement(Box, {
       position: "absolute",
       insetInlineEnd: headerPaddingInline,
       insetBlockStart: headerPaddingBlock,
@@ -7368,7 +7368,7 @@ function Header$1({
       onClick: onClose
     }));
   }
-  return /* @__PURE__ */ React.createElement(Box$1, {
+  return /* @__PURE__ */ React.createElement(Box, {
     paddingBlockStart: "400",
     paddingBlockEnd: "400",
     paddingInlineStart: headerPaddingInline,
@@ -7409,7 +7409,7 @@ function Footer({
   return /* @__PURE__ */ React.createElement(InlineStack, {
     gap: "400",
     blockAlign: "center"
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     borderColor: "border",
     borderBlockStartWidth: "025",
     padding: "400",
@@ -7418,7 +7418,7 @@ function Footer({
     gap: "400",
     blockAlign: "center",
     align: "space-between"
-  }, /* @__PURE__ */ React.createElement(Box$1, null, children), actions)));
+  }, /* @__PURE__ */ React.createElement(Box, null, children), actions)));
 }
 const IFRAME_LOADING_HEIGHT = 200;
 const DEFAULT_IFRAME_CONTENT_HEIGHT = 400;
@@ -7486,7 +7486,7 @@ const Modal = function Modal2({
     const content = sectioned ? wrapWithComponent(children, Section$1, {
       titleHidden
     }) : children;
-    const body = loading ? /* @__PURE__ */ React.createElement(Box$1, {
+    const body = loading ? /* @__PURE__ */ React.createElement(Box, {
       padding: "400"
     }, /* @__PURE__ */ React.createElement(InlineStack, {
       gap: "400",
@@ -7495,7 +7495,7 @@ const Modal = function Modal2({
     }, /* @__PURE__ */ React.createElement(Spinner$1, null))) : content;
     const scrollContainerMarkup = noScroll ? /* @__PURE__ */ React.createElement("div", {
       className: styles$a.NoScrollBody
-    }, /* @__PURE__ */ React.createElement(Box$1, {
+    }, /* @__PURE__ */ React.createElement(Box, {
       width: "100%",
       overflowX: "hidden",
       overflowY: "hidden"
@@ -7535,7 +7535,7 @@ const Modal = function Modal2({
     });
   }
   const animated = !instant;
-  const activatorMarkup = activator && !isRef(activator) ? /* @__PURE__ */ React.createElement(Box$1, {
+  const activatorMarkup = activator && !isRef(activator) ? /* @__PURE__ */ React.createElement(Box, {
     ref: activatorRef,
     as: activatorWrapper
   }, activator) : null;
@@ -7600,7 +7600,7 @@ function AnnotatedSection({
     id,
     variant: "headingMd",
     as: "h2"
-  }, title), descriptionMarkup && /* @__PURE__ */ React.createElement(Box$1, {
+  }, title), descriptionMarkup && /* @__PURE__ */ React.createElement(Box, {
     color: "text-secondary"
   }, descriptionMarkup))), /* @__PURE__ */ React.createElement("div", {
     className: styles$7.AnnotationContent
@@ -7783,7 +7783,7 @@ function Header({
   const hasActionGroupsOrSecondaryActions = actionGroups.length > 0 || isInterface(secondaryActions) && secondaryActions.length > 0 || isReactElement(secondaryActions);
   const breadcrumbMarkup = backAction ? /* @__PURE__ */ React.createElement("div", {
     className: styles$2.BreadcrumbWrapper
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     maxWidth: "100%",
     paddingInlineEnd: "100",
     printHidden: true
@@ -7792,7 +7792,7 @@ function Header({
   }))) : null;
   const paginationMarkup = pagination && !isNavigationCollapsed ? /* @__PURE__ */ React.createElement("div", {
     className: styles$2.PaginationWrapper
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     printHidden: true
   }, /* @__PURE__ */ React.createElement(Pagination, Object.assign({}, pagination, {
     hasPrevious: pagination.hasPrevious,
@@ -7833,7 +7833,7 @@ function Header({
   } else if (isReactElement(secondaryActions)) {
     actionMenuMarkup = /* @__PURE__ */ React.createElement(React.Fragment, null, secondaryActions);
   }
-  const navigationMarkup = breadcrumbMarkup || paginationMarkup ? /* @__PURE__ */ React.createElement(Box$1, {
+  const navigationMarkup = breadcrumbMarkup || paginationMarkup ? /* @__PURE__ */ React.createElement(Box, {
     printHidden: true,
     paddingBlockEnd: "100",
     paddingInlineEnd: actionMenuMarkup && isNavigationCollapsed ? "1000" : void 0
@@ -7866,7 +7866,7 @@ function Header({
     primaryActionMarkup,
     title
   });
-  return /* @__PURE__ */ React.createElement(Box$1, {
+  return /* @__PURE__ */ React.createElement(Box, {
     position: "relative",
     paddingBlockStart: {
       xs: "400",
@@ -7934,7 +7934,7 @@ function PrimaryActionMarkup({
   }
   return /* @__PURE__ */ React.createElement("div", {
     className: styles$2.PrimaryActionWrapper
-  }, /* @__PURE__ */ React.createElement(Box$1, {
+  }, /* @__PURE__ */ React.createElement(Box, {
     printHidden: true
   }, actionMarkup));
 }
@@ -8104,7 +8104,7 @@ function Select({
       disabled: true
     }, ...normalizedOptions];
   }
-  const inlineLabelMarkup = labelInline && /* @__PURE__ */ React.createElement(Box$1, {
+  const inlineLabelMarkup = labelInline && /* @__PURE__ */ React.createElement(Box, {
     paddingInlineEnd: "100"
   }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
@@ -8524,7 +8524,7 @@ function AdditionalPage() {
 }
 function Code({ children }) {
   return /* @__PURE__ */ jsx(
-    Box$1,
+    Box,
     {
       as: "span",
       padding: "025",
@@ -9572,7 +9572,7 @@ function Dashboard() {
       subtitle: "K18商品の価格を田中貴金属の金価格に連動して自動調整",
       children: /* @__PURE__ */ jsxs(BlockStack, { gap: "600", children: [
         /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-          Box$1,
+          Box,
           {
             padding: "600",
             style: {
@@ -9615,9 +9615,9 @@ function Dashboard() {
           }
         ) }),
         /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box$1, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
             /* @__PURE__ */ jsx(
-              Box$1,
+              Box,
               {
                 style: {
                   width: "48px",
@@ -9634,9 +9634,9 @@ function Dashboard() {
             /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.selectedProducts }),
             /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "選択中の商品" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box$1, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
             /* @__PURE__ */ jsx(
-              Box$1,
+              Box,
               {
                 style: {
                   width: "48px",
@@ -9653,9 +9653,9 @@ function Dashboard() {
             /* @__PURE__ */ jsx(Badge, { tone: stats.autoScheduleEnabled ? "success" : "warning", children: stats.autoScheduleEnabled ? "有効" : "無効" }),
             /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "自動スケジュール" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box$1, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
             /* @__PURE__ */ jsx(
-              Box$1,
+              Box,
               {
                 style: {
                   width: "48px",
@@ -9693,12 +9693,12 @@ function Dashboard() {
           ] }) }) }),
           /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
             /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "最近の実行ログ" }),
-            recentLogs.length === 0 ? /* @__PURE__ */ jsx(Box$1, { padding: "600", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "center", children: [
+            recentLogs.length === 0 ? /* @__PURE__ */ jsx(Box, { padding: "600", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "center", children: [
               /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "subdued" }),
               /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "まだ実行履歴がありません" })
             ] }) }) : /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
               recentLogs.slice(0, 3).map((log, index) => /* @__PURE__ */ jsx(
-                Box$1,
+                Box,
                 {
                   padding: "400",
                   style: {
@@ -9732,7 +9732,7 @@ function Dashboard() {
           ] }) }) })
         ] }),
         /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-          Box$1,
+          Box,
           {
             padding: "600",
             style: {
@@ -9840,7 +9840,7 @@ function Logs() {
       /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "/" }),
       /* @__PURE__ */ jsx(Text$1, { tone: "critical", children: log.failedCount || 0 })
     ] }, `counts-${log.id}`),
-    /* @__PURE__ */ jsx("div", { children: log.errorMessage ? /* @__PURE__ */ jsx(Box$1, { padding: "200", background: "bg-critical-subdued", borderRadius: "100", children: /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "critical", children: log.errorMessage.length > 50 ? log.errorMessage.substring(0, 50) + "..." : log.errorMessage }) }) : /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "-" }) }, `error-${log.id}`)
+    /* @__PURE__ */ jsx("div", { children: log.errorMessage ? /* @__PURE__ */ jsx(Box, { padding: "200", background: "bg-critical-subdued", borderRadius: "100", children: /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "critical", children: log.errorMessage.length > 50 ? log.errorMessage.substring(0, 50) + "..." : log.errorMessage }) }) : /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "-" }) }, `error-${log.id}`)
   ]);
   return /* @__PURE__ */ jsx(
     Page,
@@ -9849,9 +9849,9 @@ function Logs() {
       subtitle: `${logs.length}件の実行履歴を表示`,
       children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
         /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box$1, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
             /* @__PURE__ */ jsx(
-              Box$1,
+              Box,
               {
                 style: {
                   width: "48px",
@@ -9868,9 +9868,9 @@ function Logs() {
             /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalExecutions }),
             /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "総実行回数" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box$1, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
             /* @__PURE__ */ jsx(
-              Box$1,
+              Box,
               {
                 style: {
                   width: "48px",
@@ -9887,9 +9887,9 @@ function Logs() {
             /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalSuccess }),
             /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "成功更新数" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box$1, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
             /* @__PURE__ */ jsx(
-              Box$1,
+              Box,
               {
                 style: {
                   width: "48px",
@@ -9955,7 +9955,7 @@ function Logs() {
             "件を表示"
           ] })
         ] }) }),
-        /* @__PURE__ */ jsx(Card, { children: filteredLogs.length === 0 ? /* @__PURE__ */ jsx(Box$1, { padding: "800", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", align: "center", children: [
+        /* @__PURE__ */ jsx(Card, { children: filteredLogs.length === 0 ? /* @__PURE__ */ jsx(Box, { padding: "800", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", align: "center", children: [
           /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "subdued" }),
           /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", tone: "subdued", children: logs.length === 0 ? "まだ実行ログがありません" : "フィルター条件に一致するログがありません" }),
           /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: logs.length === 0 ? "商品価格調整を実行すると、ここに履歴が表示されます。" : "フィルター条件を変更してください。" })
@@ -9981,7 +9981,7 @@ function Logs() {
           }
         ) }),
         /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-          Box$1,
+          Box,
           {
             padding: "400",
             style: {
@@ -10022,7 +10022,7 @@ const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-D3-LF-Qi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-L47Mu5rn.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BNSVjd4w.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-X5lpIYYX.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-DTaMGPqi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Select-DHDjkFid.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-d3140898.js", "version": "d3140898" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-D3-LF-Qi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-DtfzKD8X.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BNSVjd4w.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-X5lpIYYX.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-DTaMGPqi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Select-DHDjkFid.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-c16ff01a.js", "version": "c16ff01a" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
