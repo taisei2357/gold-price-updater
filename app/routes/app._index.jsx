@@ -84,32 +84,17 @@ export default function Dashboard() {
     >
       <BlockStack gap="600">
         {/* Hero Section - 金価格情報 */}
-        <div style={{
-          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-          borderRadius: '16px',
-          padding: '32px',
-          color: 'white',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: '-50px',
-            right: '-50px',
-            width: '200px',
-            height: '200px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '50%'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            left: '-30px',
-            width: '150px',
-            height: '150px',
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: '50%'
-          }} />
+        <Card>
+          <Box
+            padding="600"
+            style={{
+              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+              borderRadius: '16px',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
           
           <InlineStack align="space-between" blockAlign="center">
             <BlockStack gap="300">
@@ -153,72 +138,79 @@ export default function Dashboard() {
               </Text>
             </BlockStack>
           </InlineStack>
-        </div>
+          </Box>
+        </Card>
 
         {/* 統計カード */}
         <Layout>
           <Layout.Section>
             <InlineStack gap="400">
               <Card>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Box padding="400" style={{ textAlign: 'center' }}>
                   <BlockStack gap="300" align="center">
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: '#e0f2fe',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
+                    <Box
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        background: '#e0f2fe',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Icon source={ProductIcon} tone="info" />
-                    </div>
+                    </Box>
                     <Text variant="heading2xl" as="p">{stats.selectedProducts}</Text>
                     <Text variant="bodyMd" tone="subdued">選択中の商品</Text>
                   </BlockStack>
-                </div>
+                </Box>
               </Card>
 
               <Card>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Box padding="400" style={{ textAlign: 'center' }}>
                   <BlockStack gap="300" align="center">
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: stats.autoScheduleEnabled ? '#dcfce7' : '#fef3c7',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
+                    <Box
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        background: stats.autoScheduleEnabled ? '#dcfce7' : '#fef3c7',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Icon source={ClockIcon} tone={stats.autoScheduleEnabled ? 'success' : 'warning'} />
-                    </div>
+                    </Box>
                     <Badge tone={stats.autoScheduleEnabled ? 'success' : 'warning'}>
                       {stats.autoScheduleEnabled ? '有効' : '無効'}
                     </Badge>
                     <Text variant="bodyMd" tone="subdued">自動スケジュール</Text>
                   </BlockStack>
-                </div>
+                </Box>
               </Card>
 
               <Card>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Box padding="400" style={{ textAlign: 'center' }}>
                   <BlockStack gap="300" align="center">
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: '#fce7f3',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
+                    <Box
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        background: '#fce7f3',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Icon source={NotificationIcon} tone="base" />
-                    </div>
+                    </Box>
                     <Text variant="heading2xl" as="p">{stats.totalLogs}</Text>
                     <Text variant="bodyMd" tone="subdued">最近の実行</Text>
                   </BlockStack>
-                </div>
+                </Box>
               </Card>
             </InlineStack>
           </Layout.Section>
@@ -269,23 +261,26 @@ export default function Dashboard() {
                 <Text variant="headingMd" as="h3">最近の実行ログ</Text>
                 
                 {recentLogs.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                  <Box padding="600" style={{ textAlign: 'center' }}>
                     <BlockStack gap="200" align="center">
                       <Icon source={ClockIcon} tone="subdued" />
                       <Text variant="bodyMd" tone="subdued">
                         まだ実行履歴がありません
                       </Text>
                     </BlockStack>
-                  </div>
+                  </Box>
                 ) : (
                   <BlockStack gap="300">
                     {recentLogs.slice(0, 3).map((log, index) => (
-                      <div key={log.id} style={{
-                        padding: '16px',
-                        background: '#f9fafb',
-                        borderRadius: '8px',
-                        borderLeft: `4px solid ${log.success ? '#10b981' : '#ef4444'}`
-                      }}>
+                      <Box
+                        key={log.id}
+                        padding="400"
+                        style={{
+                          background: '#f9fafb',
+                          borderRadius: '8px',
+                          borderLeft: `4px solid ${log.success ? '#10b981' : '#ef4444'}`
+                        }}
+                      >
                         <BlockStack gap="200">
                           <InlineStack align="space-between" blockAlign="center">
                             <Badge tone={log.success ? 'success' : 'critical'}>
@@ -305,7 +300,7 @@ export default function Dashboard() {
                             </Text>
                           </InlineStack>
                         </BlockStack>
-                      </div>
+                      </Box>
                     ))}
                     
                     {recentLogs.length > 3 && (
@@ -324,11 +319,13 @@ export default function Dashboard() {
 
         {/* アプリ情報 */}
         <Card>
-          <div style={{
-            padding: '24px',
-            background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-            borderRadius: '12px'
-          }}>
+          <Box
+            padding="600"
+            style={{
+              background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+              borderRadius: '12px'
+            }}
+          >
             <InlineStack align="space-between" blockAlign="center">
               <BlockStack gap="200">
                 <Text variant="headingMd" as="h3">Gold Price Updater</Text>
@@ -342,7 +339,7 @@ export default function Dashboard() {
                 <Badge tone="success">稼働中</Badge>
               </InlineStack>
             </InlineStack>
-          </div>
+          </Box>
         </Card>
       </BlockStack>
     </Page>

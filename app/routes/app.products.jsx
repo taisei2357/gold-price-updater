@@ -367,24 +367,18 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
       <Layout>
         <Layout.Section>
           {goldPrice && (
-            <div style={{
-              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-              borderRadius: '16px',
-              padding: '24px',
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              marginBottom: '20px'
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: '-30px',
-                right: '-30px',
-                width: '120px',
-                height: '120px',
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '50%'
-              }} />
+            <Card>
+              <Box
+                padding="500"
+                style={{
+                  background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                  borderRadius: '16px',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  marginBottom: '20px'
+                }}
+              >
               
               <InlineStack align="space-between" blockAlign="center">
                 <BlockStack gap="300">
@@ -410,16 +404,18 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                     </div>
                   </InlineStack>
                   
-                  <div style={{
-                    padding: '16px',
-                    background: 'rgba(255,255,255,0.2)',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(10px)'
-                  }}>
+                  <Box
+                    padding="400"
+                    style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
                     <Text variant="bodyMd" tone="text-inverse">
                       <strong>価格調整率: {goldPrice.percentage}%</strong> — この変動率で商品価格を自動調整
                     </Text>
-                  </div>
+                  </Box>
                 </BlockStack>
                 
                 <BlockStack gap="200" align="end">
@@ -429,7 +425,8 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                   </Text>
                 </BlockStack>
               </InlineStack>
-            </div>
+              </Box>
+            </Card>
           )}
 
           {!goldPrice && (
@@ -441,17 +438,19 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
 
         <Layout.Section>
           <Card>
-            <div style={{
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-              padding: '24px',
-              borderRadius: '12px',
-              marginBottom: '20px'
-            }}>
+            <Box
+              padding="500"
+              style={{
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                borderRadius: '12px',
+                marginBottom: '20px'
+              }}
+            >
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h3">商品検索・選択</Text>
                 
                 <InlineStack gap="400">
-                  <div style={{flex: 1}}>
+                  <Box style={{flex: 1}}>
                     <TextField
                       label="商品検索"
                       value={searchValue}
@@ -460,8 +459,8 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                       clearButton
                       onClearButtonClick={() => setSearchValue("")}
                     />
-                  </div>
-                  <div style={{minWidth: '150px'}}>
+                  </Box>
+                  <Box style={{minWidth: '150px'}}>
                     <Select
                       label="商品フィルター"
                       options={[
@@ -471,15 +470,17 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                       value={filterType}
                       onChange={setFilterType}
                     />
-                  </div>
+                  </Box>
                 </InlineStack>
                 
-                <div style={{
-                  background: 'white',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0'
-                }}>
+                <Box
+                  padding="400"
+                  style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0'
+                  }}
+                >
                   <TextField
                     label="価格下限設定 (%)"
                     type="number"
@@ -490,7 +491,7 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                     min="50"
                     max="100"
                   />
-                </div>
+                </Box>
 
                 <InlineStack gap="300">
                   <Button 
@@ -519,39 +520,43 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                 
                 {/* 選択状態の表示 */}
                 {selectedProductIds && selectedProductIds.length > 0 && (
-                  <div style={{
-                    background: '#e0f2fe',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: '1px solid #0ea5e9'
-                  }}>
+                  <Box
+                    padding="400"
+                    style={{
+                      background: '#e0f2fe',
+                      borderRadius: '8px',
+                      border: '1px solid #0ea5e9'
+                    }}
+                  >
                     <InlineStack gap="200" blockAlign="center">
                       <Icon source={ProductIcon} tone="info" />
                       <Text variant="bodyMd">
                         現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
                       </Text>
                     </InlineStack>
-                  </div>
+                  </Box>
                 )}
                 
                 {/* 保存結果メッセージ */}
                 {fetcher.data?.message && (
-                  <div style={{
-                    background: '#dcfce7',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: '1px solid #10b981'
-                  }}>
+                  <Box
+                    padding="400"
+                    style={{
+                      background: '#dcfce7',
+                      borderRadius: '8px',
+                      border: '1px solid #10b981'
+                    }}
+                  >
                     <InlineStack gap="200" blockAlign="center">
                       <Icon source={CheckCircleIcon} tone="success" />
                       <Text variant="bodyMd" tone="success">
                         {fetcher.data.message}
                       </Text>
                     </InlineStack>
-                  </div>
+                  </Box>
                 )}
               </BlockStack>
-            </div>
+            </Box>
           </Card>
         </Layout.Section>
 

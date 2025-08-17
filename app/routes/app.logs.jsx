@@ -155,63 +155,69 @@ export default function Logs() {
           <Layout.Section>
             <InlineStack gap="400">
               <Card>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Box padding="400" style={{ textAlign: 'center' }}>
                   <BlockStack gap="300" align="center">
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: '#e0f2fe',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
+                    <Box
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        background: '#e0f2fe',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Icon source={ClockIcon} tone="info" />
-                    </div>
+                    </Box>
                     <Text variant="heading2xl" as="p">{stats.totalExecutions}</Text>
                     <Text variant="bodyMd" tone="subdued">総実行回数</Text>
                   </BlockStack>
-                </div>
+                </Box>
               </Card>
 
               <Card>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Box padding="400" style={{ textAlign: 'center' }}>
                   <BlockStack gap="300" align="center">
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: '#dcfce7',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
+                    <Box
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        background: '#dcfce7',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Icon source={CheckCircleIcon} tone="success" />
-                    </div>
+                    </Box>
                     <Text variant="heading2xl" as="p">{stats.totalSuccess}</Text>
                     <Text variant="bodyMd" tone="subdued">成功更新数</Text>
                   </BlockStack>
-                </div>
+                </Box>
               </Card>
 
               <Card>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Box padding="400" style={{ textAlign: 'center' }}>
                   <BlockStack gap="300" align="center">
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: stats.totalFailed > 0 ? '#fecaca' : '#f3f4f6',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
+                    <Box
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        background: stats.totalFailed > 0 ? '#fecaca' : '#f3f4f6',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Icon source={AlertCircleIcon} tone={stats.totalFailed > 0 ? 'critical' : 'subdued'} />
-                    </div>
+                    </Box>
                     <Text variant="heading2xl" as="p">{stats.totalFailed}</Text>
                     <Text variant="bodyMd" tone="subdued">失敗更新数</Text>
                   </BlockStack>
-                </div>
+                </Box>
               </Card>
             </InlineStack>
           </Layout.Section>
@@ -270,7 +276,7 @@ export default function Logs() {
         {/* ログテーブル */}
         <Card>
           {filteredLogs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <Box padding="800" style={{ textAlign: 'center' }}>
               <BlockStack gap="400" align="center">
                 <Icon source={ClockIcon} tone="subdued" />
                 <Text variant="headingMd" tone="subdued">
@@ -283,7 +289,7 @@ export default function Logs() {
                   }
                 </Text>
               </BlockStack>
-            </div>
+            </Box>
           ) : (
             <DataTable
               columnContentTypes={['text', 'text', 'text', 'text', 'text', 'text', 'text', 'text']}
@@ -308,11 +314,13 @@ export default function Logs() {
 
         {/* ヘルプ情報 */}
         <Card>
-          <div style={{
-            padding: '20px',
-            background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-            borderRadius: '12px'
-          }}>
+          <Box
+            padding="400"
+            style={{
+              background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+              borderRadius: '12px'
+            }}
+          >
             <BlockStack gap="300">
               <InlineStack gap="200" blockAlign="center">
                 <Icon source={ClockIcon} tone="base" />
@@ -339,7 +347,7 @@ export default function Logs() {
                 </BlockStack>
               </InlineStack>
             </BlockStack>
-          </div>
+          </Box>
         </Card>
       </BlockStack>
     </Page>
