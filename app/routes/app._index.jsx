@@ -85,16 +85,7 @@ export default function Dashboard() {
       <BlockStack gap="600">
         {/* Hero Section - 金価格情報 */}
         <Card>
-          <Box
-            padding="600"
-            style={{
-              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-              borderRadius: '16px',
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
+          <div style={{padding: '24px', background: '#fbbf24', borderRadius: '8px'}}>
           
           <InlineStack align="space-between" blockAlign="center">
             <BlockStack gap="300">
@@ -138,7 +129,7 @@ export default function Dashboard() {
               </Text>
             </BlockStack>
           </InlineStack>
-          </Box>
+          </div>
         </Card>
 
         {/* 統計カード */}
@@ -146,21 +137,9 @@ export default function Dashboard() {
           <Layout.Section>
             <InlineStack gap="400">
               <Card>
-                <Box padding="400" style={{ textAlign: 'center' }}>
+                <Box padding="400">
                   <BlockStack gap="300" align="center">
-                    <Box
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        background: '#e0f2fe',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon source={ProductIcon} tone="info" />
-                    </Box>
+                    <Icon source={ProductIcon} tone="info" />
                     <Text variant="heading2xl" as="p">{stats.selectedProducts}</Text>
                     <Text variant="bodyMd" tone="subdued">選択中の商品</Text>
                   </BlockStack>
@@ -168,21 +147,9 @@ export default function Dashboard() {
               </Card>
 
               <Card>
-                <Box padding="400" style={{ textAlign: 'center' }}>
+                <Box padding="400">
                   <BlockStack gap="300" align="center">
-                    <Box
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        background: stats.autoScheduleEnabled ? '#dcfce7' : '#fef3c7',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon source={ClockIcon} tone={stats.autoScheduleEnabled ? 'success' : 'warning'} />
-                    </Box>
+                    <Icon source={ClockIcon} tone={stats.autoScheduleEnabled ? 'success' : 'warning'} />
                     <Badge tone={stats.autoScheduleEnabled ? 'success' : 'warning'}>
                       {stats.autoScheduleEnabled ? '有効' : '無効'}
                     </Badge>
@@ -192,21 +159,9 @@ export default function Dashboard() {
               </Card>
 
               <Card>
-                <Box padding="400" style={{ textAlign: 'center' }}>
+                <Box padding="400">
                   <BlockStack gap="300" align="center">
-                    <Box
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        background: '#fce7f3',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon source={NotificationIcon} tone="base" />
-                    </Box>
+                    <Icon source={NotificationIcon} tone="base" />
                     <Text variant="heading2xl" as="p">{stats.totalLogs}</Text>
                     <Text variant="bodyMd" tone="subdued">最近の実行</Text>
                   </BlockStack>
@@ -224,19 +179,19 @@ export default function Dashboard() {
                 <InlineStack align="space-between" blockAlign="center">
                   <Text variant="headingMd" as="h3">クイックアクション</Text>
                   <InlineStack gap="200">
-                    <RemixLink to="/app/settings" style={{ textDecoration: 'none' }}>
+                    <RemixLink to="/app/settings">
                       <Button icon={SettingsIcon}>設定</Button>
                     </RemixLink>
                   </InlineStack>
                 </InlineStack>
                 
                 <InlineStack gap="300">
-                  <RemixLink to="/app/products" style={{ textDecoration: 'none' }}>
+                  <RemixLink to="/app/products">
                     <Button variant="primary" size="large">
                       商品価格を調整
                     </Button>
                   </RemixLink>
-                  <RemixLink to="/app/logs" style={{ textDecoration: 'none' }}>
+                  <RemixLink to="/app/logs">
                     <Button>実行ログを確認</Button>
                   </RemixLink>
                 </InlineStack>
@@ -261,7 +216,7 @@ export default function Dashboard() {
                 <Text variant="headingMd" as="h3">最近の実行ログ</Text>
                 
                 {recentLogs.length === 0 ? (
-                  <Box padding="600" style={{ textAlign: 'center' }}>
+                  <Box padding="600">
                     <BlockStack gap="200" align="center">
                       <Icon source={ClockIcon} tone="subdued" />
                       <Text variant="bodyMd" tone="subdued">
@@ -275,11 +230,6 @@ export default function Dashboard() {
                       <Box
                         key={log.id}
                         padding="400"
-                        style={{
-                          background: '#f9fafb',
-                          borderRadius: '8px',
-                          borderLeft: `4px solid ${log.success ? '#10b981' : '#ef4444'}`
-                        }}
                       >
                         <BlockStack gap="200">
                           <InlineStack align="space-between" blockAlign="center">
@@ -304,7 +254,7 @@ export default function Dashboard() {
                     ))}
                     
                     {recentLogs.length > 3 && (
-                      <RemixLink to="/app/logs" style={{ textDecoration: 'none' }}>
+                      <RemixLink to="/app/logs">
                         <Button variant="plain" fullWidth>
                           すべてのログを表示
                         </Button>
@@ -319,13 +269,7 @@ export default function Dashboard() {
 
         {/* アプリ情報 */}
         <Card>
-          <Box
-            padding="600"
-            style={{
-              background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-              borderRadius: '12px'
-            }}
-          >
+          <div style={{padding: '24px', background: '#f8fafc'}}>
             <InlineStack align="space-between" blockAlign="center">
               <BlockStack gap="200">
                 <Text variant="headingMd" as="h3">Gold Price Updater</Text>
@@ -339,7 +283,7 @@ export default function Dashboard() {
                 <Badge tone="success">稼働中</Badge>
               </InlineStack>
             </InlineStack>
-          </Box>
+          </div>
         </Card>
       </BlockStack>
     </Page>

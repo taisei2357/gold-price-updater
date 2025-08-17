@@ -11,7 +11,7 @@ import { PrismaClient } from "@prisma/client";
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, PureComponent, useCallback, useMemo, forwardRef, Component, memo, useId, useImperativeHandle, createElement, isValidElement, Children, createRef, useReducer, Suspense } from "react";
 import { themes, breakpointsAliases, themeNameDefault, createThemeClassName, themeDefault, getMediaConditions, themeNames } from "@shopify/polaris-tokens";
 import { createHmac, timingSafeEqual } from "crypto";
-import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, ProductIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon } from "@shopify/polaris-icons";
+import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon, ProductIcon } from "@shopify/polaris-icons";
 import { createPortal } from "react-dom";
 import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
 import { NavMenu, TitleBar } from "@shopify/app-bridge-react";
@@ -1373,7 +1373,7 @@ var styles$J = {
 const deprecatedVariants = {
   heading3xl: "heading2xl"
 };
-const Text$1 = ({
+const Text = ({
   alignment,
   as,
   breakWord,
@@ -1442,7 +1442,7 @@ function Icon({
   };
   return /* @__PURE__ */ React.createElement("span", {
     className
-  }, accessibilityLabel && /* @__PURE__ */ React.createElement(Text$1, {
+  }, accessibilityLabel && /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel), contentMarkup[sourceType]);
@@ -1475,7 +1475,7 @@ function Spinner$1({
       role: "status"
     }
   };
-  const accessibilityLabelMarkup = (isAfterInitialMount || !hasFocusableParent) && /* @__PURE__ */ React.createElement(Text$1, {
+  const accessibilityLabelMarkup = (isAfterInitialMount || !hasFocusableParent) && /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel);
@@ -1679,7 +1679,7 @@ function Button({
   if (size === "large" || hasPlainText && size !== "micro") {
     textVariant = "bodyMd";
   }
-  const childMarkup = children ? /* @__PURE__ */ React.createElement(Text$1, {
+  const childMarkup = children ? /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: textVariant,
     fontWeight: textFontWeight,
@@ -2121,7 +2121,7 @@ function Pip({
   const accessibilityLabel = accessibilityLabelOverride ? accessibilityLabelOverride : getDefaultAccessibilityLabel(i18n, progress, tone);
   return /* @__PURE__ */ React.createElement("span", {
     className
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel));
@@ -2158,7 +2158,7 @@ function Badge({
   const withinFilter = useContext(WithinFilterContext);
   const className = classNames(styles$C.Badge, tone && styles$C[variationName("tone", tone)], size && size !== DEFAULT_SIZE && styles$C[variationName("size", size)], withinFilter && styles$C.withinFilter);
   const accessibilityLabel = toneAndProgressLabelOverride ? toneAndProgressLabelOverride : getDefaultAccessibilityLabel(i18n, progress, tone);
-  let accessibilityMarkup = Boolean(accessibilityLabel) && /* @__PURE__ */ React.createElement(Text$1, {
+  let accessibilityMarkup = Boolean(accessibilityLabel) && /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel);
@@ -2176,7 +2176,7 @@ function Badge({
     className: styles$C.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: icon
-  })), children && /* @__PURE__ */ React.createElement(Text$1, {
+  })), children && /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodySm",
     fontWeight: tone === "new" ? "medium" : void 0
@@ -2926,7 +2926,7 @@ function Tooltip({
     borderRadius,
     zIndexOverride,
     instant: !shouldAnimate
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
   }, content))) : null;
@@ -3040,11 +3040,11 @@ function Item$4({
   } else if (ellipsis) {
     contentText = `${content}…`;
   }
-  const contentMarkup = helpText ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Box, null, contentText), /* @__PURE__ */ React.createElement(Text$1, {
+  const contentMarkup = helpText ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Box, null, contentText), /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodySm",
     tone: active || disabled ? void 0 : "subdued"
-  }, helpText)) : /* @__PURE__ */ React.createElement(Text$1, {
+  }, helpText)) : /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd",
     fontWeight: active ? "semibold" : "regular"
@@ -3059,7 +3059,7 @@ function Item$4({
   }, suffix));
   const textMarkup = /* @__PURE__ */ React.createElement("span", {
     className: styles$D.Text
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd",
     fontWeight: active ? "semibold" : "regular"
@@ -3105,7 +3105,7 @@ const TruncateText = ({
       setIsOverflowing(textRef.current.scrollWidth > textRef.current.offsetWidth);
     }
   }, [children]);
-  const text = /* @__PURE__ */ React.createElement(Text$1, {
+  const text = /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     truncate: true
   }, /* @__PURE__ */ React.createElement(Box, {
@@ -3118,7 +3118,7 @@ const TruncateText = ({
     hoverDelay: 1e3,
     content: children,
     dismissOnMouseOut: true
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     truncate: true
   }, children)) : text;
@@ -3167,7 +3167,7 @@ function Section$3({
       paddingBlockEnd: "100",
       paddingInlineStart: "300",
       paddingInlineEnd: "300"
-    }, /* @__PURE__ */ React.createElement(Text$1, {
+    }, /* @__PURE__ */ React.createElement(Text, {
       as: "p",
       variant: "headingSm"
     }, section.title)) : /* @__PURE__ */ React.createElement(Box, {
@@ -3310,7 +3310,7 @@ function InlineError({
     className: styles$u.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: AlertCircleIcon
-  })), /* @__PURE__ */ React.createElement(Text$1, {
+  })), /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
   }, message));
@@ -3340,7 +3340,7 @@ function Label({
     id: labelID(id),
     htmlFor: id,
     className: classNames(styles$t.Text, requiredIndicator && styles$t.RequiredIndicator)
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
   }, children)));
@@ -3368,7 +3368,7 @@ function Labelled({
     className: styles$v.HelpText,
     id: helpTextID$1(id),
     "aria-disabled": disabled
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     tone: "subdued",
     variant: "bodyMd",
@@ -3659,7 +3659,7 @@ function TextField({
     className: classNames(styles$w.Prefix, iconPrefix && styles$w.PrefixIcon),
     id: `${id}-Prefix`,
     ref: prefixRef
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
   }, prefix)) : null;
@@ -3667,7 +3667,7 @@ function TextField({
     className: styles$w.Suffix,
     id: `${id}-Suffix`,
     ref: suffixRef
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
   }, suffix)) : null;
@@ -3696,7 +3696,7 @@ function TextField({
       "aria-live": focus ? "polite" : "off",
       "aria-atomic": "true",
       onClick: handleClickChild
-    }, /* @__PURE__ */ React.createElement(Text$1, {
+    }, /* @__PURE__ */ React.createElement(Text, {
       as: "span",
       variant: "bodyMd"
     }, characterCountText));
@@ -3707,7 +3707,7 @@ function TextField({
     className: styles$w.ClearButton,
     onClick: handleClearButtonPress,
     disabled
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     visuallyHidden: true
   }, i18n.translate("Polaris.Common.clear")), /* @__PURE__ */ React.createElement(Icon, {
@@ -5131,7 +5131,7 @@ function Choice({
       className: styles$k.Control
     }, children), /* @__PURE__ */ React.createElement("span", {
       className: styles$k.Label
-    }, /* @__PURE__ */ React.createElement(Text$1, {
+    }, /* @__PURE__ */ React.createElement(Text, {
       as: "span",
       variant: "bodyMd"
     }, label)))
@@ -5139,7 +5139,7 @@ function Choice({
   const helpTextMarkup = helpText ? /* @__PURE__ */ React.createElement("div", {
     className: styles$k.HelpText,
     id: helpTextID(id)
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     tone: disabled ? void 0 : "subdued"
   }, helpText)) : null;
@@ -5533,7 +5533,7 @@ function BannerLayout({
   const sharedBannerProps = {
     backgroundColor: bannerColors.background,
     textColor: bannerColors.text,
-    bannerTitle: title ? /* @__PURE__ */ React.createElement(Text$1, {
+    bannerTitle: title ? /* @__PURE__ */ React.createElement(Text, {
       as: "h2",
       variant: "headingSm",
       breakWord: true
@@ -5559,7 +5559,7 @@ function BannerLayout({
       accessibilityLabel: i18n.translate("Polaris.Banner.dismissButton")
     }) : null
   };
-  const childrenMarkup = children ? /* @__PURE__ */ React.createElement(Text$1, {
+  const childrenMarkup = children ? /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
   }, children) : null;
@@ -6082,7 +6082,7 @@ function Pagination({
       padding: "300",
       paddingBlockStart: "0",
       paddingBlockEnd: "0"
-    }, /* @__PURE__ */ React.createElement(Text$1, {
+    }, /* @__PURE__ */ React.createElement(Text, {
       as: "span",
       variant: "bodySm",
       fontWeight: "medium"
@@ -6105,7 +6105,7 @@ function Pagination({
       "data-buttongroup-variant": "segmented"
     }, /* @__PURE__ */ React.createElement("div", null, constructedPrevious), labelMarkup2, /* @__PURE__ */ React.createElement("div", null, constructedNext)))));
   }
-  const labelTextMarkup = hasNext && hasPrevious ? /* @__PURE__ */ React.createElement("span", null, label) : /* @__PURE__ */ React.createElement(Text$1, {
+  const labelTextMarkup = hasNext && hasPrevious ? /* @__PURE__ */ React.createElement("span", null, label) : /* @__PURE__ */ React.createElement(Text, {
     tone: "subdued",
     as: "span"
   }, label);
@@ -7086,7 +7086,7 @@ function Group({
   }
   if (title) {
     titleId = `${id}Title`;
-    titleElement = /* @__PURE__ */ React.createElement(Text$1, {
+    titleElement = /* @__PURE__ */ React.createElement(Text, {
       id: titleId,
       as: "p"
     }, title);
@@ -7285,7 +7285,7 @@ function Dialog({
   };
   const ariaLiveAnnouncements = /* @__PURE__ */ React.createElement("div", {
     "aria-live": "assertive"
-  }, toastMessages ? toastMessages.map((toastMessage) => /* @__PURE__ */ React.createElement(Text$1, {
+  }, toastMessages ? toastMessages.map((toastMessage) => /* @__PURE__ */ React.createElement(Text, {
     visuallyHidden: true,
     as: "p",
     key: toastMessage.id
@@ -7384,7 +7384,7 @@ function Header$1({
   }, /* @__PURE__ */ React.createElement(InlineStack, {
     gap: "400",
     blockAlign: "center"
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     id,
     as: "h2",
     variant: "headingMd",
@@ -7584,7 +7584,7 @@ function AnnotatedSection({
   description,
   id
 }) {
-  const descriptionMarkup = typeof description === "string" ? /* @__PURE__ */ React.createElement(Text$1, {
+  const descriptionMarkup = typeof description === "string" ? /* @__PURE__ */ React.createElement(Text, {
     as: "p",
     variant: "bodyMd"
   }, description) : description;
@@ -7596,7 +7596,7 @@ function AnnotatedSection({
     className: styles$7.Annotation
   }, /* @__PURE__ */ React.createElement(TextContainer, {
     spacing: "tight"
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     id,
     variant: "headingMd",
     as: "h2"
@@ -7736,7 +7736,7 @@ function Title({
   const className = classNames(styles$1.Title, subtitle && styles$1.TitleWithSubtitle);
   const titleMarkup = title ? /* @__PURE__ */ React.createElement("h1", {
     className
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "headingLg",
     fontWeight: "bold"
@@ -7749,7 +7749,7 @@ function Title({
   }, titleMarkup, titleMetadataMarkup);
   const subtitleMarkup = subtitle ? /* @__PURE__ */ React.createElement("div", {
     className: classNames(styles$1.SubTitle, compactTitle && styles$1.SubtitleCompact, hasSubtitleMaxWidth && styles$1.SubtitleMaxWidth)
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "p",
     variant: "bodySm",
     tone: "subdued"
@@ -7810,7 +7810,7 @@ function Header({
   const labelForPageReadyAccessibilityLabel = pageReadyAccessibilityLabel || title;
   const pageReadyAccessibilityLabelMarkup = labelForPageReadyAccessibilityLabel ? /* @__PURE__ */ React.createElement("div", {
     role: "status"
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     visuallyHidden: true,
     as: "p"
   }, i18n.translate("Polaris.Page.Header.pageReadyAccessibilityLabel", {
@@ -7844,7 +7844,7 @@ function Header({
   }, breadcrumbMarkup, paginationMarkup)) : null;
   const additionalMetadataMarkup = additionalMetadata ? /* @__PURE__ */ React.createElement("div", {
     className: styles$2.AdditionalMetaData
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     tone: "subdued",
     as: "span",
     variant: "bodySm"
@@ -8106,7 +8106,7 @@ function Select({
   }
   const inlineLabelMarkup = labelInline && /* @__PURE__ */ React.createElement(Box, {
     paddingInlineEnd: "100"
-  }, /* @__PURE__ */ React.createElement(Text$1, {
+  }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd",
     tone: tone && tone === "magic" && !focused ? "magic-subdued" : "subdued",
@@ -8383,7 +8383,7 @@ function Auth() {
   const [shop, setShop] = useState("");
   const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
   return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
-    /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "Log in" }),
+    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
     /* @__PURE__ */ jsx(
       TextField,
       {
@@ -8483,7 +8483,7 @@ function AdditionalPage() {
     /* @__PURE__ */ jsx(TitleBar, { title: "Additional page" }),
     /* @__PURE__ */ jsxs(Layout, { children: [
       /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
-        /* @__PURE__ */ jsxs(Text$1, { as: "p", variant: "bodyMd", children: [
+        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
           "The app template comes with an additional page which demonstrates how to create multiple pages within app navigation using",
           " ",
           /* @__PURE__ */ jsx(
@@ -8497,7 +8497,7 @@ function AdditionalPage() {
           ),
           "."
         ] }),
-        /* @__PURE__ */ jsxs(Text$1, { as: "p", variant: "bodyMd", children: [
+        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
           "To create your own page and have it show up in the app navigation, add a page inside ",
           /* @__PURE__ */ jsx(Code, { children: "app/routes" }),
           ", and a link to it in the ",
@@ -8508,7 +8508,7 @@ function AdditionalPage() {
         ] })
       ] }) }) }),
       /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-        /* @__PURE__ */ jsx(Text$1, { as: "h2", variant: "headingMd", children: "Resources" }),
+        /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "Resources" }),
         /* @__PURE__ */ jsx(List, { children: /* @__PURE__ */ jsx(List.Item, { children: /* @__PURE__ */ jsx(
           Link,
           {
@@ -8523,20 +8523,12 @@ function AdditionalPage() {
   ] });
 }
 function Code({ children }) {
-  return /* @__PURE__ */ jsx(
-    Box,
-    {
-      as: "span",
-      padding: "025",
-      paddingInlineStart: "100",
-      paddingInlineEnd: "100",
-      background: "bg-surface-active",
-      borderWidth: "025",
-      borderColor: "border",
-      borderRadius: "100",
-      children: /* @__PURE__ */ jsx("code", { children })
-    }
-  );
+  return /* @__PURE__ */ jsx("span", { style: {
+    padding: "2px 8px",
+    background: "#e2e8f0",
+    border: "1px solid #cbd5e1",
+    borderRadius: "12px"
+  }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
 const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -8978,193 +8970,116 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
       },
       children: /* @__PURE__ */ jsxs(Layout, { children: [
         /* @__PURE__ */ jsxs(Layout.Section, { children: [
-          goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-            Box,
-            {
-              padding: "500",
-              style: {
-                background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                borderRadius: "16px",
-                color: "white",
-                position: "relative",
-                overflow: "hidden",
-                marginBottom: "20px"
-              },
-              children: /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
-                /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
-                  /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
-                    /* @__PURE__ */ jsx(Text, { variant: "headingLg", as: "h2", tone: "text-inverse", children: "田中貴金属 金価格" }),
-                    /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
-                  ] }),
-                  /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
-                    /* @__PURE__ */ jsxs("div", { children: [
-                      /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "店頭小売価格（税込）" }),
-                      /* @__PURE__ */ jsx(Text, { variant: "headingXl", as: "p", tone: "text-inverse", children: goldPrice.retailPriceFormatted })
-                    ] }),
-                    /* @__PURE__ */ jsxs("div", { children: [
-                      /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "前日比" }),
-                      /* @__PURE__ */ jsx(Text, { variant: "headingLg", as: "p", tone: "text-inverse", children: goldPrice.change })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsx(
-                    Box,
-                    {
-                      padding: "400",
-                      style: {
-                        background: "rgba(255,255,255,0.2)",
-                        borderRadius: "12px",
-                        backdropFilter: "blur(10px)"
-                      },
-                      children: /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", tone: "text-inverse", children: [
-                        /* @__PURE__ */ jsxs("strong", { children: [
-                          "価格調整率: ",
-                          goldPrice.percentage,
-                          "%"
-                        ] }),
-                        " — この変動率で商品価格を自動調整"
-                      ] })
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "end", children: [
-                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "最終更新" }),
-                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "text-inverse", children: new Date(goldPrice.lastUpdated).toLocaleString("ja-JP") })
-                ] })
+          goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+              /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
+              /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "attention" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
+            ] }),
+            /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { children: "店頭小売価格（税込）" }),
+                /* @__PURE__ */ jsx("h4", { children: goldPrice.retailPriceFormatted })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { children: "前日比" }),
+                /* @__PURE__ */ jsx("h4", { children: goldPrice.change })
               ] })
-            }
-          ) }),
+            ] }),
+            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { children: [
+              /* @__PURE__ */ jsxs("strong", { children: [
+                "価格調整率: ",
+                goldPrice.percentage,
+                "%"
+              ] }),
+              "（この変動率で商品価格を自動調整します）"
+            ] }) }),
+            /* @__PURE__ */ jsxs("p", { children: [
+              "最終更新: ",
+              new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
+            ] })
+          ] }) }),
           !goldPrice && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: "金価格情報の取得に失敗しました。価格調整機能をご利用いただけません。" })
         ] }),
-        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-          Box,
-          {
-            padding: "500",
-            style: {
-              background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-              borderRadius: "12px",
-              marginBottom: "20px"
-            },
-            children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
-              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "商品検索・選択" }),
-              /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-                /* @__PURE__ */ jsx(Box, { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
-                  TextField,
-                  {
-                    label: "商品検索",
-                    value: searchValue,
-                    onChange: setSearchValue,
-                    placeholder: "商品名またはハンドルで検索...",
-                    clearButton: true,
-                    onClearButtonClick: () => setSearchValue("")
-                  }
-                ) }),
-                /* @__PURE__ */ jsx(Box, { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
-                  Select,
-                  {
-                    label: "商品フィルター",
-                    options: [
-                      { label: "すべての商品", value: "all" },
-                      { label: "K18商品のみ", value: "k18" }
-                    ],
-                    value: filterType,
-                    onChange: setFilterType
-                  }
-                ) })
-              ] }),
-              /* @__PURE__ */ jsx(
-                Box,
-                {
-                  padding: "400",
-                  style: {
-                    background: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #e2e8f0"
-                  },
-                  children: /* @__PURE__ */ jsx(
-                    TextField,
-                    {
-                      label: "価格下限設定 (%)",
-                      type: "number",
-                      value: minPriceRate.toString(),
-                      onChange: (value) => setMinPriceRate(parseInt(value) || 93),
-                      suffix: "%",
-                      helpText: "現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）",
-                      min: "50",
-                      max: "100"
-                    }
-                  )
-                }
-              ),
-              /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
-                /* @__PURE__ */ jsx(
-                  Button,
-                  {
-                    onClick: () => handleSelectAll(true),
-                    disabled: filteredProducts.length === 0,
-                    size: "large",
-                    children: "すべて選択"
-                  }
-                ),
-                /* @__PURE__ */ jsx(
-                  Button,
-                  {
-                    onClick: () => handleSelectAll(false),
-                    disabled: selectedProducts.length === 0,
-                    size: "large",
-                    children: "選択解除"
-                  }
-                ),
-                /* @__PURE__ */ jsx(
-                  Button,
-                  {
-                    onClick: saveSelection,
-                    disabled: fetcher.state === "submitting",
-                    variant: "primary",
-                    size: "large",
-                    children: "選択を保存"
-                  }
-                )
-              ] }),
-              selectedProductIds && selectedProductIds.length > 0 && /* @__PURE__ */ jsx(
-                Box,
-                {
-                  padding: "400",
-                  style: {
-                    background: "#e0f2fe",
-                    borderRadius: "8px",
-                    border: "1px solid #0ea5e9"
-                  },
-                  children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
-                    /* @__PURE__ */ jsx(Icon, { source: ProductIcon, tone: "info" }),
-                    /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", children: [
-                      "現在 ",
-                      /* @__PURE__ */ jsxs("strong", { children: [
-                        selectedProductIds.length,
-                        "件"
-                      ] }),
-                      " の商品が自動更新対象として保存されています"
-                    ] })
-                  ] })
-                }
-              ),
-              ((_a = fetcher.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(
-                Box,
-                {
-                  padding: "400",
-                  style: {
-                    background: "#dcfce7",
-                    borderRadius: "8px",
-                    border: "1px solid #10b981"
-                  },
-                  children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
-                    /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
-                    /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "success", children: fetcher.data.message })
-                  ] })
-                }
-              )
-            ] })
-          }
-        ) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+          /* @__PURE__ */ jsx("h3", { children: "商品検索・選択" }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+            /* @__PURE__ */ jsx("div", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
+              TextField,
+              {
+                label: "商品検索",
+                value: searchValue,
+                onChange: setSearchValue,
+                placeholder: "商品名またはハンドルで検索...",
+                clearButton: true,
+                onClearButtonClick: () => setSearchValue("")
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
+              Select,
+              {
+                label: "商品フィルター",
+                options: [
+                  { label: "すべての商品", value: "all" },
+                  { label: "K18商品のみ", value: "k18" }
+                ],
+                value: filterType,
+                onChange: setFilterType
+              }
+            ) })
+          ] }),
+          /* @__PURE__ */ jsx(
+            TextField,
+            {
+              label: "価格下限設定 (%)",
+              type: "number",
+              value: minPriceRate.toString(),
+              onChange: (value) => setMinPriceRate(parseInt(value) || 93),
+              suffix: "%",
+              helpText: "現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）",
+              min: "50",
+              max: "100"
+            }
+          ),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                onClick: () => handleSelectAll(true),
+                disabled: filteredProducts.length === 0,
+                size: "large",
+                children: "すべて選択"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                onClick: () => handleSelectAll(false),
+                disabled: selectedProducts.length === 0,
+                size: "large",
+                children: "選択解除"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                onClick: saveSelection,
+                disabled: fetcher.state === "submitting",
+                variant: "primary",
+                size: "large",
+                children: "選択を保存"
+              }
+            )
+          ] }),
+          selectedProductIds && selectedProductIds.length > 0 && /* @__PURE__ */ jsxs(Banner, { tone: "info", children: [
+            "現在 ",
+            /* @__PURE__ */ jsxs("strong", { children: [
+              selectedProductIds.length,
+              "件"
+            ] }),
+            " の商品が自動更新対象として保存されています"
+          ] }),
+          ((_a = fetcher.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: fetcher.data.message })
+        ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
           DataTable,
           {
@@ -9218,7 +9133,7 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
         ),
         ((_b = fetcher.data) == null ? void 0 : _b.updateResults) && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
           /* @__PURE__ */ jsx("h3", { children: "価格更新結果" }),
-          fetcher.data.summary && /* @__PURE__ */ jsx(Card, { background: "bg-surface-secondary", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+          fetcher.data.summary && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
             /* @__PURE__ */ jsxs("div", { children: [
               "合計: ",
               /* @__PURE__ */ jsx("strong", { children: fetcher.data.summary.total }),
@@ -9226,12 +9141,12 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
             ] }),
             /* @__PURE__ */ jsxs("div", { children: [
               "成功: ",
-              /* @__PURE__ */ jsx("strong", { style: { color: "green" }, children: fetcher.data.summary.success }),
+              /* @__PURE__ */ jsx("strong", { children: fetcher.data.summary.success }),
               "件"
             ] }),
             /* @__PURE__ */ jsxs("div", { children: [
               "失敗: ",
-              /* @__PURE__ */ jsx("strong", { style: { color: "red" }, children: fetcher.data.summary.failed }),
+              /* @__PURE__ */ jsx("strong", { children: fetcher.data.summary.failed }),
               "件"
             ] })
           ] }) }),
@@ -9267,15 +9182,15 @@ function Products() {
           ] }),
           /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
             /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "店頭小売価格（税込）" }),
-              /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold" }, children: goldPrice.retailPriceFormatted })
+              /* @__PURE__ */ jsx("p", { children: "店頭小売価格（税込）" }),
+              /* @__PURE__ */ jsx("h4", { children: goldPrice.retailPriceFormatted })
             ] }),
             /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "前日比" }),
-              /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold", color: goldPrice.changeDirection === "up" ? "#DC2626" : goldPrice.changeDirection === "down" ? "#059669" : "#6B7280" }, children: goldPrice.change })
+              /* @__PURE__ */ jsx("p", { children: "前日比" }),
+              /* @__PURE__ */ jsx("h4", { children: goldPrice.change })
             ] })
           ] }),
-          /* @__PURE__ */ jsx("div", { style: { padding: "12px", backgroundColor: "#F3F4F6", borderRadius: "8px" }, children: /* @__PURE__ */ jsxs("p", { style: { margin: 0 }, children: [
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { children: [
             /* @__PURE__ */ jsxs("strong", { children: [
               "価格調整率: ",
               goldPrice.percentage,
@@ -9283,14 +9198,14 @@ function Products() {
             ] }),
             "（この変動率で商品価格を自動調整します）"
           ] }) }),
-          /* @__PURE__ */ jsxs("p", { style: { color: "#6B7280", fontSize: "12px", margin: 0 }, children: [
+          /* @__PURE__ */ jsxs("p", { children: [
             "最終更新: ",
             new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
           ] })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(BlockStack, { gap: "400", children: /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", padding: "60px 20px" }, children: [
           /* @__PURE__ */ jsx(Spinner$1, { size: "large" }),
-          /* @__PURE__ */ jsx("p", { style: { marginTop: "20px", color: "#6B7280" }, children: "商品データを読み込んでいます..." })
+          /* @__PURE__ */ jsx("p", { style: { marginTop: "20px" }, children: "商品データを読み込んでいます..." })
         ] }) }) }) })
       ] }) }),
       children: /* @__PURE__ */ jsx(Await, { resolve: data.products, children: (products) => /* @__PURE__ */ jsx(
@@ -9398,14 +9313,14 @@ function Settings() {
       children: /* @__PURE__ */ jsxs(Layout, { children: [
         showSuccessMessage && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Banner, { tone: "success", onDismiss: () => setShowSuccessMessage(false), children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", align: "center", children: [
           /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
-          /* @__PURE__ */ jsx(Text$1, { children: "設定が正常に保存されました" })
+          /* @__PURE__ */ jsx(Text, { children: "設定が正常に保存されました" })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: SettingsIcon, tone: "base" }),
             /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "自動更新設定" }),
-              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "田中貴金属の価格変動に基づいて商品価格を自動調整します" })
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "自動更新設定" }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "田中貴金属の価格変動に基づいて商品価格を自動調整します" })
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
@@ -9451,8 +9366,8 @@ function Settings() {
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: NotificationIcon, tone: "base" }),
             /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "通知設定" }),
-              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "価格更新の実行結果やエラーを通知します" })
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "通知設定" }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "価格更新の実行結果やエラーを通知します" })
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
@@ -9472,30 +9387,30 @@ function Settings() {
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "base" }),
             /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "実行スケジュール" }),
-              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "自動更新の実行タイミングについて" })
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "実行スケジュール" }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動更新の実行タイミングについて" })
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
           /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
             /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
               /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行曜日" }),
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "平日（月〜金曜日）" })
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行曜日" }),
+                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "平日（月〜金曜日）" })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行時刻" }),
-                /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", tone: "subdued", children: [
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行時刻" }),
+                /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
                   String(setting.autoUpdateHour || 10).padStart(2, "0"),
                   ":00（日本時間）"
                 ] })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "祝日対応" }),
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "自動的にスキップ" })
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "祝日対応" }),
+                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動的にスキップ" })
               ] })
             ] }),
-            /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsx(Text$1, { children: "自動更新は平日の設定時刻に実行され、日本の祝日は自動的にスキップされます。 価格変動がない場合や取得エラー時は更新をスキップします。" }) })
+            /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsx(Text, { children: "自動更新は平日の設定時刻に実行され、日本の祝日は自動的にスキップされます。 価格変動がない場合や取得エラー時は更新をスキップします。" }) })
           ] })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(InlineStack, { align: "end", children: /* @__PURE__ */ jsx(
@@ -9571,153 +9486,93 @@ function Dashboard() {
       title: "金価格自動調整ダッシュボード",
       subtitle: "K18商品の価格を田中貴金属の金価格に連動して自動調整",
       children: /* @__PURE__ */ jsxs(BlockStack, { gap: "600", children: [
-        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-          Box,
-          {
-            padding: "600",
-            style: {
-              background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-              borderRadius: "16px",
-              color: "white",
-              position: "relative",
-              overflow: "hidden"
-            },
-            children: /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
-              /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
-                /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
-                  /* @__PURE__ */ jsx("span", { style: { fontSize: "24px", marginRight: "8px" }, children: "📈" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "headingLg", as: "h2", tone: "text-inverse", children: "田中貴金属 金価格" })
-                ] }),
-                goldPrice ? /* @__PURE__ */ jsxs(Fragment, { children: [
-                  /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", tone: "text-inverse", children: goldPrice.retailPriceFormatted }),
-                  /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
-                    /* @__PURE__ */ jsx(
-                      Badge,
-                      {
-                        tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info",
-                        size: "large",
-                        children: goldPrice.change
-                      }
-                    ),
-                    /* @__PURE__ */ jsxs(Text$1, { variant: "bodyLg", tone: "text-inverse", children: [
-                      "前日比 • 調整率: ",
-                      goldPrice.percentage,
-                      "%"
-                    ] })
-                  ] })
-                ] }) : /* @__PURE__ */ jsx(Text$1, { variant: "headingLg", tone: "text-inverse", children: "価格情報取得中..." })
-              ] }),
-              /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "end", children: [
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "text-inverse", children: "最終更新" }),
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "text-inverse", children: goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString("ja-JP") : "--" })
+        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "24px", background: "#fbbf24", borderRadius: "8px" }, children: /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
+          /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+            /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+              /* @__PURE__ */ jsx("span", { style: { fontSize: "24px", marginRight: "8px" }, children: "📈" }),
+              /* @__PURE__ */ jsx(Text, { variant: "headingLg", as: "h2", tone: "text-inverse", children: "田中貴金属 金価格" })
+            ] }),
+            goldPrice ? /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", tone: "text-inverse", children: goldPrice.retailPriceFormatted }),
+              /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
+                /* @__PURE__ */ jsx(
+                  Badge,
+                  {
+                    tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info",
+                    size: "large",
+                    children: goldPrice.change
+                  }
+                ),
+                /* @__PURE__ */ jsxs(Text, { variant: "bodyLg", tone: "text-inverse", children: [
+                  "前日比 • 調整率: ",
+                  goldPrice.percentage,
+                  "%"
+                ] })
               ] })
-            ] })
-          }
-        ) }),
+            ] }) : /* @__PURE__ */ jsx(Text, { variant: "headingLg", tone: "text-inverse", children: "価格情報取得中..." })
+          ] }),
+          /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "end", children: [
+            /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "最終更新" }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "text-inverse", children: goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString("ja-JP") : "--" })
+          ] })
+        ] }) }) }),
         /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
-            /* @__PURE__ */ jsx(
-              Box,
-              {
-                style: {
-                  width: "48px",
-                  height: "48px",
-                  background: "#e0f2fe",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                },
-                children: /* @__PURE__ */ jsx(Icon, { source: ProductIcon, tone: "info" })
-              }
-            ),
-            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.selectedProducts }),
-            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "選択中の商品" })
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: ProductIcon, tone: "info" }),
+            /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", children: stats.selectedProducts }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "選択中の商品" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
-            /* @__PURE__ */ jsx(
-              Box,
-              {
-                style: {
-                  width: "48px",
-                  height: "48px",
-                  background: stats.autoScheduleEnabled ? "#dcfce7" : "#fef3c7",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                },
-                children: /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: stats.autoScheduleEnabled ? "success" : "warning" })
-              }
-            ),
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: stats.autoScheduleEnabled ? "success" : "warning" }),
             /* @__PURE__ */ jsx(Badge, { tone: stats.autoScheduleEnabled ? "success" : "warning", children: stats.autoScheduleEnabled ? "有効" : "無効" }),
-            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "自動スケジュール" })
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "自動スケジュール" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
-            /* @__PURE__ */ jsx(
-              Box,
-              {
-                style: {
-                  width: "48px",
-                  height: "48px",
-                  background: "#fce7f3",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                },
-                children: /* @__PURE__ */ jsx(Icon, { source: NotificationIcon, tone: "base" })
-              }
-            ),
-            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalLogs }),
-            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "最近の実行" })
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: NotificationIcon, tone: "base" }),
+            /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", children: stats.totalLogs }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "最近の実行" })
           ] }) }) })
         ] }) }) }),
         /* @__PURE__ */ jsxs(Layout, { children: [
           /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
             /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
-              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "クイックアクション" }),
-              /* @__PURE__ */ jsx(InlineStack, { gap: "200", children: /* @__PURE__ */ jsx(Link$1, { to: "/app/settings", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { icon: SettingsIcon, children: "設定" }) }) })
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "クイックアクション" }),
+              /* @__PURE__ */ jsx(InlineStack, { gap: "200", children: /* @__PURE__ */ jsx(Link$1, { to: "/app/settings", children: /* @__PURE__ */ jsx(Button, { icon: SettingsIcon, children: "設定" }) }) })
             ] }),
             /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
-              /* @__PURE__ */ jsx(Link$1, { to: "/app/products", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { variant: "primary", size: "large", children: "商品価格を調整" }) }),
-              /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { children: "実行ログを確認" }) })
+              /* @__PURE__ */ jsx(Link$1, { to: "/app/products", children: /* @__PURE__ */ jsx(Button, { variant: "primary", size: "large", children: "商品価格を調整" }) }),
+              /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", children: /* @__PURE__ */ jsx(Button, { children: "実行ログを確認" }) })
             ] }),
             stats.lastExecution && /* @__PURE__ */ jsxs(Fragment, { children: [
               /* @__PURE__ */ jsx(Divider, {}),
-              /* @__PURE__ */ jsx(BlockStack, { gap: "200", children: /* @__PURE__ */ jsxs(Text$1, { variant: "bodyMd", tone: "subdued", children: [
+              /* @__PURE__ */ jsx(BlockStack, { gap: "200", children: /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", tone: "subdued", children: [
                 "最終実行: ",
                 new Date(stats.lastExecution).toLocaleString("ja-JP")
               ] }) })
             ] })
           ] }) }) }),
           /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
-            /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "最近の実行ログ" }),
-            recentLogs.length === 0 ? /* @__PURE__ */ jsx(Box, { padding: "600", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "center", children: [
+            /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "最近の実行ログ" }),
+            recentLogs.length === 0 ? /* @__PURE__ */ jsx(Box, { padding: "600", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "center", children: [
               /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "subdued" }),
-              /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "まだ実行履歴がありません" })
+              /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "まだ実行履歴がありません" })
             ] }) }) : /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
               recentLogs.slice(0, 3).map((log, index) => /* @__PURE__ */ jsx(
                 Box,
                 {
                   padding: "400",
-                  style: {
-                    background: "#f9fafb",
-                    borderRadius: "8px",
-                    borderLeft: `4px solid ${log.success ? "#10b981" : "#ef4444"}`
-                  },
                   children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
                     /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
                       /* @__PURE__ */ jsx(Badge, { tone: log.success ? "success" : "critical", children: log.success ? "成功" : "失敗" }),
-                      /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleDateString("ja-JP") })
+                      /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleDateString("ja-JP") })
                     ] }),
                     /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-                      /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", children: [
+                      /* @__PURE__ */ jsxs(Text, { variant: "bodySm", children: [
                         "商品: ",
                         log.totalProducts || 0,
                         "件"
                       ] }),
-                      /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", children: [
+                      /* @__PURE__ */ jsxs(Text, { variant: "bodySm", children: [
                         "成功: ",
                         log.updatedCount || 0,
                         "件"
@@ -9727,30 +9582,20 @@ function Dashboard() {
                 },
                 log.id
               )),
-              recentLogs.length > 3 && /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { variant: "plain", fullWidth: true, children: "すべてのログを表示" }) })
+              recentLogs.length > 3 && /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", children: /* @__PURE__ */ jsx(Button, { variant: "plain", fullWidth: true, children: "すべてのログを表示" }) })
             ] })
           ] }) }) })
         ] }),
-        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
-          Box,
-          {
-            padding: "600",
-            style: {
-              background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
-              borderRadius: "12px"
-            },
-            children: /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
-              /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-                /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "Gold Price Updater" }),
-                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "田中貴金属の金価格に連動したK18商品の自動価格調整システム" })
-              ] }),
-              /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
-                /* @__PURE__ */ jsx(Badge, { children: "Version 7" }),
-                /* @__PURE__ */ jsx(Badge, { tone: "success", children: "稼働中" })
-              ] })
-            ] })
-          }
-        ) })
+        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "24px", background: "#f8fafc" }, children: /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
+          /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+            /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "Gold Price Updater" }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "田中貴金属の金価格に連動したK18商品の自動価格調整システム" })
+          ] }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
+            /* @__PURE__ */ jsx(Badge, { children: "Version 7" }),
+            /* @__PURE__ */ jsx(Badge, { tone: "success", children: "稼働中" })
+          ] })
+        ] }) }) })
       ] })
     }
   );
@@ -9803,8 +9648,8 @@ function Logs() {
   });
   const tableRows = filteredLogs.map((log) => [
     /* @__PURE__ */ jsxs("div", { children: [
-      /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", children: new Date(log.executedAt).toLocaleDateString("ja-JP") }),
-      /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleTimeString("ja-JP") })
+      /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", children: new Date(log.executedAt).toLocaleDateString("ja-JP") }),
+      /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleTimeString("ja-JP") })
     ] }, `time-${log.id}`),
     /* @__PURE__ */ jsx(Badge, { tone: log.executionType === "auto" ? "info" : "warning", children: log.executionType === "auto" ? "自動実行" : "手動実行" }, `type-${log.id}`),
     /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
@@ -9818,29 +9663,26 @@ function Logs() {
       /* @__PURE__ */ jsx(Badge, { tone: log.success ? "success" : "critical", children: log.success ? "成功" : "失敗" })
     ] }, `status-${log.id}`),
     /* @__PURE__ */ jsx("div", { children: log.goldRatio !== null && log.goldRatio !== void 0 ? /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
-      /* @__PURE__ */ jsx("span", { style: {
-        fontSize: "16px",
-        color: log.goldRatio >= 0 ? "#dc2626" : "#059669"
-      }, children: log.goldRatio >= 0 ? "📈" : "📉" }),
-      /* @__PURE__ */ jsxs(Text$1, { children: [
+      /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: log.goldRatio >= 0 ? "critical" : "success", children: log.goldRatio >= 0 ? "📈" : "📉" }),
+      /* @__PURE__ */ jsxs(Text, { children: [
         (log.goldRatio * 100).toFixed(2),
         "%"
       ] })
-    ] }) : /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "-" }) }, `ratio-${log.id}`),
-    /* @__PURE__ */ jsxs(Text$1, { children: [
+    ] }) : /* @__PURE__ */ jsx(Text, { tone: "subdued", children: "-" }) }, `ratio-${log.id}`),
+    /* @__PURE__ */ jsxs(Text, { children: [
       log.minPricePct || "-",
       "%"
     ] }, `min-${log.id}`),
-    /* @__PURE__ */ jsxs(Text$1, { children: [
+    /* @__PURE__ */ jsxs(Text, { children: [
       log.totalProducts || 0,
       "件"
     ] }, `products-${log.id}`),
     /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
-      /* @__PURE__ */ jsx(Text$1, { tone: "success", children: log.updatedCount || 0 }),
-      /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "/" }),
-      /* @__PURE__ */ jsx(Text$1, { tone: "critical", children: log.failedCount || 0 })
+      /* @__PURE__ */ jsx(Text, { tone: "success", children: log.updatedCount || 0 }),
+      /* @__PURE__ */ jsx(Text, { tone: "subdued", children: "/" }),
+      /* @__PURE__ */ jsx(Text, { tone: "critical", children: log.failedCount || 0 })
     ] }, `counts-${log.id}`),
-    /* @__PURE__ */ jsx("div", { children: log.errorMessage ? /* @__PURE__ */ jsx(Box, { padding: "200", background: "bg-critical-subdued", borderRadius: "100", children: /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "critical", children: log.errorMessage.length > 50 ? log.errorMessage.substring(0, 50) + "..." : log.errorMessage }) }) : /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "-" }) }, `error-${log.id}`)
+    /* @__PURE__ */ jsx("div", { children: log.errorMessage ? /* @__PURE__ */ jsx("div", { style: { padding: "8px", background: "#fecaca", borderRadius: "50%" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "critical", children: log.errorMessage.length > 50 ? log.errorMessage.substring(0, 50) + "..." : log.errorMessage }) }) : /* @__PURE__ */ jsx(Text, { tone: "subdued", children: "-" }) }, `error-${log.id}`)
   ]);
   return /* @__PURE__ */ jsx(
     Page,
@@ -9849,66 +9691,24 @@ function Logs() {
       subtitle: `${logs.length}件の実行履歴を表示`,
       children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
         /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
-            /* @__PURE__ */ jsx(
-              Box,
-              {
-                style: {
-                  width: "48px",
-                  height: "48px",
-                  background: "#e0f2fe",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                },
-                children: /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "info" })
-              }
-            ),
-            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalExecutions }),
-            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "総実行回数" })
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "info" }),
+            /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", children: stats.totalExecutions }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "総実行回数" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
-            /* @__PURE__ */ jsx(
-              Box,
-              {
-                style: {
-                  width: "48px",
-                  height: "48px",
-                  background: "#dcfce7",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                },
-                children: /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" })
-              }
-            ),
-            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalSuccess }),
-            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "成功更新数" })
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
+            /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", children: stats.totalSuccess }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "成功更新数" })
           ] }) }) }),
-          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
-            /* @__PURE__ */ jsx(
-              Box,
-              {
-                style: {
-                  width: "48px",
-                  height: "48px",
-                  background: stats.totalFailed > 0 ? "#fecaca" : "#f3f4f6",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                },
-                children: /* @__PURE__ */ jsx(Icon, { source: AlertCircleIcon, tone: stats.totalFailed > 0 ? "critical" : "subdued" })
-              }
-            ),
-            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalFailed }),
-            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "失敗更新数" })
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Box, { padding: "400", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: AlertCircleIcon, tone: stats.totalFailed > 0 ? "critical" : "subdued" }),
+            /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", children: stats.totalFailed }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: "失敗更新数" })
           ] }) }) })
         ] }) }) }),
         /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
-          /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "フィルター" }),
+          /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "フィルター" }),
           /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
             /* @__PURE__ */ jsx("div", { style: { minWidth: "200px" }, children: /* @__PURE__ */ jsx(
               TextField,
@@ -9948,17 +9748,17 @@ function Logs() {
               }
             ) })
           ] }),
-          /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", tone: "subdued", children: [
+          /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
             filteredLogs.length,
             "件 / ",
             logs.length,
             "件を表示"
           ] })
         ] }) }),
-        /* @__PURE__ */ jsx(Card, { children: filteredLogs.length === 0 ? /* @__PURE__ */ jsx(Box, { padding: "800", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", align: "center", children: [
+        /* @__PURE__ */ jsx(Card, { children: filteredLogs.length === 0 ? /* @__PURE__ */ jsx(Box, { padding: "800", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", align: "center", children: [
           /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "subdued" }),
-          /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", tone: "subdued", children: logs.length === 0 ? "まだ実行ログがありません" : "フィルター条件に一致するログがありません" }),
-          /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: logs.length === 0 ? "商品価格調整を実行すると、ここに履歴が表示されます。" : "フィルター条件を変更してください。" })
+          /* @__PURE__ */ jsx(Text, { variant: "headingMd", tone: "subdued", children: logs.length === 0 ? "まだ実行ログがありません" : "フィルター条件に一致するログがありません" }),
+          /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "subdued", children: logs.length === 0 ? "商品価格調整を実行すると、ここに履歴が表示されます。" : "フィルター条件を変更してください。" })
         ] }) }) : /* @__PURE__ */ jsx(
           DataTable,
           {
@@ -9984,30 +9784,26 @@ function Logs() {
           Box,
           {
             padding: "400",
-            style: {
-              background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
-              borderRadius: "12px"
-            },
             children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
               /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
                 /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "base" }),
-                /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "ログの見方" })
+                /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "ログの見方" })
               ] }),
               /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
                 /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", fontWeight: "semibold", children: "実行タイプ" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 自動実行: スケジュールによる定期実行" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 手動実行: UIからの手動実行" })
+                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "semibold", children: "実行タイプ" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 自動実行: スケジュールによる定期実行" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 手動実行: UIからの手動実行" })
                 ] }),
                 /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", fontWeight: "semibold", children: "金価格変動率" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 田中貴金属から取得した前日比" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• この変動率で商品価格を調整" })
+                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "semibold", children: "金価格変動率" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 田中貴金属から取得した前日比" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• この変動率で商品価格を調整" })
                 ] }),
                 /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", fontWeight: "semibold", children: "価格下限" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 価格下落時の最低価格率" }),
-                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 例: 93% = 7%以上は下がらない" })
+                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "semibold", children: "価格下限" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 価格下落時の最低価格率" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 例: 93% = 7%以上は下がらない" })
                 ] })
               ] })
             ] })
@@ -10022,7 +9818,7 @@ const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-D3-LF-Qi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-DtfzKD8X.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BNSVjd4w.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-X5lpIYYX.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-DTaMGPqi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Select-DHDjkFid.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-c16ff01a.js", "version": "c16ff01a" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BH-kENwN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-dKu6tqHv.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-XeyT_iBl.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-D28RdGze.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-c0d94b2c.js", "version": "c0d94b2c" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";

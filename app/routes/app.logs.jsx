@@ -127,13 +127,13 @@ export default function Logs() {
     
     <div key={`error-${log.id}`}>
       {log.errorMessage ? (
-        <Box padding="200" background="bg-critical-subdued" borderRadius="100">
+        <div style={{padding: '8px', background: '#fecaca', borderRadius: '50%'}}>
           <Text variant="bodySm" tone="critical">
             {log.errorMessage.length > 50 
               ? log.errorMessage.substring(0, 50) + "..." 
               : log.errorMessage}
           </Text>
-        </Box>
+        </div>
       ) : (
         <Text tone="subdued">-</Text>
       )}
@@ -276,7 +276,6 @@ export default function Logs() {
         <Card>
           <Box
             padding="400"
-            background="bg-surface-secondary"
           >
             <BlockStack gap="300">
               <InlineStack gap="200" blockAlign="center">

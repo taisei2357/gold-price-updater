@@ -67,17 +67,13 @@ export default function AdditionalPage() {
 
 function Code({ children }) {
   return (
-    <Box
-      as="span"
-      padding="025"
-      paddingInlineStart="100"
-      paddingInlineEnd="100"
-      background="bg-surface-active"
-      borderWidth="025"
-      borderColor="border"
-      borderRadius="100"
-    >
+    <span style={{
+      padding: '2px 8px',
+      background: '#e2e8f0',
+      border: '1px solid #cbd5e1',
+      borderRadius: '12px'
+    }}>
       <code>{children}</code>
-    </Box>
+    </span>
   );
 }

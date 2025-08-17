@@ -369,50 +369,31 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
         <Layout.Section>
           {goldPrice && (
             <Card>
-              <Box padding="500" background="bg-warning-strong">
-              
-              <InlineStack align="space-between" blockAlign="center">
-                <BlockStack gap="300">
-                  <InlineStack gap="200" blockAlign="center">
-                    <Text variant="headingLg" as="h2" tone="text-inverse">
-                      田中貴金属 金価格
-                    </Text>
-                    <Badge tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                      {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
-                    </Badge>
-                  </InlineStack>
-                  
-                  <InlineStack gap="600">
-                    <div>
-                      <Text variant="bodySm" tone="text-inverse">店頭小売価格（税込）</Text>
-                      <Text variant="headingXl" as="p" tone="text-inverse">{goldPrice.retailPriceFormatted}</Text>
-                    </div>
-                    <div>
-                      <Text variant="bodySm" tone="text-inverse">前日比</Text>
-                      <Text variant="headingLg" as="p" tone="text-inverse">
-                        {goldPrice.change}
-                      </Text>
-                    </div>
-                  </InlineStack>
-                  
-                  <Box
-                    padding="400"
-                    background="bg-surface-secondary"
-                  >
-                    <Text variant="bodyMd" tone="text-inverse">
-                      <strong>価格調整率: {goldPrice.percentage}%</strong> — この変動率で商品価格を自動調整
-                    </Text>
-                  </Box>
-                </BlockStack>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>田中貴金属 金価格情報</h3>
+                  <Badge tone={goldPrice.changeDirection === 'up' ? 'attention' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
+                    {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
+                  </Badge>
+                </InlineStack>
                 
-                <BlockStack gap="200" align="end">
-                  <Text variant="bodySm" tone="text-inverse">最終更新</Text>
-                  <Text variant="bodyMd" tone="text-inverse">
-                    {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}
-                  </Text>
-                </BlockStack>
-              </InlineStack>
-              </Box>
+                <InlineStack gap="600">
+                  <div>
+                    <p>店頭小売価格（税込）</p>
+                    <h4>{goldPrice.retailPriceFormatted}</h4>
+                  </div>
+                  <div>
+                    <p>前日比</p>
+                    <h4>{goldPrice.change}</h4>
+                  </div>
+                </InlineStack>
+                
+                <div>
+                  <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
+                </div>
+                
+                <p>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+              </BlockStack>
             </Card>
           )}
 
@@ -425,52 +406,43 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
 
         <Layout.Section>
           <Card>
-            <Box
-              padding="500"
-              background="bg-surface-secondary"
-            >
-              <BlockStack gap="400">
-                <Text variant="headingMd" as="h3">商品検索・選択</Text>
-                
-                <InlineStack gap="400">
-                  <div style={{flex: 1}}>
-                    <TextField
-                      label="商品検索"
-                      value={searchValue}
-                      onChange={setSearchValue}
-                      placeholder="商品名またはハンドルで検索..."
-                      clearButton
-                      onClearButtonClick={() => setSearchValue("")}
-                    />
-                  </div>
-                  <div style={{minWidth: '150px'}}>
-                    <Select
-                      label="商品フィルター"
-                      options={[
-                        {label: "すべての商品", value: "all"},
-                        {label: "K18商品のみ", value: "k18"}
-                      ]}
-                      value={filterType}
-                      onChange={setFilterType}
-                    />
-                  </div>
-                </InlineStack>
-                
-                <Box
-                  padding="400"
-                  background="bg-surface"
-                >
+            <BlockStack gap="400">
+              <h3>商品検索・選択</h3>
+              
+              <InlineStack gap="400">
+                <div style={{flex: 1}}>
                   <TextField
-                    label="価格下限設定 (%)"
-                    type="number"
-                    value={minPriceRate.toString()}
-                    onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
-                    suffix="%"
-                    helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
-                    min="50"
-                    max="100"
+                    label="商品検索"
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    placeholder="商品名またはハンドルで検索..."
+                    clearButton
+                    onClearButtonClick={() => setSearchValue("")}
                   />
-                </Box>
+                </div>
+                <div style={{minWidth: '150px'}}>
+                  <Select
+                    label="商品フィルター"
+                    options={[
+                      {label: "すべての商品", value: "all"},
+                      {label: "K18商品のみ", value: "k18"}
+                    ]}
+                    value={filterType}
+                    onChange={setFilterType}
+                  />
+                </div>
+              </InlineStack>
+              
+              <TextField
+                label="価格下限設定 (%)"
+                type="number"
+                value={minPriceRate.toString()}
+                onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
+                suffix="%"
+                helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
+                min="50"
+                max="100"
+              />
 
                 <InlineStack gap="300">
                   <Button 
@@ -499,35 +471,18 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                 
                 {/* 選択状態の表示 */}
                 {selectedProductIds && selectedProductIds.length > 0 && (
-                  <Box
-                    padding="400"
-                    background="bg-info-subdued"
-                  >
-                    <InlineStack gap="200" blockAlign="center">
-                      <Icon source={ProductIcon} tone="info" />
-                      <Text variant="bodyMd">
-                        現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
-                      </Text>
-                    </InlineStack>
-                  </Box>
+                  <Banner tone="info">
+                    現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
+                  </Banner>
                 )}
                 
                 {/* 保存結果メッセージ */}
                 {fetcher.data?.message && (
-                  <Box
-                    padding="400"
-                    background="bg-success-subdued"
-                  >
-                    <InlineStack gap="200" blockAlign="center">
-                      <Icon source={CheckCircleIcon} tone="success" />
-                      <Text variant="bodyMd" tone="success">
-                        {fetcher.data.message}
-                      </Text>
-                    </InlineStack>
-                  </Box>
+                  <Banner tone="success">
+                    {fetcher.data.message}
+                  </Banner>
                 )}
               </BlockStack>
-            </Box>
           </Card>
         </Layout.Section>
 
@@ -598,11 +553,11 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                 
                 {/* サマリー情報 */}
                 {fetcher.data.summary && (
-                  <Card background="bg-surface-secondary">
+                  <Card>
                     <InlineStack gap="400">
-                      <Text variant="bodyMd">合計: <Text as="span" variant="bodyMd" fontWeight="bold">{fetcher.data.summary.total}</Text>件</Text>
-                      <Text variant="bodyMd">成功: <Text as="span" variant="bodyMd" tone="success">{fetcher.data.summary.success}</Text>件</Text>
-                      <Text variant="bodyMd">失敗: <Text as="span" variant="bodyMd" tone="critical">{fetcher.data.summary.failed}</Text>件</Text>
+                      <div>合計: <strong>{fetcher.data.summary.total}</strong>件</div>
+                      <div>成功: <strong>{fetcher.data.summary.success}</strong>件</div>
+                      <div>失敗: <strong>{fetcher.data.summary.failed}</strong>件</div>
                     </InlineStack>
                   </Card>
                 )}
@@ -654,60 +609,45 @@ export default function Products() {
             <Layout.Section>
               {goldPrice && (
                 <Card>
-                  <Box padding="500" background="bg-warning-strong">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <BlockStack gap="300">
-                        <InlineStack gap="200" blockAlign="center">
-                          <Text variant="headingLg" as="h3" tone="text-inverse">
-                            田中貴金属 金価格
-                          </Text>
-                          <Badge tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                            {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
-                          </Badge>
-                        </InlineStack>
-                        
-                        <InlineStack gap="600">
-                          <div>
-                            <Text variant="bodySm" tone="text-inverse">店頭小売価格（税込）</Text>
-                            <Text variant="headingXl" as="p" tone="text-inverse">{goldPrice.retailPriceFormatted}</Text>
-                          </div>
-                          <div>
-                            <Text variant="bodySm" tone="text-inverse">前日比</Text>
-                            <Text variant="headingLg" as="p" tone="text-inverse">
-                              {goldPrice.change}
-                            </Text>
-                          </div>
-                        </InlineStack>
-                        
-                        <Box padding="400" background="bg-surface-secondary">
-                          <Text variant="bodyMd">
-                            <strong>価格調整率: {goldPrice.percentage}%</strong> — この変動率で商品価格を自動調整
-                          </Text>
-                        </Box>
-                      </BlockStack>
-                      
-                      <BlockStack gap="200" align="end">
-                        <Text variant="bodySm" tone="text-inverse">最終更新</Text>
-                        <Text variant="bodyMd" tone="text-inverse">
-                          {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}
-                        </Text>
-                      </BlockStack>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <h3>田中貴金属 金価格情報</h3>
+                      <Badge tone={goldPrice.changeDirection === 'up' ? 'attention' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
+                        {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
+                      </Badge>
                     </InlineStack>
-                  </Box>
+                    
+                    <InlineStack gap="600">
+                      <div>
+                        <p>店頭小売価格（税込）</p>
+                        <h4>{goldPrice.retailPriceFormatted}</h4>
+                      </div>
+                      <div>
+                        <p>前日比</p>
+                        <h4>{goldPrice.change}</h4>
+                      </div>
+                    </InlineStack>
+                    
+                    <div>
+                      <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
+                    </div>
+                    
+                    <p>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+                  </BlockStack>
                 </Card>
               )}
             </Layout.Section>
             
             <Layout.Section>
               <Card>
-                <Box padding="800">
-                  <BlockStack gap="400" align="center">
+                <BlockStack gap="400">
+                  <div style={{ textAlign: 'center', padding: '60px 20px' }}>
                     <Spinner size="large" />
-                    <Text variant="bodyMd" tone="subdued">
+                    <p style={{ marginTop: '20px' }}>
                       商品データを読み込んでいます...
-                    </Text>
-                  </BlockStack>
-                </Box>
+                    </p>
+                  </div>
+                </BlockStack>
               </Card>
             </Layout.Section>
           </Layout>
