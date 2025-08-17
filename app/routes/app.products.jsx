@@ -21,29 +21,8 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { runBulkUpdateBySpec } from "../models/price.server";
-import { fetchGoldPriceDataTanaka, fetchGoldChangeRatioTanaka } from "../models/gold.server";
+import { fetchGoldPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
-
-// 金価格情報を取得（詳細データ版）
-async function fetchGoldPrice() {
-  try {
-    const goldData = await fetchGoldPriceDataTanaka();
-    if (!goldData || goldData.changeRatio === null) return null;
-    
-    return {
-      ratio: goldData.changeRatio,
-      percentage: (goldData.changeRatio * 100).toFixed(2),
-      change: goldData.changePercent,
-      retailPrice: goldData.retailPrice,
-      retailPriceFormatted: goldData.retailPriceFormatted,
-      changeDirection: goldData.changeDirection,
-      lastUpdated: goldData.lastUpdated
-    };
-  } catch (error) {
-    console.error("金価格取得エラー:", error);
-    return null;
-  }
-}
 
 // 商品フィルタリング（検索条件による）
 function filterProducts(products, searchTerm, filterType = "all") {
@@ -134,6 +113,27 @@ async function fetchAllProducts(admin) {
   }
   
   return allProducts;
+}
+
+// 金価格情報を取得（詳細データ版）- Server-side only
+async function fetchGoldPrice() {
+  try {
+    const goldData = await fetchGoldPriceDataTanaka();
+    if (!goldData || goldData.changeRatio === null) return null;
+    
+    return {
+      ratio: goldData.changeRatio,
+      percentage: (goldData.changeRatio * 100).toFixed(2),
+      change: goldData.changePercent,
+      retailPrice: goldData.retailPrice,
+      retailPriceFormatted: goldData.retailPriceFormatted,
+      changeDirection: goldData.changeDirection,
+      lastUpdated: goldData.lastUpdated
+    };
+  } catch (error) {
+    console.error("金価格取得エラー:", error);
+    return null;
+  }
 }
 
 export const loader = async ({ request }) => {

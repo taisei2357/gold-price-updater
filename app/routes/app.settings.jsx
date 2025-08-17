@@ -21,7 +21,7 @@ import {
 } from "@shopify/polaris";
 import {
   ClockIcon,
-  BellIcon,
+  NotificationIcon,
   SettingsIcon,
   CheckCircleIcon,
 } from "@shopify/polaris-icons";
@@ -207,7 +207,7 @@ export default function Settings() {
           <Card>
             <BlockStack gap="500">
               <InlineStack gap="300" align="start">
-                <Icon source={BellIcon} tone="base" />
+                <Icon source={NotificationIcon} tone="base" />
                 <BlockStack gap="200">
                   <Text variant="headingMd" as="h2">
                     通知設定

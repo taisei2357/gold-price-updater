@@ -1,18 +1,17 @@
-var _a;
 import { jsx, jsxs, Fragment } from "react/jsx-runtime";
 import { PassThrough } from "stream";
 import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer, Meta, Links, Outlet, ScrollRestoration, Scripts, useLoaderData, useActionData, Form, Link as Link$1, useRouteError, useFetcher } from "@remix-run/react";
-import { createReadableStreamFromReadable, json, redirect } from "@remix-run/node";
+import { RemixServer, Meta, Links, Outlet, ScrollRestoration, Scripts, useLoaderData, useActionData, Form, Link as Link$1, useRouteError, Await, useFetcher } from "@remix-run/react";
+import { createReadableStreamFromReadable, json, redirect, defer } from "@remix-run/node";
 import { isbot } from "isbot";
 import "@shopify/shopify-app-remix/adapters/node";
 import { shopifyApp, AppDistribution, ApiVersion, LoginErrorType, boundary } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import { PrismaClient } from "@prisma/client";
-import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, PureComponent, useCallback, useMemo, forwardRef, Component, memo, useId, useImperativeHandle, createElement, Children, isValidElement, createRef, useReducer } from "react";
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, PureComponent, useCallback, useMemo, forwardRef, Component, memo, useId, useImperativeHandle, createElement, isValidElement, Children, createRef, useReducer, Suspense } from "react";
 import { themes, breakpointsAliases, themeNameDefault, createThemeClassName, themeDefault, getMediaConditions, themeNames } from "@shopify/polaris-tokens";
 import { createHmac, timingSafeEqual } from "crypto";
-import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
+import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon } from "@shopify/polaris-icons";
 import { createPortal } from "react-dom";
 import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
 import { NavMenu, TitleBar, useAppBridge } from "@shopify/app-bridge-react";
@@ -24,18 +23,22 @@ if (process.env.NODE_ENV !== "production") {
   }
 }
 const prisma = global.prismaGlobal ?? new PrismaClient();
+const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
+const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
   apiVersion: ApiVersion.January25,
-  scopes: (_a = process.env.SCOPES) == null ? void 0 : _a.split(","),
-  appUrl: process.env.SHOPIFY_APP_URL || "",
+  scopes: scopeList,
+  appUrl,
+  // PartnersのApp URLと完全一致させる
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
     removeRest: true
+    // REST使うなら false に
   },
   ...process.env.SHOP_CUSTOM_DOMAIN ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] } : {}
 });
@@ -274,7 +277,7 @@ function getResponsiveValue(componentName, componentProp, responsiveProp) {
   }
   return Object.fromEntries(Object.entries(responsiveProp).map(([breakpointAlias, responsiveValue]) => [`--pc-${componentName}-${componentProp}-${breakpointAlias}`, responsiveValue]));
 }
-var styles$L = {
+var styles$M = {
   "themeContainer": "Polaris-ThemeProvider--themeContainer"
 };
 const themeNamesLocal = ["light", "dark-experimental"];
@@ -292,7 +295,7 @@ function ThemeProvider(props) {
     value: getTheme(themeName)
   }, /* @__PURE__ */ React.createElement(ThemeContainer, {
     "data-portal-id": props["data-portal-id"],
-    className: classNames(createThemeClassName(themeName), styles$L.themeContainer, className)
+    className: classNames(createThemeClassName(themeName), styles$M.themeContainer, className)
   }, children)));
 }
 const WithinContentContext = /* @__PURE__ */ createContext(false);
@@ -627,7 +630,7 @@ class StickyManager {
     });
   }
   evaluateStickyItem(stickyItem, scrollTop, containerTop) {
-    var _a2;
+    var _a;
     const {
       stickyNode,
       placeHolderNode,
@@ -658,7 +661,7 @@ class StickyManager {
     if (boundingElement == null) {
       sticky = scrollPosition2 >= placeHolderNodeCurrentTop;
     } else {
-      const stickyItemHeight = stickyNode.getBoundingClientRect().height || ((_a2 = stickyNode.firstElementChild) == null ? void 0 : _a2.getBoundingClientRect().height) || 0;
+      const stickyItemHeight = stickyNode.getBoundingClientRect().height || ((_a = stickyNode.firstElementChild) == null ? void 0 : _a.getBoundingClientRect().height) || 0;
       const stickyItemBottomPosition = boundingElement.getBoundingClientRect().bottom - stickyItemHeight + scrollTop - containerTop;
       sticky = scrollPosition2 >= placeHolderNodeCurrentTop && scrollPosition2 < stickyItemBottomPosition;
     }
@@ -1058,14 +1061,14 @@ const MAX_SCROLLBAR_WIDTH = 20;
 const SCROLLBAR_TEST_ELEMENT_PARENT_SIZE = 30;
 const SCROLLBAR_TEST_ELEMENT_CHILD_SIZE = SCROLLBAR_TEST_ELEMENT_PARENT_SIZE + 10;
 function measureScrollbars() {
-  var _a2;
+  var _a;
   const parentEl = document.createElement("div");
   parentEl.setAttribute("style", `position: absolute; opacity: 0; transform: translate3d(-9999px, -9999px, 0); pointer-events: none; width:${SCROLLBAR_TEST_ELEMENT_PARENT_SIZE}px; height:${SCROLLBAR_TEST_ELEMENT_PARENT_SIZE}px;`);
   const child = document.createElement("div");
   child.setAttribute("style", `width:100%; height: ${SCROLLBAR_TEST_ELEMENT_CHILD_SIZE}; overflow:scroll; scrollbar-width: thin;`);
   parentEl.appendChild(child);
   document.body.appendChild(parentEl);
-  const scrollbarWidth = SCROLLBAR_TEST_ELEMENT_PARENT_SIZE - (((_a2 = parentEl.firstElementChild) == null ? void 0 : _a2.clientWidth) ?? 0);
+  const scrollbarWidth = SCROLLBAR_TEST_ELEMENT_PARENT_SIZE - (((_a = parentEl.firstElementChild) == null ? void 0 : _a.clientWidth) ?? 0);
   const scrollbarWidthWithSafetyHatch = Math.min(scrollbarWidth, MAX_SCROLLBAR_WIDTH);
   document.documentElement.style.setProperty("--pc-app-provider-scrollbar-width", `${scrollbarWidthWithSafetyHatch}px`);
   document.body.removeChild(parentEl);
@@ -1193,8 +1196,8 @@ function findFirstFocusableNodeIncludingDisabled(element) {
   return element.querySelector(focusableSelector);
 }
 function focusFirstFocusableNode(element, onlyDescendants = true) {
-  var _a2;
-  (_a2 = findFirstFocusableNode(element, onlyDescendants)) == null ? void 0 : _a2.focus();
+  var _a;
+  (_a = findFirstFocusableNode(element, onlyDescendants)) == null ? void 0 : _a.focus();
 }
 function focusNextFocusableNode(node, filter) {
   const nextFocusable = nextFocusableNode(node, filter);
@@ -1272,7 +1275,7 @@ function matches(node, selector) {
   let i = matches2.length;
   while (--i >= 0 && matches2.item(i) !== node) return i > -1;
 }
-var styles$K = {
+var styles$L = {
   "Button": "Polaris-Button",
   "disabled": "Polaris-Button--disabled",
   "pressed": "Polaris-Button--pressed",
@@ -1303,7 +1306,7 @@ var styles$K = {
   "Icon": "Polaris-Button__Icon",
   "Spinner": "Polaris-Button__Spinner"
 };
-var styles$J = {
+var styles$K = {
   "Icon": "Polaris-Icon",
   "toneInherit": "Polaris-Icon--toneInherit",
   "toneBase": "Polaris-Icon--toneBase",
@@ -1328,7 +1331,7 @@ var styles$J = {
   "Img": "Polaris-Icon__Img",
   "Placeholder": "Polaris-Icon__Placeholder"
 };
-var styles$I = {
+var styles$J = {
   "root": "Polaris-Text--root",
   "block": "Polaris-Text--block",
   "truncate": "Polaris-Text--truncate",
@@ -1388,7 +1391,7 @@ const Text = ({
     console.warn(`Deprecation: <Text variant="${variant}" />. The value "${variant}" will be removed in a future major version of Polaris. Use "${deprecatedVariants[variant]}" instead.`);
   }
   const Component2 = as || (visuallyHidden ? "span" : "p");
-  const className = classNames(styles$I.root, variant && styles$I[variant], fontWeight && styles$I[fontWeight], (alignment || truncate) && styles$I.block, alignment && styles$I[alignment], breakWord && styles$I.break, tone && styles$I[tone], numeric && styles$I.numeric, truncate && styles$I.truncate, visuallyHidden && styles$I.visuallyHidden, textDecorationLine && styles$I[textDecorationLine]);
+  const className = classNames(styles$J.root, variant && styles$J[variant], fontWeight && styles$J[fontWeight], (alignment || truncate) && styles$J.block, alignment && styles$J[alignment], breakWord && styles$J.break, tone && styles$J[tone], numeric && styles$J.numeric, truncate && styles$J.truncate, visuallyHidden && styles$J.visuallyHidden, textDecorationLine && styles$J[textDecorationLine]);
   return /* @__PURE__ */ React.createElement(Component2, Object.assign({
     className
   }, id && {
@@ -1411,14 +1414,14 @@ function Icon({
   if (tone && sourceType === "external" && process.env.NODE_ENV === "development") {
     console.warn("Recoloring external SVGs is not supported. Set the intended color on your SVG instead.");
   }
-  const className = classNames(styles$J.Icon, tone && styles$J[variationName("tone", tone)]);
+  const className = classNames(styles$K.Icon, tone && styles$K[variationName("tone", tone)]);
   const {
     mdDown
   } = useBreakpoints();
   const SourceComponent = source;
   const contentMarkup = {
     function: /* @__PURE__ */ React.createElement(SourceComponent, Object.assign({
-      className: styles$J.Svg,
+      className: styles$K.Svg,
       focusable: "false",
       "aria-hidden": "true"
       // On Mobile we're scaling the viewBox to 18x18 to make the icons bigger
@@ -1428,10 +1431,10 @@ function Icon({
       viewBox: "1 1 18 18"
     } : {})),
     placeholder: /* @__PURE__ */ React.createElement("div", {
-      className: styles$J.Placeholder
+      className: styles$K.Placeholder
     }),
     external: /* @__PURE__ */ React.createElement("img", {
-      className: styles$J.Img,
+      className: styles$K.Img,
       src: `data:image/svg+xml;utf8,${source}`,
       alt: "",
       "aria-hidden": "true"
@@ -1444,7 +1447,7 @@ function Icon({
     visuallyHidden: true
   }, accessibilityLabel), contentMarkup[sourceType]);
 }
-var styles$H = {
+var styles$I = {
   "Spinner": "Polaris-Spinner",
   "sizeSmall": "Polaris-Spinner--sizeSmall",
   "sizeLarge": "Polaris-Spinner--sizeLarge"
@@ -1455,7 +1458,7 @@ function Spinner$1({
   hasFocusableParent
 }) {
   const isAfterInitialMount = useIsAfterInitialMount();
-  const className = classNames(styles$H.Spinner, size && styles$H[variationName("size", size)]);
+  const className = classNames(styles$I.Spinner, size && styles$I[variationName("size", size)]);
   const spinnerSVGMarkup = size === "large" ? /* @__PURE__ */ React.createElement("svg", {
     viewBox: "0 0 44 44",
     xmlns: "http://www.w3.org/2000/svg"
@@ -1653,9 +1656,9 @@ function Button({
   const {
     mdUp
   } = useBreakpoints();
-  const className = classNames(styles$K.Button, styles$K.pressable, styles$K[variationName("variant", variant)], styles$K[variationName("size", size)], styles$K[variationName("textAlign", textAlign)], fullWidth && styles$K.fullWidth, disclosure && styles$K.disclosure, icon && children && styles$K.iconWithText, icon && children == null && styles$K.iconOnly, isDisabled && styles$K.disabled, loading && styles$K.loading, pressed && !disabled && !url && styles$K.pressed, removeUnderline && styles$K.removeUnderline, tone && styles$K[variationName("tone", tone)]);
+  const className = classNames(styles$L.Button, styles$L.pressable, styles$L[variationName("variant", variant)], styles$L[variationName("size", size)], styles$L[variationName("textAlign", textAlign)], fullWidth && styles$L.fullWidth, disclosure && styles$L.disclosure, icon && children && styles$L.iconWithText, icon && children == null && styles$L.iconOnly, isDisabled && styles$L.disabled, loading && styles$L.loading, pressed && !disabled && !url && styles$L.pressed, removeUnderline && styles$L.removeUnderline, tone && styles$L[variationName("tone", tone)]);
   const disclosureMarkup = disclosure ? /* @__PURE__ */ React.createElement("span", {
-    className: loading ? styles$K.hidden : styles$K.Icon
+    className: loading ? styles$L.hidden : styles$L.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: loading ? "placeholder" : getDisclosureIconSource(disclosure, ChevronUpIcon, ChevronDownIcon)
   })) : null;
@@ -1663,7 +1666,7 @@ function Button({
     source: loading ? "placeholder" : icon
   }) : icon;
   const iconMarkup = iconSource ? /* @__PURE__ */ React.createElement("span", {
-    className: loading ? styles$K.hidden : styles$K.Icon
+    className: loading ? styles$L.hidden : styles$L.Icon
   }, iconSource) : null;
   const hasPlainText = ["plain", "monochromePlain"].includes(variant);
   let textFontWeight = "medium";
@@ -1683,7 +1686,7 @@ function Button({
     key: disabled ? "text-disabled" : "text"
   }, children) : null;
   const spinnerSVGMarkup = loading ? /* @__PURE__ */ React.createElement("span", {
-    className: styles$K.Spinner
+    className: styles$L.Spinner
   }, /* @__PURE__ */ React.createElement(Spinner$1, {
     size: "small",
     accessibilityLabel: i18n.translate("Polaris.Button.spinnerAccessibilityLabel")
@@ -1758,7 +1761,7 @@ function buttonFrom({
     variant: plainVariant || destructiveVariant
   }, action2, overrides), content);
 }
-var styles$G = {
+var styles$H = {
   "ShadowBevel": "Polaris-ShadowBevel"
 };
 function ShadowBevel(props) {
@@ -1772,7 +1775,7 @@ function ShadowBevel(props) {
   } = props;
   const Component2 = as;
   return /* @__PURE__ */ React.createElement(Component2, {
-    className: styles$G.ShadowBevel,
+    className: styles$H.ShadowBevel,
     style: {
       "--pc-shadow-bevel-z-index": zIndex,
       ...getResponsiveValue("shadow-bevel", "content", mapResponsiveProp(bevel, (bevel2) => bevel2 ? '""' : "none")),
@@ -1787,7 +1790,7 @@ function mapResponsiveProp(responsiveProp, callback) {
   }
   return Object.fromEntries(Object.entries(responsiveProp).map(([breakpointsAlias, value]) => [breakpointsAlias, callback(value)]));
 }
-var styles$F = {
+var styles$G = {
   "listReset": "Polaris-Box--listReset",
   "Box": "Polaris-Box",
   "visuallyHidden": "Polaris-Box--visuallyHidden",
@@ -1881,7 +1884,7 @@ const Box = /* @__PURE__ */ forwardRef(({
     zIndex,
     opacity
   };
-  const className = classNames(styles$F.Box, visuallyHidden && styles$F.visuallyHidden, printHidden && styles$F.printHidden, as === "ul" && styles$F.listReset);
+  const className = classNames(styles$G.Box, visuallyHidden && styles$G.visuallyHidden, printHidden && styles$G.printHidden, as === "ul" && styles$G.listReset);
   return /* @__PURE__ */ React.createElement(as, {
     className,
     id,
@@ -1918,7 +1921,7 @@ const Card = ({
     minHeight: "100%"
   }, children)));
 };
-var styles$E = {
+var styles$F = {
   "InlineStack": "Polaris-InlineStack"
 };
 const InlineStack = function InlineStack2({
@@ -1938,11 +1941,11 @@ const InlineStack = function InlineStack2({
     ...getResponsiveValue("inline-stack", "flex-direction", direction)
   };
   return /* @__PURE__ */ React.createElement(Element2, {
-    className: styles$E.InlineStack,
+    className: styles$F.InlineStack,
     style
   }, children);
 };
-var styles$D = {
+var styles$E = {
   "BlockStack": "Polaris-BlockStack",
   "listReset": "Polaris-BlockStack--listReset",
   "fieldsetReset": "Polaris-BlockStack--fieldsetReset"
@@ -1957,7 +1960,7 @@ const BlockStack = ({
   reverseOrder = false,
   ...restProps
 }) => {
-  const className = classNames(styles$D.BlockStack, (as === "ul" || as === "ol") && styles$D.listReset, as === "fieldset" && styles$D.fieldsetReset);
+  const className = classNames(styles$E.BlockStack, (as === "ul" || as === "ol") && styles$E.listReset, as === "fieldset" && styles$E.fieldsetReset);
   const style = {
     "--pc-block-stack-align": align ? `${align}` : null,
     "--pc-block-stack-inline-align": inlineAlign ? `${inlineAlign}` : null,
@@ -1980,7 +1983,7 @@ function FilterActionsProvider({
     value: filterActions
   }, children);
 }
-var styles$C = {
+var styles$D = {
   "Item": "Polaris-ActionList__Item",
   "default": "Polaris-ActionList--default",
   "active": "Polaris-ActionList--active",
@@ -1993,7 +1996,7 @@ var styles$C = {
   "Text": "Polaris-ActionList__Text"
 };
 const WithinFilterContext = /* @__PURE__ */ createContext(false);
-var styles$B = {
+var styles$C = {
   "Badge": "Polaris-Badge",
   "toneSuccess": "Polaris-Badge--toneSuccess",
   "toneSuccess-strong": "Polaris-Badge__toneSuccess--strong",
@@ -2096,7 +2099,7 @@ function getDefaultAccessibilityLabel(i18n, progress, tone) {
     });
   }
 }
-var styles$A = {
+var styles$B = {
   "Pip": "Polaris-Badge-Pip",
   "toneInfo": "Polaris-Badge-Pip--toneInfo",
   "toneSuccess": "Polaris-Badge-Pip--toneSuccess",
@@ -2114,7 +2117,7 @@ function Pip({
   accessibilityLabelOverride
 }) {
   const i18n = useI18n();
-  const className = classNames(styles$A.Pip, tone && styles$A[variationName("tone", tone)], progress && styles$A[variationName("progress", progress)]);
+  const className = classNames(styles$B.Pip, tone && styles$B[variationName("tone", tone)], progress && styles$B[variationName("progress", progress)]);
   const accessibilityLabel = accessibilityLabelOverride ? accessibilityLabelOverride : getDefaultAccessibilityLabel(i18n, progress, tone);
   return /* @__PURE__ */ React.createElement("span", {
     className
@@ -2153,7 +2156,7 @@ function Badge({
 }) {
   const i18n = useI18n();
   const withinFilter = useContext(WithinFilterContext);
-  const className = classNames(styles$B.Badge, tone && styles$B[variationName("tone", tone)], size && size !== DEFAULT_SIZE && styles$B[variationName("size", size)], withinFilter && styles$B.withinFilter);
+  const className = classNames(styles$C.Badge, tone && styles$C[variationName("tone", tone)], size && size !== DEFAULT_SIZE && styles$C[variationName("size", size)], withinFilter && styles$C.withinFilter);
   const accessibilityLabel = toneAndProgressLabelOverride ? toneAndProgressLabelOverride : getDefaultAccessibilityLabel(i18n, progress, tone);
   let accessibilityMarkup = Boolean(accessibilityLabel) && /* @__PURE__ */ React.createElement(Text, {
     as: "span",
@@ -2161,7 +2164,7 @@ function Badge({
   }, accessibilityLabel);
   if (progress && !icon) {
     accessibilityMarkup = /* @__PURE__ */ React.createElement("span", {
-      className: styles$B.Icon
+      className: styles$C.Icon
     }, /* @__PURE__ */ React.createElement(Icon, {
       accessibilityLabel,
       source: progressIconMap[progress]
@@ -2170,7 +2173,7 @@ function Badge({
   return /* @__PURE__ */ React.createElement("span", {
     className
   }, accessibilityMarkup, icon && /* @__PURE__ */ React.createElement("span", {
-    className: styles$B.Icon
+    className: styles$C.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: icon
   })), children && /* @__PURE__ */ React.createElement(Text, {
@@ -2189,7 +2192,7 @@ function useToggle(initialState) {
     setFalse: useCallback(() => setState(false), [])
   };
 }
-var styles$z = {
+var styles$A = {
   "TooltipContainer": "Polaris-Tooltip__TooltipContainer",
   "HasUnderline": "Polaris-Tooltip__HasUnderline"
 };
@@ -2228,7 +2231,7 @@ function Portal({
 }
 function noop$3() {
 }
-var styles$y = {
+var styles$z = {
   "TooltipOverlay": "Polaris-Tooltip-TooltipOverlay",
   "Tail": "Polaris-Tooltip-TooltipOverlay__Tail",
   "positionedAbove": "Polaris-Tooltip-TooltipOverlay--positionedAbove",
@@ -2328,7 +2331,7 @@ function windowRect(node) {
     width: document2.body.clientWidth
   });
 }
-var styles$x = {
+var styles$y = {
   "PositionedOverlay": "Polaris-PositionedOverlay",
   "fixed": "Polaris-PositionedOverlay--fixed",
   "preventInteraction": "Polaris-PositionedOverlay--preventInteraction"
@@ -2350,7 +2353,7 @@ function useComponentDidMount(callback) {
   }
 }
 const ScrollableContext = /* @__PURE__ */ createContext(void 0);
-var styles$w = {
+var styles$x = {
   "Scrollable": "Polaris-Scrollable",
   "hasTopShadow": "Polaris-Scrollable--hasTopShadow",
   "hasBottomShadow": "Polaris-Scrollable--hasBottomShadow",
@@ -2397,10 +2400,10 @@ const ScrollableComponent = /* @__PURE__ */ forwardRef(({
   const stickyManager = useLazyRef(() => new StickyManager());
   const scrollArea = useRef(null);
   const scrollTo = useCallback((scrollY, options = {}) => {
-    var _a2;
+    var _a;
     const optionsBehavior = options.behavior || "smooth";
     const behavior = prefersReducedMotion() ? "auto" : optionsBehavior;
-    (_a2 = scrollArea.current) == null ? void 0 : _a2.scrollTo({
+    (_a = scrollArea.current) == null ? void 0 : _a.scrollTo({
       top: scrollY,
       behavior
     });
@@ -2437,7 +2440,7 @@ const ScrollableComponent = /* @__PURE__ */ forwardRef(({
     }
   });
   useEffect(() => {
-    var _a2;
+    var _a;
     const currentScrollArea = scrollArea.current;
     if (!currentScrollArea) {
       return;
@@ -2445,7 +2448,7 @@ const ScrollableComponent = /* @__PURE__ */ forwardRef(({
     const handleResize = debounce(handleScroll, 50, {
       trailing: true
     });
-    (_a2 = stickyManager.current) == null ? void 0 : _a2.setContainer(currentScrollArea);
+    (_a = stickyManager.current) == null ? void 0 : _a.setContainer(currentScrollArea);
     currentScrollArea.addEventListener("scroll", handleScroll);
     globalThis.addEventListener("resize", handleResize);
     return () => {
@@ -2453,7 +2456,7 @@ const ScrollableComponent = /* @__PURE__ */ forwardRef(({
       globalThis.removeEventListener("resize", handleResize);
     };
   }, [stickyManager, handleScroll]);
-  const finalClassName = classNames(className, styles$w.Scrollable, vertical && styles$w.vertical, horizontal && styles$w.horizontal, shadow && topShadow && styles$w.hasTopShadow, shadow && bottomShadow && styles$w.hasBottomShadow, scrollbarWidth && styles$w[variationName("scrollbarWidth", scrollbarWidth)], scrollbarGutter && styles$w[variationName("scrollbarGutter", scrollbarGutter.replace(" ", ""))]);
+  const finalClassName = classNames(className, styles$x.Scrollable, vertical && styles$x.vertical, horizontal && styles$x.horizontal, shadow && topShadow && styles$x.hasTopShadow, shadow && bottomShadow && styles$x.hasBottomShadow, scrollbarWidth && styles$x[variationName("scrollbarWidth", scrollbarWidth)], scrollbarGutter && styles$x[variationName("scrollbarGutter", scrollbarGutter.replace(" ", ""))]);
   return /* @__PURE__ */ React.createElement(ScrollableContext.Provider, {
     value: scrollTo
   }, /* @__PURE__ */ React.createElement(StickyManagerContext.Provider, {
@@ -2685,7 +2688,7 @@ class PositionedOverlay extends PureComponent {
     }
   }
   render() {
-    var _a2;
+    var _a;
     const {
       left,
       right,
@@ -2707,7 +2710,7 @@ class PositionedOverlay extends PureComponent {
       width: width == null || isNaN(width) ? void 0 : width,
       zIndex: zIndexOverride || zIndex || void 0
     };
-    const className = classNames(styles$x.PositionedOverlay, fixed && styles$x.fixed, preventInteraction && styles$x.preventInteraction, propClassNames);
+    const className = classNames(styles$y.PositionedOverlay, fixed && styles$y.fixed, preventInteraction && styles$y.preventInteraction, propClassNames);
     return /* @__PURE__ */ React.createElement("div", {
       className,
       style,
@@ -2715,7 +2718,7 @@ class PositionedOverlay extends PureComponent {
     }, /* @__PURE__ */ React.createElement(EventListener, {
       event: "resize",
       handler: this.handleMeasurement,
-      window: (_a2 = this.overlay) == null ? void 0 : _a2.ownerDocument.defaultView
+      window: (_a = this.overlay) == null ? void 0 : _a.ownerDocument.defaultView
     }), render(this.overlayDetails()));
   }
   get firstScrollableContainer() {
@@ -2787,8 +2790,8 @@ function TooltipOverlay({
       positioning,
       chevronOffset
     } = overlayDetails;
-    const containerClassName = classNames(styles$y.TooltipOverlay, measuring && styles$y.measuring, !measuring && styles$y.measured, instant && styles$y.instant, positioning === "above" && styles$y.positionedAbove);
-    const contentClassName = classNames(styles$y.Content, width && styles$y[width]);
+    const containerClassName = classNames(styles$z.TooltipOverlay, measuring && styles$z.measuring, !measuring && styles$z.measured, instant && styles$z.instant, positioning === "above" && styles$z.positionedAbove);
+    const contentClassName = classNames(styles$z.Content, width && styles$z[width]);
     const contentStyles = measuring ? void 0 : {
       minHeight: desiredHeight
     };
@@ -2801,7 +2804,7 @@ function TooltipOverlay({
       style,
       className: containerClassName
     }, layer.props), /* @__PURE__ */ React.createElement("svg", {
-      className: styles$y.Tail,
+      className: styles$z.Tail,
       width: "19",
       height: "11",
       fill: "none"
@@ -2927,7 +2930,7 @@ function Tooltip({
     as: "span",
     variant: "bodyMd"
   }, content))) : null;
-  const wrapperClassNames = classNames(activatorWrapper === "div" && styles$z.TooltipContainer, hasUnderline && styles$z.HasUnderline);
+  const wrapperClassNames = classNames(activatorWrapper === "div" && styles$A.TooltipContainer, hasUnderline && styles$A.HasUnderline);
   return /* @__PURE__ */ React.createElement(WrapperComponent, {
     onFocus: () => {
       handleOpen();
@@ -3010,22 +3013,22 @@ function Item$4({
   role,
   variant = "default"
 }) {
-  const className = classNames(styles$C.Item, disabled && styles$C.disabled, destructive && styles$C.destructive, active && styles$C.active, variant === "default" && styles$C.default, variant === "indented" && styles$C.indented, variant === "menu" && styles$C.menu);
+  const className = classNames(styles$D.Item, disabled && styles$D.disabled, destructive && styles$D.destructive, active && styles$D.active, variant === "default" && styles$D.default, variant === "indented" && styles$D.indented, variant === "menu" && styles$D.menu);
   let prefixMarkup = null;
   if (prefix) {
     prefixMarkup = /* @__PURE__ */ React.createElement("span", {
-      className: styles$C.Prefix
+      className: styles$D.Prefix
     }, prefix);
   } else if (icon) {
     prefixMarkup = /* @__PURE__ */ React.createElement("span", {
-      className: styles$C.Prefix
+      className: styles$D.Prefix
     }, /* @__PURE__ */ React.createElement(Icon, {
       source: icon
     }));
   } else if (image) {
     prefixMarkup = /* @__PURE__ */ React.createElement("span", {
       role: "presentation",
-      className: styles$C.Prefix,
+      className: styles$D.Prefix,
       style: {
         backgroundImage: `url(${image}`
       }
@@ -3047,15 +3050,15 @@ function Item$4({
     fontWeight: active ? "semibold" : "regular"
   }, contentText);
   const badgeMarkup = badge && /* @__PURE__ */ React.createElement("span", {
-    className: styles$C.Suffix
+    className: styles$D.Suffix
   }, /* @__PURE__ */ React.createElement(Badge, {
     tone: badge.tone
   }, badge.content));
   const suffixMarkup = suffix && /* @__PURE__ */ React.createElement(Box, null, /* @__PURE__ */ React.createElement("span", {
-    className: styles$C.Suffix
+    className: styles$D.Suffix
   }, suffix));
   const textMarkup = /* @__PURE__ */ React.createElement("span", {
-    className: styles$C.Text
+    className: styles$D.Text
   }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd",
@@ -3242,7 +3245,7 @@ function KeypressListener({
   }, [keyEvent, handleKeyEvent, useCapture, options, ownerDocument]);
   return null;
 }
-var styles$v = {
+var styles$w = {
   "TextField": "Polaris-TextField",
   "ClearButton": "Polaris-TextField__ClearButton",
   "Loading": "Polaris-TextField__Loading",
@@ -3280,7 +3283,7 @@ var styles$v = {
   "Segment": "Polaris-TextField__Segment",
   "monospaced": "Polaris-TextField--monospaced"
 };
-var styles$u = {
+var styles$v = {
   "hidden": "Polaris-Labelled--hidden",
   "LabelWrapper": "Polaris-Labelled__LabelWrapper",
   "disabled": "Polaris-Labelled--disabled",
@@ -3289,7 +3292,7 @@ var styles$u = {
   "Error": "Polaris-Labelled__Error",
   "Action": "Polaris-Labelled__Action"
 };
-var styles$t = {
+var styles$u = {
   "InlineError": "Polaris-InlineError",
   "Icon": "Polaris-InlineError__Icon"
 };
@@ -3302,9 +3305,9 @@ function InlineError({
   }
   return /* @__PURE__ */ React.createElement("div", {
     id: errorTextID(fieldID),
-    className: styles$t.InlineError
+    className: styles$u.InlineError
   }, /* @__PURE__ */ React.createElement("div", {
-    className: styles$t.Icon
+    className: styles$u.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: AlertCircleIcon
   })), /* @__PURE__ */ React.createElement(Text, {
@@ -3315,7 +3318,7 @@ function InlineError({
 function errorTextID(id) {
   return `${id}Error`;
 }
-var styles$s = {
+var styles$t = {
   "Label": "Polaris-Label",
   "hidden": "Polaris-Label--hidden",
   "Text": "Polaris-Label__Text",
@@ -3330,13 +3333,13 @@ function Label({
   hidden,
   requiredIndicator
 }) {
-  const className = classNames(styles$s.Label, hidden && styles$s.hidden);
+  const className = classNames(styles$t.Label, hidden && styles$t.hidden);
   return /* @__PURE__ */ React.createElement("div", {
     className
   }, /* @__PURE__ */ React.createElement("label", {
     id: labelID(id),
     htmlFor: id,
-    className: classNames(styles$s.Text, requiredIndicator && styles$s.RequiredIndicator)
+    className: classNames(styles$t.Text, requiredIndicator && styles$t.RequiredIndicator)
   }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     variant: "bodyMd"
@@ -3355,14 +3358,14 @@ function Labelled({
   readOnly,
   ...rest
 }) {
-  const className = classNames(labelHidden && styles$u.hidden, disabled && styles$u.disabled, readOnly && styles$u.readOnly);
+  const className = classNames(labelHidden && styles$v.hidden, disabled && styles$v.disabled, readOnly && styles$v.readOnly);
   const actionMarkup = action2 ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$u.Action
+    className: styles$v.Action
   }, buttonFrom(action2, {
     variant: "plain"
   })) : null;
   const helpTextMarkup = helpText ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$u.HelpText,
+    className: styles$v.HelpText,
     id: helpTextID$1(id),
     "aria-disabled": disabled
   }, /* @__PURE__ */ React.createElement(Text, {
@@ -3372,13 +3375,13 @@ function Labelled({
     breakWord: true
   }, helpText)) : null;
   const errorMarkup = error && typeof error !== "boolean" && /* @__PURE__ */ React.createElement("div", {
-    className: styles$u.Error
+    className: styles$v.Error
   }, /* @__PURE__ */ React.createElement(InlineError, {
     message: error,
     fieldID: id
   }));
   const labelMarkup = label ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$u.LabelWrapper
+    className: styles$v.LabelWrapper
   }, /* @__PURE__ */ React.createElement(Label, Object.assign({
     id,
     requiredIndicator
@@ -3392,7 +3395,7 @@ function Labelled({
 function helpTextID$1(id) {
   return `${id}HelpText`;
 }
-var styles$r = {
+var styles$s = {
   "Connected": "Polaris-Connected",
   "Item": "Polaris-Connected__Item",
   "Item-primary": "Polaris-Connected__Item--primary",
@@ -3407,7 +3410,7 @@ function Item$3({
     setTrue: forceTrueFocused,
     setFalse: forceFalseFocused
   } = useToggle(false);
-  const className = classNames(styles$r.Item, focused && styles$r["Item-focused"], position === "primary" ? styles$r["Item-primary"] : styles$r["Item-connection"]);
+  const className = classNames(styles$s.Item, focused && styles$s["Item-focused"], position === "primary" ? styles$s["Item-primary"] : styles$s["Item-connection"]);
   return /* @__PURE__ */ React.createElement("div", {
     onBlur: forceFalseFocused,
     onFocus: forceTrueFocused,
@@ -3426,7 +3429,7 @@ function Connected({
     position: "right"
   }, right) : null;
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$r.Connected
+    className: styles$s.Connected
   }, leftConnectionMarkup, /* @__PURE__ */ React.createElement(Item$3, {
     position: "primary"
   }, children), rightConnectionMarkup);
@@ -3448,32 +3451,32 @@ const Spinner = /* @__PURE__ */ React.forwardRef(function Spinner2({
     };
   }
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.Spinner,
+    className: styles$w.Spinner,
     onClick,
     "aria-hidden": true,
     ref
   }, /* @__PURE__ */ React.createElement("div", {
     role: "button",
-    className: styles$v.Segment,
+    className: styles$w.Segment,
     tabIndex: -1,
     onClick: handleStep(1),
     onMouseDown: handleMouseDown(handleStep(1)),
     onMouseUp,
     onBlur
   }, /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.SpinnerIcon
+    className: styles$w.SpinnerIcon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: ChevronUpIcon
   }))), /* @__PURE__ */ React.createElement("div", {
     role: "button",
-    className: styles$v.Segment,
+    className: styles$w.Segment,
     tabIndex: -1,
     onClick: handleStep(-1),
     onMouseDown: handleMouseDown(handleStep(-1)),
     onMouseUp,
     onBlur
   }, /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.SpinnerIcon
+    className: styles$w.SpinnerIcon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: ChevronDownIcon
   }))));
@@ -3500,7 +3503,7 @@ function Resizer({
   }, []);
   const minimumLinesMarkup = minimumLines ? /* @__PURE__ */ React.createElement("div", {
     ref: minimumLinesNode,
-    className: styles$v.DummyInput,
+    className: styles$w.DummyInput,
     dangerouslySetInnerHTML: {
       __html: getContentsForMinimumLines(minimumLines)
     }
@@ -3524,13 +3527,13 @@ function Resizer({
   });
   return /* @__PURE__ */ React.createElement("div", {
     "aria-hidden": true,
-    className: styles$v.Resizer
+    className: styles$w.Resizer
   }, /* @__PURE__ */ React.createElement(EventListener, {
     event: "resize",
     handler: handleHeightCheck
   }), /* @__PURE__ */ React.createElement("div", {
     ref: contentNode,
-    className: styles$v.DummyInput,
+    className: styles$w.DummyInput,
     dangerouslySetInnerHTML: {
       __html: getFinalContents(contents)
     }
@@ -3648,12 +3651,12 @@ function TextField({
   const normalizedStep = step != null ? step : 1;
   const normalizedMax = max != null ? max : Infinity;
   const normalizedMin = min != null ? min : -Infinity;
-  const className = classNames(styles$v.TextField, Boolean(normalizedValue) && styles$v.hasValue, disabled && styles$v.disabled, readOnly && styles$v.readOnly, error && styles$v.error, tone && styles$v[variationName("tone", tone)], multiline && styles$v.multiline, focus && !disabled && styles$v.focus, variant !== "inherit" && styles$v[variant], size === "slim" && styles$v.slim);
+  const className = classNames(styles$w.TextField, Boolean(normalizedValue) && styles$w.hasValue, disabled && styles$w.disabled, readOnly && styles$w.readOnly, error && styles$w.error, tone && styles$w[variationName("tone", tone)], multiline && styles$w.multiline, focus && !disabled && styles$w.focus, variant !== "inherit" && styles$w[variant], size === "slim" && styles$w.slim);
   const inputType = type === "currency" ? "text" : type;
   const isNumericType = type === "number" || type === "integer";
   const iconPrefix = /* @__PURE__ */ React.isValidElement(prefix) && prefix.type === Icon;
   const prefixMarkup = prefix ? /* @__PURE__ */ React.createElement("div", {
-    className: classNames(styles$v.Prefix, iconPrefix && styles$v.PrefixIcon),
+    className: classNames(styles$w.Prefix, iconPrefix && styles$w.PrefixIcon),
     id: `${id}-Prefix`,
     ref: prefixRef
   }, /* @__PURE__ */ React.createElement(Text, {
@@ -3661,7 +3664,7 @@ function TextField({
     variant: "bodyMd"
   }, prefix)) : null;
   const suffixMarkup = suffix ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.Suffix,
+    className: styles$w.Suffix,
     id: `${id}-Suffix`,
     ref: suffixRef
   }, /* @__PURE__ */ React.createElement(Text, {
@@ -3669,7 +3672,7 @@ function TextField({
     variant: "bodyMd"
   }, suffix)) : null;
   const loadingMarkup = loading ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.Loading,
+    className: styles$w.Loading,
     id: `${id}-Loading`,
     ref: loadingRef
   }, /* @__PURE__ */ React.createElement(Spinner$1, {
@@ -3684,7 +3687,7 @@ function TextField({
     }) : i18n.translate("Polaris.TextField.characterCount", {
       count: characterCount
     });
-    const characterCountClassName = classNames(styles$v.CharacterCount, multiline && styles$v.AlignFieldBottom);
+    const characterCountClassName = classNames(styles$w.CharacterCount, multiline && styles$w.AlignFieldBottom);
     const characterCountText = !maxLength ? characterCount : `${characterCount}/${maxLength}`;
     characterCountMarkup = /* @__PURE__ */ React.createElement("div", {
       id: `${id}-CharacterCounter`,
@@ -3701,7 +3704,7 @@ function TextField({
   const clearButtonVisible = normalizedValue !== "";
   const clearButtonMarkup = clearButton && clearButtonVisible ? /* @__PURE__ */ React.createElement("button", {
     type: "button",
-    className: styles$v.ClearButton,
+    className: styles$w.ClearButton,
     onClick: handleClearButtonPress,
     disabled
   }, /* @__PURE__ */ React.createElement(Text, {
@@ -3787,7 +3790,7 @@ function TextField({
     labelledBy.push(`${id}-VerticalContent`);
   }
   labelledBy.unshift(labelID(id));
-  const inputClassName = classNames(styles$v.Input, align && styles$v[variationName("Input-align", align)], suffix && styles$v["Input-suffixed"], clearButton && styles$v["Input-hasClearButton"], monospaced && styles$v.monospaced, suggestion && styles$v.suggestion, autoSize && styles$v["Input-autoSize"]);
+  const inputClassName = classNames(styles$w.Input, align && styles$w[variationName("Input-align", align)], suffix && styles$w["Input-suffixed"], clearButton && styles$w["Input-hasClearButton"], monospaced && styles$w.monospaced, suggestion && styles$w.suggestion, autoSize && styles$w["Input-autoSize"]);
   const handleOnFocus = (event) => {
     setFocus(true);
     if (selectTextOnFocus && !suggestion) {
@@ -3853,19 +3856,19 @@ function TextField({
     "data-form-type": autoComplete === "off" ? "other" : void 0
   });
   const inputWithVerticalContentMarkup = verticalContent ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.VerticalContent,
+    className: styles$w.VerticalContent,
     id: `${id}-VerticalContent`,
     ref: verticalContentRef,
     onClick: handleClickChild
   }, verticalContent, input) : null;
   const inputMarkup = verticalContent ? inputWithVerticalContentMarkup : input;
   const backdropMarkup = /* @__PURE__ */ React.createElement("div", {
-    className: classNames(styles$v.Backdrop, connectedLeft && styles$v["Backdrop-connectedLeft"], connectedRight && styles$v["Backdrop-connectedRight"])
+    className: classNames(styles$w.Backdrop, connectedLeft && styles$w["Backdrop-connectedLeft"], connectedRight && styles$w["Backdrop-connectedRight"])
   });
   const inputAndSuffixMarkup = autoSize ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$v.InputAndSuffixWrapper
+    className: styles$w.InputAndSuffixWrapper
   }, /* @__PURE__ */ React.createElement("div", {
-    className: classNames(styles$v.AutoSizeWrapper, suffix && styles$v.AutoSizeWrapperWithSuffix),
+    className: classNames(styles$w.AutoSizeWrapper, suffix && styles$w.AutoSizeWrapperWithSuffix),
     "data-auto-size-value": value || placeholder
   }, inputMarkup), suffixMarkup) : /* @__PURE__ */ React.createElement(React.Fragment, null, inputMarkup, suffixMarkup);
   return /* @__PURE__ */ React.createElement(Labelled, {
@@ -3890,11 +3893,11 @@ function TextField({
     onChange && onChange(event.currentTarget.value, id);
   }
   function handleClick(event) {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     const {
       target
     } = event;
-    const inputRefRole = (_a2 = inputRef == null ? void 0 : inputRef.current) == null ? void 0 : _a2.getAttribute("role");
+    const inputRefRole = (_a = inputRef == null ? void 0 : inputRef.current) == null ? void 0 : _a.getAttribute("role");
     if (target === inputRef.current && inputRefRole === "combobox") {
       (_b = inputRef.current) == null ? void 0 : _b.focus();
       handleOnFocus(event);
@@ -3906,7 +3909,7 @@ function TextField({
     (_c = getInputRef()) == null ? void 0 : _c.focus();
   }
   function handleClickChild(event) {
-    var _a2;
+    var _a;
     if (!isSpinner(event.target) && !isInput(event.target)) {
       event.stopPropagation();
     }
@@ -3914,7 +3917,7 @@ function TextField({
       return;
     }
     setFocus(true);
-    (_a2 = getInputRef()) == null ? void 0 : _a2.focus();
+    (_a = getInputRef()) == null ? void 0 : _a.focus();
   }
   function handleClearButtonPress() {
     onClearButtonClick && onClearButtonClick(id);
@@ -3969,9 +3972,9 @@ function TextField({
     }
   }
   function handleOnBlur(event) {
-    var _a2;
+    var _a;
     setFocus(false);
-    if ((_a2 = textFieldRef.current) == null ? void 0 : _a2.contains(event == null ? void 0 : event.relatedTarget)) {
+    if ((_a = textFieldRef.current) == null ? void 0 : _a.contains(event == null ? void 0 : event.relatedTarget)) {
       return;
     }
     if (onBlur) {
@@ -4100,10 +4103,10 @@ function ActionList({
   }, listeners, sectionMarkup));
 }
 ActionList.Item = Item$4;
-var styles$q = {
+var styles$r = {
   "ActionMenu": "Polaris-ActionMenu"
 };
-var styles$p = {
+var styles$q = {
   "RollupActivator": "Polaris-ActionMenu-RollupActions__RollupActivator"
 };
 function setActivatorAttributes(activator, {
@@ -4131,14 +4134,14 @@ function wrapWithComponent(element, Component2, props) {
 }
 const isComponent = process.env.NODE_ENV === "development" ? hotReloadComponentCheck : (AComponent, AnotherComponent) => AComponent === AnotherComponent;
 function isElementOfType(element, Component2) {
-  var _a2;
+  var _a;
   if (element == null || !/* @__PURE__ */ isValidElement(element) || typeof element.type === "string") {
     return false;
   }
   const {
     type: defaultType
   } = element;
-  const overrideType = (_a2 = element.props) == null ? void 0 : _a2.__type__;
+  const overrideType = (_a = element.props) == null ? void 0 : _a.__type__;
   const type = overrideType || defaultType;
   const Components = Array.isArray(Component2) ? Component2 : [Component2];
   return Components.some((AComponent) => typeof type !== "string" && isComponent(AComponent, type));
@@ -4164,7 +4167,7 @@ function hotReloadComponentCheck(AComponent, AnotherComponent) {
   const anotherComponentName = AnotherComponent.displayName;
   return AComponent === AnotherComponent || Boolean(componentName) && componentName === anotherComponentName;
 }
-var styles$o = {
+var styles$p = {
   "Popover": "Polaris-Popover",
   "PopoverOverlay": "Polaris-Popover__PopoverOverlay",
   "PopoverOverlay-noAnimation": "Polaris-Popover__PopoverOverlay--noAnimation",
@@ -4191,7 +4194,7 @@ function Section$2({
   children
 }) {
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$o.Section
+    className: styles$p.Section
   }, /* @__PURE__ */ React.createElement(Box, {
     paddingInlineStart: "300",
     paddingInlineEnd: "300",
@@ -4210,7 +4213,7 @@ function Pane({
   subdued,
   onScrolledToBottom
 }) {
-  const className = classNames(styles$o.Pane, fixed && styles$o["Pane-fixed"], subdued && styles$o["Pane-subdued"], captureOverscroll && styles$o["Pane-captureOverscroll"]);
+  const className = classNames(styles$p.Pane, fixed && styles$p["Pane-fixed"], subdued && styles$p["Pane-subdued"], captureOverscroll && styles$p["Pane-captureOverscroll"]);
   const content = sectioned ? wrapWithComponent(children, Section$2, {}) : children;
   const style = {
     height,
@@ -4267,11 +4270,11 @@ class PopoverOverlay extends PureComponent {
         captureOverscroll
       } = this.props;
       const isCovering = positioning === "cover";
-      const className = classNames(styles$o.Popover, measuring && styles$o.measuring, (fullWidth || isCovering) && styles$o.fullWidth, hideOnPrint && styles$o["PopoverOverlay-hideOnPrint"], positioning && styles$o[variationName("positioned", positioning)]);
+      const className = classNames(styles$p.Popover, measuring && styles$p.measuring, (fullWidth || isCovering) && styles$p.fullWidth, hideOnPrint && styles$p["PopoverOverlay-hideOnPrint"], positioning && styles$p[variationName("positioned", positioning)]);
       const contentStyles = measuring ? void 0 : {
         height: desiredHeight
       };
-      const contentClassNames = classNames(styles$o.Content, fullHeight && styles$o["Content-fullHeight"], fluidContent && styles$o["Content-fluidContent"]);
+      const contentClassNames = classNames(styles$p.Content, fullHeight && styles$p["Content-fullHeight"], fluidContent && styles$p["Content-fluidContent"]);
       const {
         window: window2
       } = this.state;
@@ -4290,11 +4293,11 @@ class PopoverOverlay extends PureComponent {
         handler: this.handleEscape,
         document: window2 == null ? void 0 : window2.document
       }), /* @__PURE__ */ React.createElement("div", {
-        className: styles$o.FocusTracker,
+        className: styles$p.FocusTracker,
         tabIndex: 0,
         onFocus: this.handleFocusFirstItem
       }), /* @__PURE__ */ React.createElement("div", {
-        className: styles$o.ContentContainer
+        className: styles$p.ContentContainer
       }, /* @__PURE__ */ React.createElement("div", {
         id,
         tabIndex: autofocusTarget === "none" ? void 0 : -1,
@@ -4305,7 +4308,7 @@ class PopoverOverlay extends PureComponent {
         captureOverscroll,
         sectioned
       }))), /* @__PURE__ */ React.createElement("div", {
-        className: styles$o.FocusTracker,
+        className: styles$p.FocusTracker,
         tabIndex: 0,
         onFocus: this.handleFocusLastItem
       }));
@@ -4355,8 +4358,8 @@ class PopoverOverlay extends PureComponent {
     this.overlayRef = /* @__PURE__ */ createRef();
   }
   forceUpdatePosition() {
-    var _a2;
-    (_a2 = this.overlayRef.current) == null ? void 0 : _a2.forceUpdatePosition();
+    var _a;
+    (_a = this.overlayRef.current) == null ? void 0 : _a.forceUpdatePosition();
   }
   changeTransitionStatus(transitionStatus, cb) {
     this.setState({
@@ -4385,7 +4388,7 @@ class PopoverOverlay extends PureComponent {
     this.observer.observe(this.props.activator);
   }
   componentDidUpdate(oldProps) {
-    var _a2, _b;
+    var _a, _b;
     if (this.props.active && !oldProps.active) {
       this.focusContent();
       this.changeTransitionStatus(TransitionStatus.Entering, () => {
@@ -4404,14 +4407,14 @@ class PopoverOverlay extends PureComponent {
       });
     }
     if (this.props.activator !== oldProps.activator) {
-      (_a2 = this.observer) == null ? void 0 : _a2.unobserve(oldProps.activator);
+      (_a = this.observer) == null ? void 0 : _a.unobserve(oldProps.activator);
       (_b = this.observer) == null ? void 0 : _b.observe(this.props.activator);
     }
   }
   componentWillUnmount() {
-    var _a2;
+    var _a;
     this.clearTransitionTimeout();
-    (_a2 = this.observer) == null ? void 0 : _a2.disconnect();
+    (_a = this.observer) == null ? void 0 : _a.disconnect();
   }
   render() {
     const {
@@ -4428,7 +4431,7 @@ class PopoverOverlay extends PureComponent {
       transitionStatus
     } = this.state;
     if (transitionStatus === TransitionStatus.Exited && !active) return null;
-    const className = classNames(styles$o.PopoverOverlay, transitionStatus === TransitionStatus.Entering && styles$o["PopoverOverlay-entering"], transitionStatus === TransitionStatus.Entered && styles$o["PopoverOverlay-open"], transitionStatus === TransitionStatus.Exiting && styles$o["PopoverOverlay-exiting"], preferredPosition === "cover" && styles$o["PopoverOverlay-noAnimation"]);
+    const className = classNames(styles$p.PopoverOverlay, transitionStatus === TransitionStatus.Entering && styles$p["PopoverOverlay-entering"], transitionStatus === TransitionStatus.Entered && styles$p["PopoverOverlay-open"], transitionStatus === TransitionStatus.Exiting && styles$p["PopoverOverlay-exiting"], preferredPosition === "cover" && styles$p["PopoverOverlay-noAnimation"]);
     return /* @__PURE__ */ React.createElement(PositionedOverlay, {
       ref: this.overlayRef,
       fullWidth,
@@ -4520,8 +4523,8 @@ const PopoverComponent = /* @__PURE__ */ forwardRef(function Popover({
   const WrapperComponent = activatorWrapper;
   const id = useId();
   function forceUpdatePosition() {
-    var _a2;
-    (_a2 = overlayRef.current) == null ? void 0 : _a2.forceUpdatePosition();
+    var _a;
+    (_a = overlayRef.current) == null ? void 0 : _a.forceUpdatePosition();
   }
   const handleClose = (source) => {
     onClose(source);
@@ -4635,7 +4638,7 @@ function RollupActions({
     return null;
   }
   const activatorMarkup = /* @__PURE__ */ React.createElement("div", {
-    className: styles$p.RollupActivator
+    className: styles$q.RollupActivator
   }, /* @__PURE__ */ React.createElement(Button, {
     icon: MenuHorizontalIcon,
     accessibilityLabel: accessibilityLabel || i18n.translate("Polaris.ActionMenu.RollupActions.rollupButton"),
@@ -4653,7 +4656,7 @@ function RollupActions({
     onActionAnyItem: toggleRollupOpen
   }));
 }
-var styles$n = {
+var styles$o = {
   "ActionsLayoutOuter": "Polaris-ActionMenu-Actions__ActionsLayoutOuter",
   "ActionsLayout": "Polaris-ActionMenu-Actions__ActionsLayout",
   "ActionsLayout--measuring": "Polaris-ActionMenu-Actions--actionsLayoutMeasuring",
@@ -4702,10 +4705,10 @@ function getVisibleAndHiddenActionsIndices(actions = [], groups = [], disclosure
     hiddenGroups
   };
 }
-var styles$m = {
+var styles$n = {
   "Details": "Polaris-ActionMenu-MenuGroup__Details"
 };
-var styles$l = {
+var styles$m = {
   "SecondaryAction": "Polaris-ActionMenu-SecondaryAction",
   "critical": "Polaris-ActionMenu-SecondaryAction--critical"
 };
@@ -4726,7 +4729,7 @@ function SecondaryAction({
     content: helpText
   }, buttonMarkup) : buttonMarkup;
   return /* @__PURE__ */ React.createElement("div", {
-    className: classNames(styles$l.SecondaryAction, tone === "critical" && styles$l.critical)
+    className: classNames(styles$m.SecondaryAction, tone === "critical" && styles$m.critical)
   }, actionMarkup);
 }
 function MenuGroup({
@@ -4773,7 +4776,7 @@ function MenuGroup({
     sections,
     onActionAnyItem: handleClose
   }), details && /* @__PURE__ */ React.createElement("div", {
-    className: styles$m.Details
+    className: styles$n.Details
   }, details));
 }
 const ACTION_SPACING = 8;
@@ -4835,7 +4838,7 @@ function ActionsMeasurer({
   });
   useEventListener("resize", handleMeasurement);
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$n.ActionsLayoutMeasurer,
+    className: styles$o.ActionsLayoutMeasurer,
     ref: containerNode
   }, actionsMarkup, groupsMarkup, activator);
 }
@@ -5009,9 +5012,9 @@ function Actions({
     handleMeasurement
   });
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$n.ActionsLayoutOuter
+    className: styles$o.ActionsLayoutOuter
   }, actionsMeasurer, /* @__PURE__ */ React.createElement("div", {
-    className: classNames(styles$n.ActionsLayout, !hasMeasured && styles$n["ActionsLayout--measuring"])
+    className: classNames(styles$o.ActionsLayout, !hasMeasured && styles$o["ActionsLayout--measuring"])
   }, actionsMarkup, groupsMarkup));
 }
 function isMenuGroup(actionOrMenuGroup) {
@@ -5027,7 +5030,7 @@ function ActionMenu({
   if (actions.length === 0 && groups.length === 0) {
     return null;
   }
-  const actionMenuClassNames = classNames(styles$q.ActionMenu, rollup && styles$q.rollup);
+  const actionMenuClassNames = classNames(styles$r.ActionMenu, rollup && styles$r.rollup);
   const rollupSections = groups.map((group) => convertGroupToSection(group));
   return /* @__PURE__ */ React.createElement("div", {
     className: actionMenuClassNames
@@ -5058,7 +5061,7 @@ function convertGroupToSection({
   };
 }
 const WithinListboxContext = /* @__PURE__ */ createContext(false);
-var styles$k = {
+var styles$l = {
   "Checkbox": "Polaris-Checkbox",
   "ChoiceLabel": "Polaris-Checkbox__ChoiceLabel",
   "Backdrop": "Polaris-Checkbox__Backdrop",
@@ -5072,7 +5075,7 @@ var styles$k = {
   "checked": "Polaris-Checkbox--checked",
   "pathAnimation": "Polaris-Checkbox--pathAnimation"
 };
-var styles$j = {
+var styles$k = {
   "Choice": "Polaris-Choice",
   "labelHidden": "Polaris-Choice--labelHidden",
   "Label": "Polaris-Choice__Label",
@@ -5100,7 +5103,7 @@ function Choice({
   bleedInlineEnd,
   tone
 }) {
-  const className = classNames(styles$j.Choice, labelHidden && styles$j.labelHidden, disabled && styles$j.disabled, tone && styles$j[variationName("tone", tone)], labelClassName);
+  const className = classNames(styles$k.Choice, labelHidden && styles$k.labelHidden, disabled && styles$k.disabled, tone && styles$k[variationName("tone", tone)], labelClassName);
   const labelStyle = {
     // Pass through overrides for bleed values if they're set by the prop
     ...getResponsiveProps("choice", "bleed-block-end", "space", bleedBlockEnd || bleed),
@@ -5125,29 +5128,29 @@ function Choice({
       onClick,
       style: sanitizeCustomProperties(labelStyle)
     }, /* @__PURE__ */ React.createElement("span", {
-      className: styles$j.Control
+      className: styles$k.Control
     }, children), /* @__PURE__ */ React.createElement("span", {
-      className: styles$j.Label
+      className: styles$k.Label
     }, /* @__PURE__ */ React.createElement(Text, {
       as: "span",
       variant: "bodyMd"
     }, label)))
   );
   const helpTextMarkup = helpText ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$j.HelpText,
+    className: styles$k.HelpText,
     id: helpTextID(id)
   }, /* @__PURE__ */ React.createElement(Text, {
     as: "span",
     tone: disabled ? void 0 : "subdued"
   }, helpText)) : null;
   const errorMarkup = error && typeof error !== "boolean" && /* @__PURE__ */ React.createElement("div", {
-    className: styles$j.Error
+    className: styles$k.Error
   }, /* @__PURE__ */ React.createElement(InlineError, {
     message: error,
     fieldID: id
   }));
   const descriptionMarkup = helpTextMarkup || errorMarkup ? /* @__PURE__ */ React.createElement("div", {
-    className: styles$j.Descriptions
+    className: styles$k.Descriptions
   }, errorMarkup, helpTextMarkup) : null;
   return descriptionMarkup ? /* @__PURE__ */ React.createElement("div", null, labelMarkup, descriptionMarkup) : labelMarkup;
 }
@@ -5210,7 +5213,7 @@ const Checkbox = /* @__PURE__ */ forwardRef(function Checkbox2({
     describedBy.push(ariaDescribedByProp);
   }
   const ariaDescribedBy = describedBy.length ? describedBy.join(" ") : void 0;
-  const wrapperClassName = classNames(styles$k.Checkbox, error && styles$k.error);
+  const wrapperClassName = classNames(styles$l.Checkbox, error && styles$l.error);
   const isIndeterminate = checked === "indeterminate";
   const isChecked = !isIndeterminate && Boolean(checked);
   const indeterminateAttributes = isIndeterminate ? {
@@ -5224,7 +5227,7 @@ const Checkbox = /* @__PURE__ */ forwardRef(function Checkbox2({
     shapeRendering: "geometricPrecision",
     textRendering: "geometricPrecision"
   }, /* @__PURE__ */ React.createElement("path", {
-    className: classNames(checked && styles$k.checked),
+    className: classNames(checked && styles$l.checked),
     d: "M1.5,5.5L3.44655,8.22517C3.72862,8.62007,4.30578,8.64717,4.62362,8.28044L10.5,1.5",
     transform: "translate(2 2.980376)",
     opacity: "0",
@@ -5235,7 +5238,7 @@ const Checkbox = /* @__PURE__ */ forwardRef(function Checkbox2({
     strokeLinejoin: "round",
     pathLength: "1"
   }));
-  const inputClassName = classNames(styles$k.Input, isIndeterminate && styles$k["Input-indeterminate"], tone && styles$k[variationName("tone", tone)]);
+  const inputClassName = classNames(styles$l.Input, isIndeterminate && styles$l["Input-indeterminate"], tone && styles$l[variationName("tone", tone)]);
   const extraChoiceProps = {
     helpText,
     error,
@@ -5250,7 +5253,7 @@ const Checkbox = /* @__PURE__ */ forwardRef(function Checkbox2({
     label,
     labelHidden,
     disabled,
-    labelClassName: classNames(styles$k.ChoiceLabel, labelClassName),
+    labelClassName: classNames(styles$l.ChoiceLabel, labelClassName),
     fill,
     tone
   }, extraChoiceProps), /* @__PURE__ */ React.createElement("span", {
@@ -5273,11 +5276,11 @@ const Checkbox = /* @__PURE__ */ forwardRef(function Checkbox2({
     "aria-describedby": ariaDescribedBy,
     role: isWithinListbox ? "presentation" : "checkbox"
   }, indeterminateAttributes)), /* @__PURE__ */ React.createElement("span", {
-    className: styles$k.Backdrop,
+    className: styles$l.Backdrop,
     onClick: stopPropagation,
     onKeyUp: stopPropagation
   }), /* @__PURE__ */ React.createElement("span", {
-    className: classNames(styles$k.Icon, !isIndeterminate && styles$k.animated)
+    className: classNames(styles$l.Icon, !isIndeterminate && styles$l.animated)
   }, isIndeterminate ? /* @__PURE__ */ React.createElement(Icon, {
     source: MinusIcon
   }) : iconSource)));
@@ -5287,7 +5290,7 @@ function noop$1() {
 function stopPropagation(event) {
   event.stopPropagation();
 }
-var styles$i = {
+var styles$j = {
   "Backdrop": "Polaris-Backdrop",
   "transparent": "Polaris-Backdrop--transparent",
   "belowNavigation": "Polaris-Backdrop--belowNavigation"
@@ -5317,7 +5320,7 @@ function Backdrop(props) {
     transparent,
     setClosing
   } = props;
-  const className = classNames(styles$i.Backdrop, belowNavigation && styles$i.belowNavigation, transparent && styles$i.transparent);
+  const className = classNames(styles$j.Backdrop, belowNavigation && styles$j.belowNavigation, transparent && styles$j.transparent);
   const handleMouseDown = () => {
     if (setClosing) {
       setClosing(true);
@@ -5339,7 +5342,7 @@ function Backdrop(props) {
   }));
 }
 const BannerContext = /* @__PURE__ */ createContext(false);
-var styles$h = {
+var styles$i = {
   "Banner": "Polaris-Banner",
   "keyFocused": "Polaris-Banner--keyFocused",
   "withinContentContainer": "Polaris-Banner--withinContentContainer",
@@ -5414,8 +5417,8 @@ function useBannerFocus(bannerRef) {
   const [shouldShowFocus, setShouldShowFocus] = useState(false);
   useImperativeHandle(bannerRef, () => ({
     focus: () => {
-      var _a2;
-      (_a2 = wrapperRef.current) == null ? void 0 : _a2.focus();
+      var _a;
+      (_a = wrapperRef.current) == null ? void 0 : _a.focus();
       setShouldShowFocus(true);
     }
   }), []);
@@ -5437,7 +5440,7 @@ function useBannerFocus(bannerRef) {
     shouldShowFocus
   };
 }
-var styles$g = {
+var styles$h = {
   "ButtonGroup": "Polaris-ButtonGroup",
   "Item": "Polaris-ButtonGroup__Item",
   "Item-plain": "Polaris-ButtonGroup__Item--plain",
@@ -5457,7 +5460,7 @@ function Item$2({
     setTrue: forceTrueFocused,
     setFalse: forceFalseFocused
   } = useToggle(false);
-  const className = classNames(styles$g.Item, focused && styles$g["Item-focused"], button.props.variant === "plain" && styles$g["Item-plain"]);
+  const className = classNames(styles$h.Item, focused && styles$h["Item-focused"], button.props.variant === "plain" && styles$h["Item-plain"]);
   return /* @__PURE__ */ React.createElement("div", {
     className,
     onFocus: forceTrueFocused,
@@ -5472,7 +5475,7 @@ function ButtonGroup({
   connectedTop,
   noWrap
 }) {
-  const className = classNames(styles$g.ButtonGroup, gap && styles$g[gap], variant && styles$g[variationName("variant", variant)], fullWidth && styles$g.fullWidth, noWrap && styles$g.noWrap);
+  const className = classNames(styles$h.ButtonGroup, gap && styles$h[gap], variant && styles$h[variationName("variant", variant)], fullWidth && styles$h.fullWidth, noWrap && styles$h.noWrap);
   const contents = elementChildren(children).map((child, index) => /* @__PURE__ */ React.createElement(Item$2, {
     button: child,
     key: index
@@ -5498,7 +5501,7 @@ const Banner = /* @__PURE__ */ forwardRef(function Banner2(props, bannerRef) {
     handleMouseUp,
     shouldShowFocus
   } = useBannerFocus(bannerRef);
-  const className = classNames(styles$h.Banner, shouldShowFocus && styles$h.keyFocused, withinContentContainer ? styles$h.withinContentContainer : styles$h.withinPage);
+  const className = classNames(styles$i.Banner, shouldShowFocus && styles$i.keyFocused, withinContentContainer ? styles$i.withinContentContainer : styles$i.withinPage);
   return /* @__PURE__ */ React.createElement(BannerContext.Provider, {
     value: true
   }, /* @__PURE__ */ React.createElement("div", {
@@ -5536,7 +5539,7 @@ function BannerLayout({
       breakWord: true
     }, title) : null,
     bannerIcon: hideIcon ? null : /* @__PURE__ */ React.createElement("span", {
-      className: styles$h[bannerColors.icon]
+      className: styles$i[bannerColors.icon]
     }, /* @__PURE__ */ React.createElement(Icon, {
       source: icon ?? bannerAttributes[bannerTone].icon
     })),
@@ -5548,7 +5551,7 @@ function BannerLayout({
     dismissButton: onDismiss ? /* @__PURE__ */ React.createElement(Button, {
       variant: "tertiary",
       icon: /* @__PURE__ */ React.createElement("span", {
-        className: styles$h[isInlineIconBanner ? "icon-secondary" : bannerColors.icon]
+        className: styles$i[isInlineIconBanner ? "icon-secondary" : bannerColors.icon]
       }, /* @__PURE__ */ React.createElement(Icon, {
         source: XIcon
       })),
@@ -5623,8 +5626,8 @@ function InlineIconBanner({
   const iconNode = useRef(null);
   const dismissIconNode = useRef(null);
   const handleResize = useCallback(() => {
-    var _a2, _b, _c;
-    const contentHeight = (_a2 = contentNode.current) == null ? void 0 : _a2.offsetHeight;
+    var _a, _b, _c;
+    const contentHeight = (_a = contentNode.current) == null ? void 0 : _a.offsetHeight;
     const iconBoxHeight = ((_b = iconNode.current) == null ? void 0 : _b.offsetHeight) || ((_c = dismissIconNode.current) == null ? void 0 : _c.offsetHeight);
     if (!contentHeight || !iconBoxHeight) return;
     contentHeight > iconBoxHeight ? setBlockAlign("start") : setBlockAlign("center");
@@ -5658,7 +5661,7 @@ function InlineIconBanner({
     gap: "200"
   }, /* @__PURE__ */ React.createElement("div", null, children), actionButtons)))), /* @__PURE__ */ React.createElement("div", {
     ref: dismissIconNode,
-    className: styles$h.DismissIcon
+    className: styles$i.DismissIcon
   }, dismissButton)));
 }
 function WithinContentContainerBanner({
@@ -5692,7 +5695,7 @@ function WithinContentContainerBanner({
     gap: "050"
   }, bannerTitle, /* @__PURE__ */ React.createElement("div", null, children)), actionButtons))), dismissButton));
 }
-var styles$f = {
+var styles$g = {
   "Bleed": "Polaris-Bleed"
 };
 const Bleed = ({
@@ -5734,7 +5737,7 @@ const Bleed = ({
     ...getResponsiveProps("bleed", "margin-inline-end", "space", negativeMarginInlineEnd)
   };
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$f.Bleed,
+    className: styles$g.Bleed,
     style: sanitizeCustomProperties(style)
   }, children);
 };
@@ -5753,7 +5756,7 @@ function Breadcrumbs({
     accessibilityLabel: backAction.accessibilityLabel ?? content
   });
 }
-var styles$e = {
+var styles$f = {
   "InlineGrid": "Polaris-InlineGrid"
 };
 function InlineGrid({
@@ -5768,7 +5771,7 @@ function InlineGrid({
     "--pc-inline-grid-align-items": alignItems
   };
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$e.InlineGrid,
+    className: styles$f.InlineGrid,
     style: sanitizeCustomProperties(style)
   }, children);
 }
@@ -5837,7 +5840,7 @@ function getPrevAndCurrentColumns(tableData, columnData) {
     currentColumn
   };
 }
-var styles$d = {
+var styles$e = {
   "DataTable": "Polaris-DataTable",
   "condensed": "Polaris-DataTable--condensed",
   "Navigation": "Polaris-DataTable__Navigation",
@@ -5912,9 +5915,9 @@ function Cell({
 }) {
   const i18n = useI18n();
   const numeric = contentType === "numeric";
-  const className = classNames(styles$d.Cell, styles$d[`Cell-${variationName("verticalAlign", verticalAlign)}`], firstColumn && styles$d["Cell-firstColumn"], truncate && styles$d["Cell-truncated"], header && styles$d["Cell-header"], total && styles$d["Cell-total"], totalInFooter && styles$d["Cell-total-footer"], numeric && styles$d["Cell-numeric"], sortable && styles$d["Cell-sortable"], sorted && styles$d["Cell-sorted"], stickyHeadingCell && styles$d.StickyHeaderCell, hovered && styles$d["Cell-hovered"], lastFixedFirstColumn && inFixedNthColumn && fixedCellVisible && styles$d["Cell-separate"], nthColumn && inFixedNthColumn && stickyHeadingCell && styles$d.FixedFirstColumn);
-  const headerClassName = classNames(header && styles$d.Heading, header && contentType === "text" && styles$d["Heading-left"]);
-  const iconClassName = classNames(sortable && styles$d.Icon);
+  const className = classNames(styles$e.Cell, styles$e[`Cell-${variationName("verticalAlign", verticalAlign)}`], firstColumn && styles$e["Cell-firstColumn"], truncate && styles$e["Cell-truncated"], header && styles$e["Cell-header"], total && styles$e["Cell-total"], totalInFooter && styles$e["Cell-total-footer"], numeric && styles$e["Cell-numeric"], sortable && styles$e["Cell-sortable"], sorted && styles$e["Cell-sorted"], stickyHeadingCell && styles$e.StickyHeaderCell, hovered && styles$e["Cell-hovered"], lastFixedFirstColumn && inFixedNthColumn && fixedCellVisible && styles$e["Cell-separate"], nthColumn && inFixedNthColumn && stickyHeadingCell && styles$e.FixedFirstColumn);
+  const headerClassName = classNames(header && styles$e.Heading, header && contentType === "text" && styles$e["Heading-left"]);
+  const iconClassName = classNames(sortable && styles$e.Icon);
   const direction = sorted && sortDirection ? sortDirection : defaultSortDirection;
   const source = direction === "descending" ? SortDescendingIcon : SortAscendingIcon;
   const oppositeDirection = sortDirection === "ascending" ? "descending" : "ascending";
@@ -5971,7 +5974,7 @@ function Cell({
       ...minWidthStyles
     }
   }), truncate ? /* @__PURE__ */ React.createElement(TruncatedText, {
-    className: styles$d.TooltipContent
+    className: styles$e.TooltipContent
   }, content) : content);
   const cellMarkup = header || firstColumn || nthColumn ? headingMarkup : /* @__PURE__ */ React.createElement("td", Object.assign({
     className
@@ -6010,7 +6013,7 @@ function isInputFocused() {
   } = document.activeElement;
   return tagName === EditableTarget.Input || tagName === EditableTarget.Textarea || tagName === EditableTarget.Select || document.activeElement.hasAttribute(EditableTarget.ContentEditable);
 }
-var styles$c = {
+var styles$d = {
   "Pagination": "Polaris-Pagination",
   "table": "Polaris-Pagination--table",
   "TablePaginationActions": "Polaris-Pagination__TablePaginationActions"
@@ -6087,7 +6090,7 @@ function Pagination({
     return /* @__PURE__ */ React.createElement("nav", {
       "aria-label": navLabel,
       ref: node,
-      className: classNames(styles$c.Pagination, styles$c.table)
+      className: classNames(styles$d.Pagination, styles$d.table)
     }, previousButtonEvents, nextButtonEvents, /* @__PURE__ */ React.createElement(Box, {
       background: "bg-surface-secondary",
       paddingBlockStart: "150",
@@ -6098,7 +6101,7 @@ function Pagination({
       align: "center",
       blockAlign: "center"
     }, /* @__PURE__ */ React.createElement("div", {
-      className: styles$c.TablePaginationActions,
+      className: styles$d.TablePaginationActions,
       "data-buttongroup-variant": "segmented"
     }, /* @__PURE__ */ React.createElement("div", null, constructedPrevious), labelMarkup2, /* @__PURE__ */ React.createElement("div", null, constructedNext)))));
   }
@@ -6116,7 +6119,7 @@ function Pagination({
   return /* @__PURE__ */ React.createElement("nav", {
     "aria-label": navLabel,
     ref: node,
-    className: styles$c.Pagination
+    className: styles$d.Pagination
   }, previousButtonEvents, nextButtonEvents, /* @__PURE__ */ React.createElement(ButtonGroup, {
     variant: "segmented"
   }, constructedPrevious, labelMarkup, constructedNext));
@@ -6297,7 +6300,7 @@ function Navigation({
   const i18n = useI18n();
   const pipMarkup = columnVisibilityData.map((column, index) => {
     if (index < fixedFirstColumns) return;
-    const className = classNames(styles$d.Pip, column.isVisible && styles$d["Pip-visible"]);
+    const className = classNames(styles$e.Pip, column.isVisible && styles$e["Pip-visible"]);
     return /* @__PURE__ */ React.createElement("div", {
       className,
       key: `pip-${index}`
@@ -6310,7 +6313,7 @@ function Navigation({
     direction: "right"
   });
   return /* @__PURE__ */ React.createElement("div", {
-    className: styles$d.Navigation,
+    className: styles$e.Navigation,
     ref: setRef
   }, /* @__PURE__ */ React.createElement(Button, {
     variant: "tertiary",
@@ -6403,12 +6406,12 @@ class DataTableInner extends PureComponent {
         headerNav
       } = this;
       const stickyFocusedItemIndex = stickyHeadings.findIndex((item) => {
-        var _a2;
-        return item === ((_a2 = document.activeElement) == null ? void 0 : _a2.parentElement);
+        var _a;
+        return item === ((_a = document.activeElement) == null ? void 0 : _a.parentElement);
       });
       const tableFocusedItemIndex = tableHeadings.findIndex((item) => {
-        var _a2;
-        return item === ((_a2 = document.activeElement) == null ? void 0 : _a2.parentElement);
+        var _a;
+        return item === ((_a = document.activeElement) == null ? void 0 : _a.parentElement);
       });
       const arrowsInStickyNav = stickyNav == null ? void 0 : stickyNav.querySelectorAll("button");
       const arrowsInHeaderNav = headerNav == null ? void 0 : headerNav.querySelectorAll("button");
@@ -6492,7 +6495,7 @@ class DataTableInner extends PureComponent {
       };
     };
     this.handleHeaderButtonFocus = (event) => {
-      var _a2;
+      var _a;
       const fixedFirstColumns = this.fixedFirstColumns();
       if (this.scrollContainer.current == null || event.target == null || this.state.columnVisibilityData.length === 0) {
         return;
@@ -6502,7 +6505,7 @@ class DataTableInner extends PureComponent {
       const tableScrollLeft = this.scrollContainer.current.scrollLeft;
       const tableViewableWidth = this.scrollContainer.current.offsetWidth;
       const tableRightEdge = tableScrollLeft + tableViewableWidth;
-      const nthColumnWidth = this.state.columnVisibilityData.length > 0 ? (_a2 = this.state.columnVisibilityData[fixedFirstColumns]) == null ? void 0 : _a2.rightEdge : 0;
+      const nthColumnWidth = this.state.columnVisibilityData.length > 0 ? (_a = this.state.columnVisibilityData[fixedFirstColumns]) == null ? void 0 : _a.rightEdge : 0;
       const currentColumnLeftEdge = currentCell.offsetLeft;
       const currentColumnRightEdge = currentCell.offsetLeft + currentCell.offsetWidth;
       if (tableScrollLeft > currentColumnLeftEdge - nthColumnWidth) {
@@ -6525,7 +6528,7 @@ class DataTableInner extends PureComponent {
       stickyTable.scrollLeft = scrollContainer.scrollLeft;
     };
     this.scrollListener = () => {
-      var _a2;
+      var _a;
       if (this.scrollStopTimer) {
         clearTimeout(this.scrollStopTimer);
       }
@@ -6535,7 +6538,7 @@ class DataTableInner extends PureComponent {
         }));
       }, 100);
       this.setState({
-        isScrolledFarthestLeft: ((_a2 = this.scrollContainer.current) == null ? void 0 : _a2.scrollLeft) === 0
+        isScrolledFarthestLeft: ((_a = this.scrollContainer.current) == null ? void 0 : _a.scrollLeft) === 0
       });
       if (this.props.stickyHeader && this.stickyHeaderActive) {
         this.stickyHeaderScrolling();
@@ -6547,14 +6550,14 @@ class DataTableInner extends PureComponent {
       });
     };
     this.handleFocus = (event) => {
-      var _a2;
+      var _a;
       const fixedFirstColumns = this.fixedFirstColumns();
       if (this.scrollContainer.current == null || event.target == null) {
         return;
       }
       const currentCell = event.target.parentNode;
       const fixedNthColumn = this.props;
-      const nthColumnWidth = fixedNthColumn ? (_a2 = this.state.columnVisibilityData[fixedFirstColumns]) == null ? void 0 : _a2.rightEdge : 0;
+      const nthColumnWidth = fixedNthColumn ? (_a = this.state.columnVisibilityData[fixedFirstColumns]) == null ? void 0 : _a.rightEdge : 0;
       const currentColumnLeftEdge = currentCell.offsetLeft;
       const desiredScrollLeft = currentColumnLeftEdge - nthColumnWidth;
       if (this.scrollContainer.current.scrollLeft > desiredScrollLeft) {
@@ -6562,13 +6565,13 @@ class DataTableInner extends PureComponent {
       }
     };
     this.navigateTable = (direction) => {
-      var _a2;
+      var _a;
       const fixedFirstColumns = this.fixedFirstColumns();
       const {
         currentColumn,
         previousColumn
       } = this.state;
-      const nthColumnWidth = (_a2 = this.state.columnVisibilityData[fixedFirstColumns - 1]) == null ? void 0 : _a2.rightEdge;
+      const nthColumnWidth = (_a = this.state.columnVisibilityData[fixedFirstColumns - 1]) == null ? void 0 : _a.rightEdge;
       if (!currentColumn || !previousColumn) {
         return;
       }
@@ -6603,7 +6606,7 @@ class DataTableInner extends PureComponent {
       inFixedNthColumn,
       inStickyHeader
     }) => {
-      var _a2;
+      var _a;
       const {
         sortable,
         truncate = false,
@@ -6680,7 +6683,7 @@ class DataTableInner extends PureComponent {
           inFixedNthColumn: Boolean(fixedFirstColumns),
           lastFixedFirstColumn: headingIndex === fixedFirstColumns - 1,
           style: {
-            left: (_a2 = this.state.columnVisibilityData[headingIndex]) == null ? void 0 : _a2.leftEdge
+            left: (_a = this.state.columnVisibilityData[headingIndex]) == null ? void 0 : _a.leftEdge
           }
         }))];
       }
@@ -6771,7 +6774,7 @@ class DataTableInner extends PureComponent {
         condensed
       } = this.state;
       const fixedFirstColumns = this.fixedFirstColumns();
-      const className = classNames(styles$d.TableRow, hoverable && styles$d.hoverable);
+      const className = classNames(styles$e.TableRow, hoverable && styles$e.hoverable);
       return /* @__PURE__ */ React.createElement("tr", {
         key: `row-${index}`,
         className,
@@ -6844,7 +6847,7 @@ class DataTableInner extends PureComponent {
     this.handleResize.cancel();
   }
   render() {
-    var _a2, _b, _c;
+    var _a, _b, _c;
     const {
       headings,
       totals,
@@ -6869,8 +6872,8 @@ class DataTableInner extends PureComponent {
     }
     const fixedFirstColumns = this.fixedFirstColumns();
     const rowCountIsEven = rows.length % 2 === 0;
-    const className = classNames(styles$d.DataTable, condensed && styles$d.condensed, totals && styles$d.ShowTotals, showTotalsInFooter && styles$d.ShowTotalsInFooter, hasZebraStripingOnData && styles$d.ZebraStripingOnData, hasZebraStripingOnData && rowCountIsEven && styles$d.RowCountIsEven);
-    const wrapperClassName = classNames(styles$d.TableWrapper, condensed && styles$d.condensed, increasedTableDensity && styles$d.IncreasedTableDensity, stickyHeader && styles$d.StickyHeaderEnabled);
+    const className = classNames(styles$e.DataTable, condensed && styles$e.condensed, totals && styles$e.ShowTotals, showTotalsInFooter && styles$e.ShowTotalsInFooter, hasZebraStripingOnData && styles$e.ZebraStripingOnData, hasZebraStripingOnData && rowCountIsEven && styles$e.RowCountIsEven);
+    const wrapperClassName = classNames(styles$e.TableWrapper, condensed && styles$e.condensed, increasedTableDensity && styles$e.IncreasedTableDensity, stickyHeader && styles$e.StickyHeaderEnabled);
     const headingMarkup = /* @__PURE__ */ React.createElement("tr", null, headings.map((heading, index) => this.renderHeading({
       heading,
       headingIndex: index,
@@ -6884,12 +6887,12 @@ class DataTableInner extends PureComponent {
     const nthColumns = rows.map((row) => row.slice(0, fixedFirstColumns));
     const nthHeadings = headings.slice(0, fixedFirstColumns);
     const nthTotals = totals == null ? void 0 : totals.slice(0, fixedFirstColumns);
-    const tableHeaderRows = (_a2 = this.table.current) == null ? void 0 : _a2.children[0].childNodes;
+    const tableHeaderRows = (_a = this.table.current) == null ? void 0 : _a.children[0].childNodes;
     const tableBodyRows = (_b = this.table.current) == null ? void 0 : _b.children[1].childNodes;
     const headerRowHeights = getRowClientHeights(tableHeaderRows);
     const bodyRowHeights = getRowClientHeights(tableBodyRows);
     const fixedNthColumnMarkup = condensed && fixedFirstColumns !== 0 && /* @__PURE__ */ React.createElement("table", {
-      className: classNames(styles$d.FixedFirstColumn, !isScrolledFarthestLeft && styles$d.separate),
+      className: classNames(styles$e.FixedFirstColumn, !isScrolledFarthestLeft && styles$e.separate),
       style: {
         width: `${(_c = columnVisibilityData[fixedFirstColumns - 1]) == null ? void 0 : _c.rightEdge}px`
       }
@@ -6924,7 +6927,7 @@ class DataTableInner extends PureComponent {
       inFixedNthColumn: false
     }));
     const footerMarkup = footerContent ? /* @__PURE__ */ React.createElement("div", {
-      className: styles$d.Footer
+      className: styles$e.Footer
     }, footerContent) : null;
     const paginationMarkup = pagination ? /* @__PURE__ */ React.createElement(Pagination, Object.assign({
       type: "table"
@@ -6947,7 +6950,7 @@ class DataTableInner extends PureComponent {
       }
     });
     const stickyHeaderMarkup = stickyHeader ? /* @__PURE__ */ React.createElement(AfterInitialMount, null, /* @__PURE__ */ React.createElement("div", {
-      className: styles$d.StickyHeaderWrapper,
+      className: styles$e.StickyHeaderWrapper,
       role: "presentation"
     }, /* @__PURE__ */ React.createElement(Sticky, {
       boundingElement: this.dataTable.current,
@@ -6956,15 +6959,15 @@ class DataTableInner extends PureComponent {
         this.stickyHeaderActive = isSticky;
       }
     }, (isSticky) => {
-      const stickyHeaderInnerClassNames = classNames(styles$d.StickyHeaderInner, isSticky && styles$d["StickyHeaderInner-isSticky"]);
-      const stickyHeaderTableClassNames = classNames(styles$d.StickyHeaderTable, !isScrolledFarthestLeft && styles$d.separate);
+      const stickyHeaderInnerClassNames = classNames(styles$e.StickyHeaderInner, isSticky && styles$e["StickyHeaderInner-isSticky"]);
+      const stickyHeaderTableClassNames = classNames(styles$e.StickyHeaderTable, !isScrolledFarthestLeft && styles$e.separate);
       return /* @__PURE__ */ React.createElement("div", {
         className: stickyHeaderInnerClassNames
       }, /* @__PURE__ */ React.createElement("div", null, navigationMarkup("sticky")), /* @__PURE__ */ React.createElement("table", {
         className: stickyHeaderTableClassNames,
         ref: this.stickyTable
       }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", {
-        className: styles$d.StickyTableHeadingsRow
+        className: styles$e.StickyTableHeadingsRow
       }, headings.map((heading, index) => {
         return this.renderHeading({
           heading,
@@ -6980,7 +6983,7 @@ class DataTableInner extends PureComponent {
     }, stickyHeaderMarkup, navigationMarkup("header"), /* @__PURE__ */ React.createElement("div", {
       className
     }, /* @__PURE__ */ React.createElement("div", {
-      className: styles$d.ScrollContainer,
+      className: styles$e.ScrollContainer,
       ref: this.scrollContainer
     }, /* @__PURE__ */ React.createElement(EventListener, {
       event: "resize",
@@ -6991,7 +6994,7 @@ class DataTableInner extends PureComponent {
       event: "scroll",
       handler: this.scrollListener
     }), fixedNthColumnMarkup, /* @__PURE__ */ React.createElement("table", {
-      className: styles$d.Table,
+      className: styles$e.Table,
       ref: this.table
     }, /* @__PURE__ */ React.createElement("thead", null, headingMarkup, headerTotalsMarkup), /* @__PURE__ */ React.createElement("tbody", null, bodyMarkup), footerTotalsMarkup)), paginationMarkup, footerMarkup));
   }
@@ -7014,6 +7017,21 @@ function DataTable(props) {
     i18n
   }));
 }
+var styles$c = {
+  "Divider": "Polaris-Divider"
+};
+const Divider = ({
+  borderColor = "border-secondary",
+  borderWidth = "025"
+}) => {
+  const borderColorValue = borderColor === "transparent" ? borderColor : `var(--p-color-${borderColor})`;
+  return /* @__PURE__ */ React.createElement("hr", {
+    className: styles$c.Divider,
+    style: {
+      borderBlockStart: `var(--p-border-width-${borderWidth}) solid ${borderColorValue}`
+    }
+  });
+};
 const Focus = /* @__PURE__ */ memo(function Focus2({
   children,
   disabled,
@@ -8250,7 +8268,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App$2,
   links: links$2
 }, Symbol.toStringTag, { value: "Module" }));
-const action$8 = async ({ request }) => {
+const action$7 = async ({ request }) => {
   const raw = await request.text();
   const hmac = request.headers.get("x-shopify-hmac-sha256") ?? "";
   const digest = createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(raw, "utf8").digest("base64");
@@ -8259,13 +8277,13 @@ const action$8 = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$a = () => new Response(null, { status: 405 });
+const loader$9 = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$8,
-  loader: loader$a
+  action: action$7,
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-const action$7 = async ({ request }) => {
+const action$6 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   const current = payload.current;
@@ -8283,14 +8301,14 @@ const action$7 = async ({ request }) => {
 };
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7
+  action: action$6
 }, Symbol.toStringTag, { value: "Module" }));
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$8,
-  loader: loader$a
+  action: action$7,
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-const action$6 = async ({ request }) => {
+const action$5 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   try {
@@ -8312,10 +8330,257 @@ const action$6 = async ({ request }) => {
 };
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6
+  action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
+const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$7,
+  loader: loader$9
+}, Symbol.toStringTag, { value: "Module" }));
+const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
+const polarisTranslations = {
+  Polaris
+};
+function loginErrorMessage(loginErrors) {
+  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
+    return { shop: "Please enter your shop domain to log in" };
+  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
+    return { shop: "Please enter a valid shop domain to log in" };
+  }
+  return {};
+}
+const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
+const loader$8 = async () => {
+  return json({ errors: {}, polarisTranslations });
+};
+const action$4 = async ({ request }) => {
+  const formData = await request.formData();
+  const rawShop = (formData.get("shop") || "").toString();
+  const shop = normalizeShop(rawShop);
+  if (!shop) {
+    return json({ errors: { shop: "Shop domain is required" } }, { status: 400 });
+  }
+  try {
+    const url = new URL(request.url);
+    url.searchParams.set("shop", shop);
+    const newReq = new Request(url.toString(), { method: "POST", body: formData });
+    return await login(newReq);
+  } catch (e) {
+    return json({ errors: loginErrorMessage(e) }, { status: 400 });
+  }
+};
+function normalizeShop(input) {
+  const s = input.trim().toLowerCase();
+  if (!s) return "";
+  if (s.endsWith(".myshopify.com")) return s;
+  if (!s.includes(".")) return `${s}.myshopify.com`;
+  const base = s.split(".myshopify.com")[0].replace(/\.$/, "");
+  return `${base}.myshopify.com`;
+}
+function Auth() {
+  const loaderData = useLoaderData();
+  const actionData = useActionData();
+  const [shop, setShop] = useState("");
+  const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
+  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
+    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
+    /* @__PURE__ */ jsx(
+      TextField,
+      {
+        type: "text",
+        name: "shop",
+        label: "Shop domain",
+        helpText: "example.myshopify.com",
+        value: shop,
+        onChange: (v) => setShop(v),
+        autoComplete: "off",
+        error: errors.shop
+      }
+    ),
+    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
+  ] }) }) }) }) });
+}
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$4,
+  default: Auth,
+  links: links$1,
+  loader: loader$8
+}, Symbol.toStringTag, { value: "Module" }));
+async function action$3() {
+  return json({
+    status: "success",
+    message: "API endpoint is working",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+}
+async function loader$7() {
+  return json({
+    status: "ready",
+    message: "Test endpoint is ready",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+}
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$3,
+  loader: loader$7
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$6 = async ({ request }) => {
+  const url = new URL(request.url);
+  return redirect("/app" + url.search);
+};
+function App$1() {
+  return null;
+}
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: App$1,
+  loader: loader$6
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$5 = async ({ request }) => {
+  await authenticate.admin(request);
+  return null;
+};
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$5
+}, Symbol.toStringTag, { value: "Module" }));
+const links = () => [{ rel: "stylesheet", href: polarisStyles }];
+const loader$4 = async ({ request }) => {
+  await authenticate.admin(request);
+  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+};
+function App() {
+  const { apiKey } = useLoaderData();
+  return /* @__PURE__ */ jsxs(AppProvider$1, { isEmbeddedApp: true, apiKey, children: [
+    /* @__PURE__ */ jsxs(NavMenu, { children: [
+      /* @__PURE__ */ jsx(Link$1, { to: "/app", rel: "home", prefetch: "intent", children: "ホーム" }),
+      /* @__PURE__ */ jsx(Link$1, { to: "/app/products", prefetch: "intent", children: "商品価格調整" }),
+      /* @__PURE__ */ jsx(Link$1, { to: "/app/settings", prefetch: "intent", children: "設定" }),
+      /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", prefetch: "intent", children: "実行ログ" }),
+      /* @__PURE__ */ jsx(Link$1, { to: "/app/additional", prefetch: "intent", children: "Additional page" })
+    ] }),
+    /* @__PURE__ */ jsx(Outlet, {})
+  ] });
+}
+function ErrorBoundary() {
+  return boundary.error(useRouteError());
+}
+const headers = (headersArgs) => {
+  return boundary.headers(headersArgs);
+};
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  ErrorBoundary,
+  default: App,
+  headers,
+  links,
+  loader: loader$4
+}, Symbol.toStringTag, { value: "Module" }));
+function AdditionalPage() {
+  return /* @__PURE__ */ jsxs(Page, { children: [
+    /* @__PURE__ */ jsx(TitleBar, { title: "Additional page" }),
+    /* @__PURE__ */ jsxs(Layout, { children: [
+      /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
+          "The app template comes with an additional page which demonstrates how to create multiple pages within app navigation using",
+          " ",
+          /* @__PURE__ */ jsx(
+            Link,
+            {
+              url: "https://shopify.dev/docs/apps/tools/app-bridge",
+              target: "_blank",
+              removeUnderline: true,
+              children: "App Bridge"
+            }
+          ),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
+          "To create your own page and have it show up in the app navigation, add a page inside ",
+          /* @__PURE__ */ jsx(Code, { children: "app/routes" }),
+          ", and a link to it in the ",
+          /* @__PURE__ */ jsx(Code, { children: "<NavMenu>" }),
+          " component found in ",
+          /* @__PURE__ */ jsx(Code, { children: "app/routes/app.jsx" }),
+          "."
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+        /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "Resources" }),
+        /* @__PURE__ */ jsx(List, { children: /* @__PURE__ */ jsx(List.Item, { children: /* @__PURE__ */ jsx(
+          Link,
+          {
+            url: "https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav",
+            target: "_blank",
+            removeUnderline: true,
+            children: "App nav best practices"
+          }
+        ) }) })
+      ] }) }) })
+    ] })
+  ] });
+}
+function Code({ children }) {
+  return /* @__PURE__ */ jsx(
+    Box,
+    {
+      as: "span",
+      padding: "025",
+      paddingInlineStart: "100",
+      paddingInlineEnd: "100",
+      background: "bg-surface-active",
+      borderWidth: "025",
+      borderColor: "border",
+      borderRadius: "100",
+      children: /* @__PURE__ */ jsx("code", { children })
+    }
+  );
+}
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: AdditionalPage
+}, Symbol.toStringTag, { value: "Module" }));
+let _cache = null;
+const TTL_MS = 10 * 60 * 1e3;
+async function fetchGoldPriceDataTanaka() {
+  if (_cache && Date.now() - _cache.at < TTL_MS) return _cache.data;
+  try {
+    const url = "https://gold.tanaka.co.jp/commodity/souba/index.php";
+    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
+    const html = await resp.text();
+    const priceMatch = html.match(/店頭小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/金価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i);
+    const retailPriceStr = priceMatch ? priceMatch[1].replace(/,/g, "") : null;
+    const retailPrice = retailPriceStr ? parseInt(retailPriceStr) : null;
+    const changeMatch = html.match(/前日比[^%\-+]*([+\-]?\d+(?:\.\d+)?)\s*%/i) || html.match(/変動率[^%\-+]*([+\-]?\d+(?:\.\d+)?)\s*%/i);
+    const changeRatio = changeMatch ? Number(changeMatch[1]) / 100 : null;
+    const changePercent = changeMatch ? `${changeMatch[1]}%` : "0.00%";
+    let changeDirection = "flat";
+    if (changeRatio !== null) {
+      if (changeRatio > 0) changeDirection = "up";
+      else if (changeRatio < 0) changeDirection = "down";
+    }
+    const data = {
+      retailPrice,
+      retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : "取得失敗",
+      changeRatio,
+      changePercent: changeRatio !== null ? changeRatio >= 0 ? `+${changePercent}` : changePercent : "0.00%",
+      changeDirection,
+      lastUpdated: /* @__PURE__ */ new Date()
+    };
+    _cache = { at: Date.now(), data };
+    return data;
+  } catch (error) {
+    console.error("田中貴金属価格取得エラー:", error);
+    _cache = { at: Date.now(), data: null };
+    return null;
+  }
+}
 async function fetchGoldChangeRatioTanaka() {
-  return 0.02;
+  const data = await fetchGoldPriceDataTanaka();
+  return (data == null ? void 0 : data.changeRatio) || null;
 }
 function roundInt(n) {
   return Math.round(n);
@@ -8326,7 +8591,7 @@ function calcFinalPrice(current, ratio, minPct) {
   return String(roundInt(Math.max(calc, floor)));
 }
 async function runBulkUpdateBySpec(admin, shop) {
-  var _a2, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f;
   const ratio = await fetchGoldChangeRatioTanaka();
   if (ratio === null) {
     return { ok: false, disabled: true, reason: "金価格の取得に失敗", updated: 0, failed: 0, details: [] };
@@ -8358,7 +8623,7 @@ async function runBulkUpdateBySpec(admin, shop) {
       }
     `, { variables: { id: t.productId } });
     const body = await resp.json();
-    const product = (_a2 = body == null ? void 0 : body.data) == null ? void 0 : _a2.product;
+    const product = (_a = body == null ? void 0 : body.data) == null ? void 0 : _a.product;
     if (!product) continue;
     for (const edge of product.variants.edges) {
       const variant = edge.node;
@@ -8439,567 +8704,6 @@ async function runBulkUpdateBySpec(admin, shop) {
     details
   };
 }
-const HOLIDAYS_JP = /* @__PURE__ */ new Set([
-  // 2024
-  "2024-01-01",
-  // 元日
-  "2024-01-08",
-  // 成人の日
-  "2024-02-11",
-  // 建国記念の日
-  "2024-02-12",
-  // 建国記念の日 振替
-  "2024-02-23",
-  // 天皇誕生日
-  "2024-03-20",
-  // 春分の日
-  "2024-04-29",
-  // 昭和の日
-  "2024-05-03",
-  // 憲法記念日
-  "2024-05-04",
-  // みどりの日
-  "2024-05-05",
-  // こどもの日
-  "2024-05-06",
-  // こどもの日 振替
-  "2024-07-15",
-  // 海の日
-  "2024-08-11",
-  // 山の日
-  "2024-08-12",
-  // 山の日 振替
-  "2024-09-16",
-  // 敬老の日
-  "2024-09-22",
-  // 秋分の日
-  "2024-09-23",
-  // 秋分の日 振替
-  "2024-10-14",
-  // スポーツの日
-  "2024-11-03",
-  // 文化の日
-  "2024-11-04",
-  // 文化の日 振替
-  "2024-11-23",
-  // 勤労感謝の日
-  // 2025
-  "2025-01-01",
-  // 元日
-  "2025-01-13",
-  // 成人の日
-  "2025-02-11",
-  // 建国記念の日
-  "2025-02-23",
-  // 天皇誕生日
-  "2025-02-24",
-  // 天皇誕生日 振替
-  "2025-03-20",
-  // 春分の日（想定）
-  "2025-04-29",
-  // 昭和の日
-  "2025-05-03",
-  // 憲法記念日
-  "2025-05-04",
-  // みどりの日
-  "2025-05-05",
-  // こどもの日
-  "2025-05-06",
-  // みどりの日(振替)想定
-  "2025-07-21",
-  // 海の日
-  "2025-08-11",
-  // 山の日
-  "2025-09-15",
-  // 敬老の日
-  "2025-09-23",
-  // 秋分の日（想定）
-  "2025-10-13",
-  // スポーツの日
-  "2025-11-03",
-  // 文化の日
-  "2025-11-23"
-  // 勤労感謝の日
-]);
-function toJST(utcDate = /* @__PURE__ */ new Date()) {
-  return new Date(utcDate.getTime() + 9 * 60 * 60 * 1e3);
-}
-function isJapanHolidayJST(date = /* @__PURE__ */ new Date()) {
-  const jst = toJST(date);
-  const dateStr = jst.toISOString().split("T")[0];
-  return HOLIDAYS_JP.has(dateStr);
-}
-function isWeekendJST(date = /* @__PURE__ */ new Date()) {
-  const jst = toJST(date);
-  const dayOfWeek = jst.getDay();
-  return dayOfWeek === 0 || dayOfWeek === 6;
-}
-function isBusinessDayJST(date = /* @__PURE__ */ new Date()) {
-  return !isWeekendJST(date) && !isJapanHolidayJST(date);
-}
-function shouldRunNowJST(targetHour = 10, date = /* @__PURE__ */ new Date()) {
-  if (!isBusinessDayJST(date)) return false;
-  const jst = toJST(date);
-  return jst.getHours() === targetHour;
-}
-async function executeAutoUpdate(shopDomain, admin, shop, force = false) {
-  try {
-    const shopSetting = await prisma.shopSetting.findUnique({
-      where: { shopDomain }
-    });
-    const targetHour = (shopSetting == null ? void 0 : shopSetting.autoUpdateHour) || 10;
-    if (!force && !shouldRunNowJST(targetHour)) {
-      return {
-        success: false,
-        message: `自動実行時間外です（平日${String(targetHour).padStart(2, "0")}:00のみ実行）`,
-        skipped: true
-      };
-    }
-    const selectedProducts = await prisma.selectedProduct.findMany({
-      where: {
-        shopDomain,
-        selected: true
-      }
-    });
-    if (selectedProducts.length === 0) {
-      return {
-        success: false,
-        message: "選択された商品がありません"
-      };
-    }
-    const products = await fetchProductDetails(admin, selectedProducts.map((p) => p.productId));
-    const result = await runBulkUpdateBySpec(admin, shopDomain);
-    await prisma.priceUpdateLog.create({
-      data: {
-        shopDomain,
-        executionType: "auto",
-        goldRatio: result.goldRatio,
-        minPricePct: shop.minPricePct || 93,
-        totalProducts: products.length,
-        updatedCount: result.updated || 0,
-        failedCount: result.failed || 0,
-        success: result.ok,
-        errorMessage: result.ok ? null : result.reason,
-        details: JSON.stringify(result.details)
-      }
-    });
-    return {
-      success: result.ok,
-      message: result.ok ? `${result.updated}件の商品価格を更新しました` : result.reason,
-      updated: result.updated,
-      failed: result.failed
-    };
-  } catch (error) {
-    await prisma.priceUpdateLog.create({
-      data: {
-        shopDomain,
-        executionType: "auto",
-        success: false,
-        errorMessage: error.message,
-        minPricePct: 93
-      }
-    });
-    return {
-      success: false,
-      message: `自動更新中にエラーが発生しました: ${error.message}`
-    };
-  }
-}
-async function fetchProductDetails(admin, productIds) {
-  var _a2;
-  const products = [];
-  for (const productId of productIds) {
-    try {
-      const response = await admin.graphql(`
-        query getProduct($id: ID!) {
-          product(id: $id) {
-            id
-            title
-            variants(first: 250) {
-              edges {
-                node {
-                  id
-                  title
-                  price
-                  sku
-                }
-              }
-            }
-          }
-        }
-      `, { variables: { id: productId } });
-      const data = await response.json();
-      if ((_a2 = data == null ? void 0 : data.data) == null ? void 0 : _a2.product) {
-        products.push(data.data.product);
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } catch (error) {
-      console.error(`商品取得エラー (${productId}):`, error);
-    }
-  }
-  return products;
-}
-async function action$5({ request }) {
-  const authHeader = request.headers.get("Authorization");
-  const expectedSecret = process.env.CRON_SECRET || "your-secret-key";
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return json({ error: "認証ヘッダーが必要です" }, { status: 401 });
-  }
-  const token = authHeader.substring(7);
-  if (token !== expectedSecret) {
-    return json({ error: "認証に失敗しました" }, { status: 401 });
-  }
-  const url = new URL(request.url);
-  const force = url.searchParams.get("force") === "1";
-  try {
-    const activeShops = await prisma.shopSetting.findMany({
-      where: { autoUpdateEnabled: true }
-    });
-    if (activeShops.length === 0) {
-      return json({
-        message: "自動更新が有効なショップがありません",
-        processed: 0
-      });
-    }
-    const results = [];
-    for (const shop of activeShops) {
-      try {
-        const session = await prisma.session.findFirst({
-          where: {
-            shop: shop.shopDomain,
-            isOnline: false
-            // オフラインアクセストークンを優先
-          },
-          orderBy: { expires: "desc" }
-        });
-        if (!session) {
-          results.push({
-            shop: shop.shopDomain,
-            success: false,
-            message: "有効なセッションが見つかりません"
-          });
-          continue;
-        }
-        const admin = {
-          graphql: async (query, options) => {
-            const response = await fetch(`https://${shop.shopDomain}/admin/api/2024-07/graphql.json`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Shopify-Access-Token": session.accessToken
-              },
-              body: JSON.stringify({
-                query,
-                variables: options == null ? void 0 : options.variables
-              })
-            });
-            return response;
-          }
-        };
-        if (shop.consecutiveFailures >= 3) {
-          results.push({
-            shop: shop.shopDomain,
-            success: false,
-            message: `連続失敗により自動停止中（${shop.consecutiveFailures}回失敗）`,
-            circuitBreakerTripped: true
-          });
-          continue;
-        }
-        const result = await executeAutoUpdate(shop.shopDomain, admin, shop, force);
-        if (result.success) {
-          await prisma.shopSetting.update({
-            where: { shopDomain: shop.shopDomain },
-            data: { consecutiveFailures: 0, lastFailureAt: null }
-          });
-        } else {
-          const newFailureCount = shop.consecutiveFailures + 1;
-          await prisma.shopSetting.update({
-            where: { shopDomain: shop.shopDomain },
-            data: {
-              consecutiveFailures: newFailureCount,
-              lastFailureAt: /* @__PURE__ */ new Date(),
-              // 3回連続失敗で自動更新を無効化
-              autoUpdateEnabled: newFailureCount >= 3 ? false : shop.autoUpdateEnabled
-            }
-          });
-        }
-        results.push({
-          shop: shop.shopDomain,
-          ...result
-        });
-        await new Promise((resolve) => setTimeout(resolve, 1e3));
-      } catch (error) {
-        results.push({
-          shop: shop.shopDomain,
-          success: false,
-          message: `エラー: ${error.message}`
-        });
-      }
-    }
-    const summary = {
-      totalShops: activeShops.length,
-      successful: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
-      skipped: results.filter((r) => r.skipped).length,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    return json({
-      message: "自動更新処理が完了しました",
-      summary,
-      results
-    });
-  } catch (error) {
-    console.error("Cron実行エラー:", error);
-    return json({
-      error: "自動更新処理中にエラーが発生しました",
-      message: error.message,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    }, { status: 500 });
-  }
-}
-async function loader$9() {
-  try {
-    const activeShops = await prisma.shopSetting.count({
-      where: { autoUpdateEnabled: true }
-    });
-    const recentLogs = await prisma.priceUpdateLog.findMany({
-      where: { executionType: "auto" },
-      orderBy: { executedAt: "desc" },
-      take: 5,
-      select: {
-        shopDomain: true,
-        success: true,
-        updatedCount: true,
-        failedCount: true,
-        executedAt: true
-      }
-    });
-    return json({
-      status: "ready",
-      activeShops,
-      recentExecutions: recentLogs,
-      nextSchedule: "平日朝10時（JST）",
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  } catch (error) {
-    return json({
-      status: "error",
-      message: error.message
-    }, { status: 500 });
-  }
-}
-const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$5,
-  loader: loader$9
-}, Symbol.toStringTag, { value: "Module" }));
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$8,
-  loader: loader$a
-}, Symbol.toStringTag, { value: "Module" }));
-const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
-const polarisTranslations = {
-  Polaris
-};
-function loginErrorMessage(loginErrors) {
-  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
-    return { shop: "Please enter your shop domain to log in" };
-  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
-    return { shop: "Please enter a valid shop domain to log in" };
-  }
-  return {};
-}
-const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$8 = async ({ request }) => {
-  const errors = loginErrorMessage(await login(request));
-  return { errors, polarisTranslations };
-};
-const action$4 = async ({ request }) => {
-  const errors = loginErrorMessage(await login(request));
-  return {
-    errors
-  };
-};
-function Auth() {
-  const loaderData = useLoaderData();
-  const actionData = useActionData();
-  const [shop, setShop] = useState("");
-  const { errors } = actionData || loaderData;
-  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", children: /* @__PURE__ */ jsxs(FormLayout, { children: [
-    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
-    /* @__PURE__ */ jsx(
-      TextField,
-      {
-        type: "text",
-        name: "shop",
-        label: "Shop domain",
-        helpText: "example.myshopify.com",
-        value: shop,
-        onChange: setShop,
-        autoComplete: "on",
-        error: errors.shop
-      }
-    ),
-    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
-  ] }) }) }) }) });
-}
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$4,
-  default: Auth,
-  links: links$1,
-  loader: loader$8
-}, Symbol.toStringTag, { value: "Module" }));
-async function action$3() {
-  return json({
-    status: "success",
-    message: "API endpoint is working",
-    timestamp: (/* @__PURE__ */ new Date()).toISOString()
-  });
-}
-async function loader$7() {
-  return json({
-    status: "ready",
-    message: "Test endpoint is ready",
-    timestamp: (/* @__PURE__ */ new Date()).toISOString()
-  });
-}
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$3,
-  loader: loader$7
-}, Symbol.toStringTag, { value: "Module" }));
-const loader$6 = async ({ request }) => {
-  const url = new URL(request.url);
-  return redirect("/app" + url.search);
-};
-function App$1() {
-  return null;
-}
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: App$1,
-  loader: loader$6
-}, Symbol.toStringTag, { value: "Module" }));
-const loader$5 = async ({ request }) => {
-  await authenticate.admin(request);
-  return null;
-};
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  loader: loader$5
-}, Symbol.toStringTag, { value: "Module" }));
-const links = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$4 = async ({ request }) => {
-  await authenticate.admin(request);
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
-};
-function App() {
-  const { apiKey } = useLoaderData();
-  return /* @__PURE__ */ jsxs(AppProvider$1, { isEmbeddedApp: true, apiKey, children: [
-    /* @__PURE__ */ jsxs(NavMenu, { children: [
-      /* @__PURE__ */ jsx(Link$1, { to: "/app", rel: "home", children: "ホーム" }),
-      /* @__PURE__ */ jsx(Link$1, { to: "/app/products", children: "商品価格調整" }),
-      /* @__PURE__ */ jsx(Link$1, { to: "/app/settings", children: "設定" }),
-      /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", children: "実行ログ" }),
-      /* @__PURE__ */ jsx(Link$1, { to: "/app/additional", children: "Additional page" })
-    ] }),
-    /* @__PURE__ */ jsx(Outlet, {})
-  ] });
-}
-function ErrorBoundary() {
-  return boundary.error(useRouteError());
-}
-const headers = (headersArgs) => {
-  return boundary.headers(headersArgs);
-};
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  ErrorBoundary,
-  default: App,
-  headers,
-  links,
-  loader: loader$4
-}, Symbol.toStringTag, { value: "Module" }));
-function AdditionalPage() {
-  return /* @__PURE__ */ jsxs(Page, { children: [
-    /* @__PURE__ */ jsx(TitleBar, { title: "Additional page" }),
-    /* @__PURE__ */ jsxs(Layout, { children: [
-      /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
-        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
-          "The app template comes with an additional page which demonstrates how to create multiple pages within app navigation using",
-          " ",
-          /* @__PURE__ */ jsx(
-            Link,
-            {
-              url: "https://shopify.dev/docs/apps/tools/app-bridge",
-              target: "_blank",
-              removeUnderline: true,
-              children: "App Bridge"
-            }
-          ),
-          "."
-        ] }),
-        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
-          "To create your own page and have it show up in the app navigation, add a page inside ",
-          /* @__PURE__ */ jsx(Code, { children: "app/routes" }),
-          ", and a link to it in the ",
-          /* @__PURE__ */ jsx(Code, { children: "<NavMenu>" }),
-          " component found in ",
-          /* @__PURE__ */ jsx(Code, { children: "app/routes/app.jsx" }),
-          "."
-        ] })
-      ] }) }) }),
-      /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-        /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "Resources" }),
-        /* @__PURE__ */ jsx(List, { children: /* @__PURE__ */ jsx(List.Item, { children: /* @__PURE__ */ jsx(
-          Link,
-          {
-            url: "https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav",
-            target: "_blank",
-            removeUnderline: true,
-            children: "App nav best practices"
-          }
-        ) }) })
-      ] }) }) })
-    ] })
-  ] });
-}
-function Code({ children }) {
-  return /* @__PURE__ */ jsx(
-    Box,
-    {
-      as: "span",
-      padding: "025",
-      paddingInlineStart: "100",
-      paddingInlineEnd: "100",
-      background: "bg-surface-active",
-      borderWidth: "025",
-      borderColor: "border",
-      borderRadius: "100",
-      children: /* @__PURE__ */ jsx("code", { children })
-    }
-  );
-}
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: AdditionalPage
-}, Symbol.toStringTag, { value: "Module" }));
-async function fetchGoldPrice() {
-  try {
-    const ratio = await fetchGoldChangeRatioTanaka();
-    if (ratio === null) return null;
-    return {
-      ratio,
-      percentage: (ratio * 100).toFixed(2),
-      change: ratio > 0 ? `+${(ratio * 100).toFixed(2)}` : (ratio * 100).toFixed(2)
-    };
-  } catch (error) {
-    console.error("金価格取得エラー:", error);
-    return null;
-  }
-}
 function filterProducts(products, searchTerm, filterType = "all") {
   let filtered = products;
   if (filterType === "k18") {
@@ -9020,8 +8724,7 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   const finalPrice = Math.max(newPrice, minPrice);
   return Math.ceil(finalPrice / 10) * 10;
 }
-const loader$3 = async ({ request }) => {
-  const { admin, session } = await authenticate.admin(request);
+async function fetchAllProducts(admin) {
   let allProducts = [];
   let cursor = null;
   let hasNextPage = true;
@@ -9068,20 +8771,46 @@ const loader$3 = async ({ request }) => {
     hasNextPage = responseJson.data.products.pageInfo.hasNextPage;
     cursor = responseJson.data.products.edges.length > 0 ? responseJson.data.products.edges[responseJson.data.products.edges.length - 1].cursor : null;
   }
-  const goldPrice = await fetchGoldPrice();
-  const selectedProducts = await prisma.selectedProduct.findMany({
-    where: {
-      shopDomain: session.shop,
-      selected: true
-    },
-    select: { productId: true }
-  });
+  return allProducts;
+}
+async function fetchGoldPrice() {
+  try {
+    const goldData = await fetchGoldPriceDataTanaka();
+    if (!goldData || goldData.changeRatio === null) return null;
+    return {
+      ratio: goldData.changeRatio,
+      percentage: (goldData.changeRatio * 100).toFixed(2),
+      change: goldData.changePercent,
+      retailPrice: goldData.retailPrice,
+      retailPriceFormatted: goldData.retailPriceFormatted,
+      changeDirection: goldData.changeDirection,
+      lastUpdated: goldData.lastUpdated
+    };
+  } catch (error) {
+    console.error("金価格取得エラー:", error);
+    return null;
+  }
+}
+const loader$3 = async ({ request }) => {
+  const { admin, session } = await authenticate.admin(request);
+  const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
+    fetchGoldPrice(),
+    prisma.selectedProduct.findMany({
+      where: {
+        shopDomain: session.shop,
+        selected: true
+      },
+      select: { productId: true }
+    }),
+    prisma.shopSetting.findUnique({
+      where: { shopDomain: session.shop }
+    })
+  ]);
   const selectedProductIds = selectedProducts.map((p) => p.productId);
-  const shopSetting = await prisma.shopSetting.findUnique({
-    where: { shopDomain: session.shop }
-  });
-  return json({
-    products: allProducts,
+  const productsPromise = fetchAllProducts(admin);
+  return defer({
+    products: productsPromise,
+    // Promise を渡す
     goldPrice,
     selectedProductIds,
     shopSetting
@@ -9135,9 +8864,8 @@ const action$2 = async ({ request }) => {
   }
   return json({ error: "不正なアクション" });
 };
-function Products() {
-  var _a2, _b;
-  const { products, goldPrice, selectedProductIds, shopSetting } = useLoaderData();
+function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting }) {
+  var _a, _b;
   const fetcher = useFetcher();
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -9212,10 +8940,10 @@ function Products() {
     setShowPreview(false);
   }, [selectedProducts, goldPrice, minPriceRate, fetcher]);
   const tableRows = filteredProducts.map((product) => {
-    var _a3;
+    var _a2;
     const isSelected = selectedProducts.some((p) => p.id === product.id);
     const variants = product.variants.edges;
-    const priceRange = variants.length > 1 ? `¥${Math.min(...variants.map((v) => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map((v) => parseFloat(v.node.price)))}` : `¥${((_a3 = variants[0]) == null ? void 0 : _a3.node.price) || 0}`;
+    const priceRange = variants.length > 1 ? `¥${Math.min(...variants.map((v) => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map((v) => parseFloat(v.node.price)))}` : `¥${((_a2 = variants[0]) == null ? void 0 : _a2.node.price) || 0}`;
     return [
       /* @__PURE__ */ jsx(
         Checkbox,
@@ -9243,22 +8971,32 @@ function Products() {
       },
       children: /* @__PURE__ */ jsxs(Layout, { children: [
         /* @__PURE__ */ jsxs(Layout.Section, { children: [
-          goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
-            /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
-            /* @__PURE__ */ jsxs("p", { children: [
-              "前日比: ",
-              /* @__PURE__ */ jsxs("strong", { children: [
-                goldPrice.change,
-                "%"
+          goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+              /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
+              /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "attention" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
+            ] }),
+            /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "店頭小売価格（税込）" }),
+                /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold" }, children: goldPrice.retailPriceFormatted })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "前日比" }),
+                /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold", color: goldPrice.changeDirection === "up" ? "#DC2626" : goldPrice.changeDirection === "down" ? "#059669" : "#6B7280" }, children: goldPrice.change })
               ] })
             ] }),
-            /* @__PURE__ */ jsxs("p", { children: [
+            /* @__PURE__ */ jsx("div", { style: { padding: "12px", backgroundColor: "#F3F4F6", borderRadius: "8px" }, children: /* @__PURE__ */ jsxs("p", { style: { margin: 0 }, children: [
               /* @__PURE__ */ jsxs("strong", { children: [
                 "価格調整率: ",
-                (goldPrice.ratio * 100).toFixed(2),
+                goldPrice.percentage,
                 "%"
               ] }),
               "（この変動率で商品価格を自動調整します）"
+            ] }) }),
+            /* @__PURE__ */ jsxs("p", { style: { color: "#6B7280", fontSize: "12px", margin: 0 }, children: [
+              "最終更新: ",
+              new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
             ] })
           ] }) }),
           !goldPrice && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: "金価格情報の取得に失敗しました。価格調整機能をご利用いただけません。" })
@@ -9334,7 +9072,7 @@ function Products() {
             selectedProductIds.length,
             " 件の商品が自動更新対象として保存されています"
           ] }),
-          ((_a2 = fetcher.data) == null ? void 0 : _a2.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: fetcher.data.message })
+          ((_a = fetcher.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: fetcher.data.message })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
           DataTable,
@@ -9409,12 +9147,12 @@ function Products() {
           fetcher.data.error && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: fetcher.data.error }),
           fetcher.data.message && /* @__PURE__ */ jsx(Banner, { tone: "info", children: fetcher.data.message }),
           fetcher.data.updateResults.map((result, index) => {
-            var _a3, _b2;
+            var _a2, _b2;
             return /* @__PURE__ */ jsx(
               Banner,
               {
                 tone: result.success ? "success" : "critical",
-                children: result.success ? `${result.product} - ${result.variant}: ¥${(_a3 = result.oldPrice) == null ? void 0 : _a3.toLocaleString()} → ¥${(_b2 = result.newPrice) == null ? void 0 : _b2.toLocaleString()}` : `${result.product} - ${result.variant}: ${result.error}`
+                children: result.success ? `${result.product} - ${result.variant}: ¥${(_a2 = result.oldPrice) == null ? void 0 : _a2.toLocaleString()} → ¥${(_b2 = result.newPrice) == null ? void 0 : _b2.toLocaleString()}` : `${result.product} - ${result.variant}: ${result.error}`
               },
               index
             );
@@ -9424,7 +9162,59 @@ function Products() {
     }
   );
 }
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+function Products() {
+  const data = useLoaderData();
+  const { goldPrice, selectedProductIds, shopSetting } = data;
+  return /* @__PURE__ */ jsx(
+    Suspense,
+    {
+      fallback: /* @__PURE__ */ jsx(Page, { title: "商品価格自動調整", subtitle: "読み込み中...", children: /* @__PURE__ */ jsxs(Layout, { children: [
+        /* @__PURE__ */ jsx(Layout.Section, { children: goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+          /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+            /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
+            /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "attention" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
+          ] }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "店頭小売価格（税込）" }),
+              /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold" }, children: goldPrice.retailPriceFormatted })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "前日比" }),
+              /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold", color: goldPrice.changeDirection === "up" ? "#DC2626" : goldPrice.changeDirection === "down" ? "#059669" : "#6B7280" }, children: goldPrice.change })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx("div", { style: { padding: "12px", backgroundColor: "#F3F4F6", borderRadius: "8px" }, children: /* @__PURE__ */ jsxs("p", { style: { margin: 0 }, children: [
+            /* @__PURE__ */ jsxs("strong", { children: [
+              "価格調整率: ",
+              goldPrice.percentage,
+              "%"
+            ] }),
+            "（この変動率で商品価格を自動調整します）"
+          ] }) }),
+          /* @__PURE__ */ jsxs("p", { style: { color: "#6B7280", fontSize: "12px", margin: 0 }, children: [
+            "最終更新: ",
+            new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
+          ] })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(BlockStack, { gap: "400", children: /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", padding: "60px 20px" }, children: [
+          /* @__PURE__ */ jsx(Spinner$1, { size: "large" }),
+          /* @__PURE__ */ jsx("p", { style: { marginTop: "20px", color: "#6B7280" }, children: "商品データを読み込んでいます..." })
+        ] }) }) }) })
+      ] }) }),
+      children: /* @__PURE__ */ jsx(Await, { resolve: data.products, children: (products) => /* @__PURE__ */ jsx(
+        ProductsContent,
+        {
+          products,
+          goldPrice,
+          selectedProductIds,
+          shopSetting
+        }
+      ) })
+    }
+  );
+}
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   default: Products,
@@ -9449,7 +9239,7 @@ async function action$1({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const form = await request.formData();
-  const autoUpdateEnabled = form.get("autoUpdateEnabled") === "on";
+  const autoUpdateEnabled = form.get("autoUpdateEnabled") === "true";
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
   const autoUpdateHour = Math.max(0, Math.min(23, Number(form.get("autoUpdateHour") || 10)));
   const notificationEmail = String(form.get("notificationEmail") || "");
@@ -9469,106 +9259,169 @@ async function action$1({ request }) {
       notificationEmail: notificationEmail || null
     }
   });
-  return redirect(".");
+  return json({
+    success: true,
+    message: "設定が正常に保存されました",
+    setting: {
+      autoUpdateEnabled,
+      minPricePct,
+      autoUpdateHour,
+      notificationEmail: notificationEmail || null
+    }
+  });
 }
 function Settings() {
   const { setting } = useLoaderData();
-  return /* @__PURE__ */ jsxs("div", { style: { padding: 16 }, children: [
-    /* @__PURE__ */ jsx("h1", { style: { fontSize: 20, fontWeight: 600 }, children: "自動価格調整 設定" }),
-    /* @__PURE__ */ jsxs(Form, { method: "post", style: { marginTop: 16, display: "grid", gap: 12 }, children: [
-      /* @__PURE__ */ jsxs("label", { children: [
-        /* @__PURE__ */ jsx(
-          "input",
+  const fetcher = useFetcher();
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(setting.autoUpdateEnabled);
+  const [minPricePct, setMinPricePct] = useState(setting.minPricePct.toString());
+  const [autoUpdateHour, setAutoUpdateHour] = useState(setting.autoUpdateHour.toString());
+  const [notificationEmail, setNotificationEmail] = useState(setting.notificationEmail || "");
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  useEffect(() => {
+    var _a;
+    if ((_a = fetcher.data) == null ? void 0 : _a.success) {
+      setShowSuccessMessage(true);
+      const timer = setTimeout(() => setShowSuccessMessage(false), 3e3);
+      return () => clearTimeout(timer);
+    }
+  }, [fetcher.data]);
+  const hourOptions = [...Array(24)].map((_, i) => ({
+    label: `${String(i).padStart(2, "0")}:00`,
+    value: i.toString()
+  }));
+  const handleSubmit = () => {
+    const formData = new FormData();
+    formData.append("autoUpdateEnabled", autoUpdateEnabled.toString());
+    formData.append("minPricePct", minPricePct);
+    formData.append("autoUpdateHour", autoUpdateHour);
+    formData.append("notificationEmail", notificationEmail);
+    fetcher.submit(formData, { method: "post" });
+  };
+  return /* @__PURE__ */ jsx(
+    Page,
+    {
+      title: "アプリ設定",
+      subtitle: "自動価格調整の設定を管理します",
+      titleMetadata: /* @__PURE__ */ jsx(Badge, { tone: "info", children: "V2.0" }),
+      children: /* @__PURE__ */ jsxs(Layout, { children: [
+        showSuccessMessage && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Banner, { tone: "success", onDismiss: () => setShowSuccessMessage(false), children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", align: "center", children: [
+          /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
+          /* @__PURE__ */ jsx(Text, { children: "設定が正常に保存されました" })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
+            /* @__PURE__ */ jsx(Icon, { source: SettingsIcon, tone: "base" }),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "自動更新設定" }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "田中貴金属の価格変動に基づいて商品価格を自動調整します" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(Divider, {}),
+          /* @__PURE__ */ jsxs(FormLayout, { children: [
+            /* @__PURE__ */ jsx(
+              Checkbox,
+              {
+                label: "自動更新を有効化",
+                helpText: "有効にすると設定時刻に自動で価格調整が実行されます",
+                checked: autoUpdateEnabled,
+                onChange: setAutoUpdateEnabled
+              }
+            ),
+            /* @__PURE__ */ jsxs(InlineStack, { gap: "400", align: "start", children: [
+              /* @__PURE__ */ jsx("div", { style: { minWidth: "200px" }, children: /* @__PURE__ */ jsx(
+                Select,
+                {
+                  label: "自動更新時刻（JST）",
+                  options: hourOptions,
+                  value: autoUpdateHour,
+                  onChange: setAutoUpdateHour,
+                  disabled: !autoUpdateEnabled
+                }
+              ) }),
+              /* @__PURE__ */ jsx("div", { style: { paddingTop: "24px" }, children: /* @__PURE__ */ jsx(Badge, { tone: autoUpdateEnabled ? "info" : "warning", children: autoUpdateEnabled ? "有効" : "無効" }) })
+            ] }),
+            /* @__PURE__ */ jsx(
+              TextField,
+              {
+                label: "価格下限設定（%）",
+                type: "number",
+                value: minPricePct,
+                onChange: setMinPricePct,
+                min: 1,
+                max: 100,
+                suffix: "%",
+                helpText: `現在価格の${minPricePct}%を下限として保護します（例: ${minPricePct}% = ${100 - parseInt(minPricePct)}%以上下がらない）`
+              }
+            )
+          ] })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
+            /* @__PURE__ */ jsx(Icon, { source: NotificationIcon, tone: "base" }),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "通知設定" }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "価格更新の実行結果やエラーを通知します" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(Divider, {}),
+          /* @__PURE__ */ jsx(FormLayout, { children: /* @__PURE__ */ jsx(
+            TextField,
+            {
+              label: "通知メールアドレス（任意）",
+              type: "email",
+              value: notificationEmail,
+              onChange: setNotificationEmail,
+              placeholder: "you@example.com",
+              helpText: "設定すると自動更新の結果がメールで通知されます"
+            }
+          ) })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
+            /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "base" }),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "実行スケジュール" }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動更新の実行タイミングについて" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(Divider, {}),
+          /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+            /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行曜日" }),
+                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "平日（月〜金曜日）" })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行時刻" }),
+                /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
+                  String(setting.autoUpdateHour || 10).padStart(2, "0"),
+                  ":00（日本時間）"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "祝日対応" }),
+                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動的にスキップ" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsx(Text, { children: "自動更新は平日の設定時刻に実行され、日本の祝日は自動的にスキップされます。 価格変動がない場合や取得エラー時は更新をスキップします。" }) })
+          ] })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(InlineStack, { align: "end", children: /* @__PURE__ */ jsx(
+          Button,
           {
-            type: "checkbox",
-            name: "autoUpdateEnabled",
-            defaultChecked: setting.autoUpdateEnabled
+            variant: "primary",
+            size: "large",
+            onClick: handleSubmit,
+            loading: fetcher.state === "submitting",
+            children: "設定を保存"
           }
-        ),
-        /* @__PURE__ */ jsx("span", { style: { marginLeft: 8 }, children: "自動更新を有効化" })
-      ] }),
-      /* @__PURE__ */ jsxs("label", { children: [
-        "自動更新時刻（JST）",
-        /* @__PURE__ */ jsx(
-          "select",
-          {
-            style: { marginLeft: 8, width: 120 },
-            name: "autoUpdateHour",
-            defaultValue: setting.autoUpdateHour || 10,
-            children: [...Array(24)].map((_, i) => /* @__PURE__ */ jsxs("option", { value: i, children: [
-              String(i).padStart(2, "0"),
-              ":00"
-            ] }, i))
-          }
-        ),
-        /* @__PURE__ */ jsx("small", { style: { marginLeft: 8, color: "#666" }, children: "平日のみ実行（祝日はスキップ）" })
-      ] }),
-      /* @__PURE__ */ jsxs("label", { children: [
-        "価格下限（%）",
-        /* @__PURE__ */ jsx(
-          "input",
-          {
-            style: { marginLeft: 8, width: 100 },
-            type: "number",
-            name: "minPricePct",
-            min: 1,
-            max: 100,
-            defaultValue: setting.minPricePct
-          }
-        ),
-        /* @__PURE__ */ jsxs("small", { style: { marginLeft: 8, color: "#666" }, children: [
-          "現在価格の",
-          setting.minPricePct,
-          "%を下限とする"
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("label", { children: [
-        "通知メール（任意）",
-        /* @__PURE__ */ jsx(
-          "input",
-          {
-            style: { marginLeft: 8, width: 280 },
-            type: "email",
-            name: "notificationEmail",
-            defaultValue: setting.notificationEmail || "",
-            placeholder: "you@example.com"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          type: "submit",
-          style: {
-            width: 160,
-            padding: 8,
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            backgroundColor: "#007ace",
-            color: "white",
-            cursor: "pointer"
-          },
-          children: "保存"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxs("div", { style: { marginTop: 24, padding: 12, backgroundColor: "#f0f8ff", borderRadius: 6 }, children: [
-      /* @__PURE__ */ jsx("h3", { style: { margin: 0, fontSize: 16 }, children: "📅 自動実行スケジュール" }),
-      /* @__PURE__ */ jsxs("p", { style: { margin: "8px 0 0 0", fontSize: 14, color: "#666" }, children: [
-        "平日（月〜金）の設定時刻（日本時間）に自動実行されます。",
-        /* @__PURE__ */ jsx("br", {}),
-        "祝日は自動的にスキップされます。",
-        /* @__PURE__ */ jsx("br", {}),
-        "現在の設定: ",
-        /* @__PURE__ */ jsxs("strong", { children: [
-          String(setting.autoUpdateHour || 10).padStart(2, "0"),
-          ":00"
-        ] })
+        ) }) })
       ] })
-    ] })
-  ] });
+    }
+  );
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Settings,
@@ -9640,11 +9493,11 @@ const action = async ({ request }) => {
   };
 };
 function Index() {
-  var _a2, _b, _c, _d;
+  var _a, _b, _c, _d;
   const fetcher = useFetcher();
   const shopify2 = useAppBridge();
   const isLoading = ["loading", "submitting"].includes(fetcher.state) && fetcher.formMethod === "POST";
-  const productId = (_b = (_a2 = fetcher.data) == null ? void 0 : _a2.product) == null ? void 0 : _b.id.replace(
+  const productId = (_b = (_a = fetcher.data) == null ? void 0 : _a.product) == null ? void 0 : _b.id.replace(
     "gid://shopify/Product/",
     ""
   );
@@ -9862,7 +9715,7 @@ function Index() {
     ] }) })
   ] });
 }
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Index,
@@ -9957,12 +9810,12 @@ const td = {
   padding: "8px",
   fontSize: 14
 };
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-CBpm8P5R.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BpbUDCDv.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js", "/assets/styles-C3i6sGs7.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.cron.price-update": { "id": "routes/api.cron.price-update", "parentId": "root", "path": "api/cron/price-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron.price-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-r5URE6xT.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-C3i6sGs7.js", "/assets/components-CzBC-wXh.js", "/assets/Page-J_DpkFPJ.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-DOva-zVP.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js", "/assets/styles-C3i6sGs7.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BeHHR4dx.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-J_DpkFPJ.js", "/assets/TitleBar-DZjc3WQW.js", "/assets/Layout-CEE4ZotV.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-CLFOFUFb.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js", "/assets/Page-J_DpkFPJ.js", "/assets/Layout-CEE4ZotV.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-EIm-7E__.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BPSFh83c.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js", "/assets/Page-J_DpkFPJ.js", "/assets/TitleBar-DZjc3WQW.js", "/assets/Layout-CEE4ZotV.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-C2bm3ucN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CzBC-wXh.js"], "css": [] } }, "url": "/assets/manifest-260f21c4.js", "version": "260f21c4" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-C1NaqPX0.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CbPFOs8B.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/styles-C3i6sGs7.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-DGvm1xVx.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-C3i6sGs7.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/FormLayout-D7OHCHJE.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Bpu5PY13.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/styles-C3i6sGs7.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BVTGwYpF.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-tPcJA2Wd.js", "/assets/TitleBar-B7TtlRvj.js", "/assets/Layout-DylFXOet.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-71md2DJt.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/Layout-DylFXOet.js", "/assets/Select-BvGNw0HV.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-Bx-OPiFx.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/Layout-DylFXOet.js", "/assets/Select-BvGNw0HV.js", "/assets/FormLayout-D7OHCHJE.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-CzBE-i-N.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/TitleBar-B7TtlRvj.js", "/assets/Layout-DylFXOet.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-DUGY_YB2.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js"], "css": [] } }, "url": "/assets/manifest-b16f0fba.js", "version": "b16f0fba" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -10011,21 +9864,13 @@ const routes = {
     caseSensitive: void 0,
     module: route4
   },
-  "routes/api.cron.price-update": {
-    id: "routes/api.cron.price-update",
-    parentId: "root",
-    path: "api/cron/price-update",
-    index: void 0,
-    caseSensitive: void 0,
-    module: route5
-  },
   "routes/webhooks.shop.redact": {
     id: "routes/webhooks.shop.redact",
     parentId: "root",
     path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
+    module: route5
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -10033,7 +9878,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route6
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -10041,7 +9886,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route7
   },
   "routes/_index": {
     id: "routes/_index",
@@ -10049,7 +9894,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route9
+    module: route8
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -10057,7 +9902,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route10
+    module: route9
   },
   "routes/app": {
     id: "routes/app",
@@ -10065,7 +9910,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route10
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -10073,7 +9918,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route11
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -10081,7 +9926,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route12
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -10089,7 +9934,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route13
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -10097,7 +9942,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route15
+    module: route14
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -10105,7 +9950,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route16
+    module: route15
   }
 };
 export {
