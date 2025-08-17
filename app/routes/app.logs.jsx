@@ -154,7 +154,7 @@ export default function Logs() {
           <Layout.Section>
             <InlineStack gap="400">
               <Card>
-                <Box padding="400" style={{ textAlign: 'center' }}>
+                <Box padding="400">
                   <BlockStack gap="300" align="center">
                     <Box
                       style={{
@@ -176,7 +176,7 @@ export default function Logs() {
               </Card>
 
               <Card>
-                <Box padding="400" style={{ textAlign: 'center' }}>
+                <Box padding="400">
                   <BlockStack gap="300" align="center">
                     <Box
                       style={{
@@ -198,7 +198,7 @@ export default function Logs() {
               </Card>
 
               <Card>
-                <Box padding="400" style={{ textAlign: 'center' }}>
+                <Box padding="400">
                   <BlockStack gap="300" align="center">
                     <Box
                       style={{
@@ -275,7 +275,7 @@ export default function Logs() {
         {/* ログテーブル */}
         <Card>
           {filteredLogs.length === 0 ? (
-            <Box padding="800" style={{ textAlign: 'center' }}>
+            <Box padding="800">
               <BlockStack gap="400" align="center">
                 <Icon source={ClockIcon} tone="subdued" />
                 <Text variant="headingMd" tone="subdued">
