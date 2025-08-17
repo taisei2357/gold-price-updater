@@ -282,9 +282,24 @@ export default function Settings() {
                 
                 <Banner tone="info">
                   <Text>
-                    自動更新は平日の設定時刻に実行され、日本の祝日は自動的にスキップされます。
+                    <strong>注意:</strong> 現在のシステムは平日朝10時（JST）固定で実行されます。
+                    上記の「自動更新時刻」設定は将来の機能向けです。
                     価格変動がない場合や取得エラー時は更新をスキップします。
                   </Text>
+                </Banner>
+                
+                <Banner tone="warning">
+                  <BlockStack gap="200">
+                    <Text fontWeight="semibold">
+                      🕙 実際の実行スケジュール（現在）
+                    </Text>
+                    <Text>
+                      • <strong>実行時刻:</strong> 毎平日 朝10:00（日本時間）<br/>
+                      • <strong>対象曜日:</strong> 月曜日〜金曜日<br/>
+                      • <strong>祝日:</strong> 自動的にスキップ<br/>
+                      • <strong>実行条件:</strong> 自動更新が有効で、対象商品が選択されている場合
+                    </Text>
+                  </BlockStack>
                 </Banner>
               </BlockStack>
             </BlockStack>
