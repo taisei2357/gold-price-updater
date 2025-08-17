@@ -26,21 +26,38 @@ export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> 
     const html = await resp.text();
 
     // 店頭小売価格（税込）を抽出
-    // パターン例: "店頭小売価格（税込）：12,345円/g"
+    // より包括的なパターンマッチング
     const priceMatch = html.match(/店頭小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) ||
                       html.match(/小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) ||
-                      html.match(/金価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i);
+                      html.match(/金[^0-9]*([0-9,]+)[^0-9]*円/i) ||
+                      html.match(/(\d{1,2},\d{3})\s*円/i);
     
     const retailPriceStr = priceMatch ? priceMatch[1].replace(/,/g, '') : null;
     const retailPrice = retailPriceStr ? parseInt(retailPriceStr) : null;
 
-    // 前日比を抽出
-    // パターン例: "前日比 +2.50%" / "前日比：-0.85%"
-    const changeMatch = html.match(/前日比[^%\-+]*([+\-]?\d+(?:\.\d+)?)\s*%/i) ||
-                       html.match(/変動率[^%\-+]*([+\-]?\d+(?:\.\d+)?)\s*%/i);
+    // 前日比を抽出（円単位）
+    // パターン例: "前日比 -72円" / "前日比：+50円"
+    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) ||
+                       html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
     
-    const changeRatio = changeMatch ? Number(changeMatch[1]) / 100 : null;
-    const changePercent = changeMatch ? `${changeMatch[1]}%` : '0.00%';
+    const changeYen = changeMatch ? Number(changeMatch[1]) : null;
+
+    // デバッグログ
+    console.log('Gold price extraction:', {
+      priceMatch: priceMatch?.[0],
+      retailPrice,
+      changeMatch: changeMatch?.[0], 
+      changeYen
+    });
+    
+    // 変動率を計算（前日比円 / 店頭小売価格）
+    const changeRatio = (changeYen !== null && retailPrice !== null) 
+      ? changeYen / retailPrice 
+      : null;
+    
+    const changePercent = changeRatio !== null 
+      ? `${(changeRatio * 100).toFixed(2)}%` 
+      : '0.00%';
     
     // 変動方向を判定
     let changeDirection: 'up' | 'down' | 'flat' = 'flat';

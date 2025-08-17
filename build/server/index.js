@@ -8551,12 +8551,19 @@ async function fetchGoldPriceDataTanaka() {
     const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
     const html = await resp.text();
-    const priceMatch = html.match(/店頭小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/金価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i);
+    const priceMatch = html.match(/店頭小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/金[^0-9]*([0-9,]+)[^0-9]*円/i) || html.match(/(\d{1,2},\d{3})\s*円/i);
     const retailPriceStr = priceMatch ? priceMatch[1].replace(/,/g, "") : null;
     const retailPrice = retailPriceStr ? parseInt(retailPriceStr) : null;
-    const changeMatch = html.match(/前日比[^%\-+]*([+\-]?\d+(?:\.\d+)?)\s*%/i) || html.match(/変動率[^%\-+]*([+\-]?\d+(?:\.\d+)?)\s*%/i);
-    const changeRatio = changeMatch ? Number(changeMatch[1]) / 100 : null;
-    const changePercent = changeMatch ? `${changeMatch[1]}%` : "0.00%";
+    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) || html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
+    const changeYen = changeMatch ? Number(changeMatch[1]) : null;
+    console.log("Gold price extraction:", {
+      priceMatch: priceMatch == null ? void 0 : priceMatch[0],
+      retailPrice,
+      changeMatch: changeMatch == null ? void 0 : changeMatch[0],
+      changeYen
+    });
+    const changeRatio = changeYen !== null && retailPrice !== null ? changeYen / retailPrice : null;
+    const changePercent = changeRatio !== null ? `${(changeRatio * 100).toFixed(2)}%` : "0.00%";
     let changeDirection = "flat";
     if (changeRatio !== null) {
       if (changeRatio > 0) changeDirection = "up";
