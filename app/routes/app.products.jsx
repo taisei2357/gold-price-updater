@@ -21,19 +21,23 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { runBulkUpdateBySpec } from "../models/price.server";
-import { fetchGoldChangeRatioTanaka } from "../models/gold.server";
+import { fetchGoldPriceDataTanaka, fetchGoldChangeRatioTanaka } from "../models/gold.server";
 import prisma from "../db.server";
 
-// 金価格情報を取得（新しいモジュールを使用）
+// 金価格情報を取得（詳細データ版）
 async function fetchGoldPrice() {
   try {
-    const ratio = await fetchGoldChangeRatioTanaka();
-    if (ratio === null) return null;
+    const goldData = await fetchGoldPriceDataTanaka();
+    if (!goldData || goldData.changeRatio === null) return null;
     
     return {
-      ratio: ratio,
-      percentage: (ratio * 100).toFixed(2),
-      change: ratio > 0 ? `+${(ratio * 100).toFixed(2)}` : (ratio * 100).toFixed(2)
+      ratio: goldData.changeRatio,
+      percentage: (goldData.changeRatio * 100).toFixed(2),
+      change: goldData.changePercent,
+      retailPrice: goldData.retailPrice,
+      retailPriceFormatted: goldData.retailPriceFormatted,
+      changeDirection: goldData.changeDirection,
+      lastUpdated: goldData.lastUpdated
     };
   } catch (error) {
     console.error("金価格取得エラー:", error);
@@ -354,14 +358,36 @@ export default function Products() {
         <Layout.Section>
           {goldPrice && (
             <Card>
-              <BlockStack gap="300">
-                <h3>田中貴金属 金価格情報</h3>
-                <p>
-                  前日比: <strong>{goldPrice.change}%</strong>
-                </p>
-                <p>
-                  <strong>価格調整率: {(goldPrice.ratio * 100).toFixed(2)}%</strong>
-                  （この変動率で商品価格を自動調整します）
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>田中貴金属 金価格情報</h3>
+                  <Badge tone={goldPrice.changeDirection === 'up' ? 'attention' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
+                    {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
+                  </Badge>
+                </InlineStack>
+                
+                <InlineStack gap="600">
+                  <div>
+                    <p style={{color: '#6B7280', fontSize: '14px'}}>店頭小売価格（税込）</p>
+                    <p style={{fontSize: '18px', fontWeight: 'bold'}}>{goldPrice.retailPriceFormatted}</p>
+                  </div>
+                  <div>
+                    <p style={{color: '#6B7280', fontSize: '14px'}}>前日比</p>
+                    <p style={{fontSize: '18px', fontWeight: 'bold', color: goldPrice.changeDirection === 'up' ? '#DC2626' : goldPrice.changeDirection === 'down' ? '#059669' : '#6B7280'}}>
+                      {goldPrice.change}
+                    </p>
+                  </div>
+                </InlineStack>
+                
+                <div style={{padding: '12px', backgroundColor: '#F3F4F6', borderRadius: '8px'}}>
+                  <p style={{margin: 0}}>
+                    <strong>価格調整率: {goldPrice.percentage}%</strong>
+                    （この変動率で商品価格を自動調整します）
+                  </p>
+                </div>
+                
+                <p style={{color: '#6B7280', fontSize: '12px', margin: 0}}>
+                  最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}
                 </p>
               </BlockStack>
             </Card>
