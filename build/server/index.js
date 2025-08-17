@@ -11,10 +11,10 @@ import { PrismaClient } from "@prisma/client";
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, PureComponent, useCallback, useMemo, forwardRef, Component, memo, useId, useImperativeHandle, createElement, isValidElement, Children, createRef, useReducer, Suspense } from "react";
 import { themes, breakpointsAliases, themeNameDefault, createThemeClassName, themeDefault, getMediaConditions, themeNames } from "@shopify/polaris-tokens";
 import { createHmac, timingSafeEqual } from "crypto";
-import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon } from "@shopify/polaris-icons";
+import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, ProductIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon } from "@shopify/polaris-icons";
 import { createPortal } from "react-dom";
 import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
-import { NavMenu, TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { NavMenu, TitleBar } from "@shopify/app-bridge-react";
 import isEqual from "react-fast-compare";
 import { Transition, CSSTransition, TransitionGroup } from "react-transition-group";
 if (process.env.NODE_ENV !== "production") {
@@ -1373,7 +1373,7 @@ var styles$J = {
 const deprecatedVariants = {
   heading3xl: "heading2xl"
 };
-const Text = ({
+const Text$1 = ({
   alignment,
   as,
   breakWord,
@@ -1442,7 +1442,7 @@ function Icon({
   };
   return /* @__PURE__ */ React.createElement("span", {
     className
-  }, accessibilityLabel && /* @__PURE__ */ React.createElement(Text, {
+  }, accessibilityLabel && /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel), contentMarkup[sourceType]);
@@ -1475,7 +1475,7 @@ function Spinner$1({
       role: "status"
     }
   };
-  const accessibilityLabelMarkup = (isAfterInitialMount || !hasFocusableParent) && /* @__PURE__ */ React.createElement(Text, {
+  const accessibilityLabelMarkup = (isAfterInitialMount || !hasFocusableParent) && /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel);
@@ -1679,7 +1679,7 @@ function Button({
   if (size === "large" || hasPlainText && size !== "micro") {
     textVariant = "bodyMd";
   }
-  const childMarkup = children ? /* @__PURE__ */ React.createElement(Text, {
+  const childMarkup = children ? /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: textVariant,
     fontWeight: textFontWeight,
@@ -2121,7 +2121,7 @@ function Pip({
   const accessibilityLabel = accessibilityLabelOverride ? accessibilityLabelOverride : getDefaultAccessibilityLabel(i18n, progress, tone);
   return /* @__PURE__ */ React.createElement("span", {
     className
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel));
@@ -2158,7 +2158,7 @@ function Badge({
   const withinFilter = useContext(WithinFilterContext);
   const className = classNames(styles$C.Badge, tone && styles$C[variationName("tone", tone)], size && size !== DEFAULT_SIZE && styles$C[variationName("size", size)], withinFilter && styles$C.withinFilter);
   const accessibilityLabel = toneAndProgressLabelOverride ? toneAndProgressLabelOverride : getDefaultAccessibilityLabel(i18n, progress, tone);
-  let accessibilityMarkup = Boolean(accessibilityLabel) && /* @__PURE__ */ React.createElement(Text, {
+  let accessibilityMarkup = Boolean(accessibilityLabel) && /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     visuallyHidden: true
   }, accessibilityLabel);
@@ -2176,7 +2176,7 @@ function Badge({
     className: styles$C.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: icon
-  })), children && /* @__PURE__ */ React.createElement(Text, {
+  })), children && /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodySm",
     fontWeight: tone === "new" ? "medium" : void 0
@@ -2926,7 +2926,7 @@ function Tooltip({
     borderRadius,
     zIndexOverride,
     instant: !shouldAnimate
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd"
   }, content))) : null;
@@ -3040,11 +3040,11 @@ function Item$4({
   } else if (ellipsis) {
     contentText = `${content}…`;
   }
-  const contentMarkup = helpText ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Box, null, contentText), /* @__PURE__ */ React.createElement(Text, {
+  const contentMarkup = helpText ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Box, null, contentText), /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodySm",
     tone: active || disabled ? void 0 : "subdued"
-  }, helpText)) : /* @__PURE__ */ React.createElement(Text, {
+  }, helpText)) : /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd",
     fontWeight: active ? "semibold" : "regular"
@@ -3059,7 +3059,7 @@ function Item$4({
   }, suffix));
   const textMarkup = /* @__PURE__ */ React.createElement("span", {
     className: styles$D.Text
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd",
     fontWeight: active ? "semibold" : "regular"
@@ -3105,7 +3105,7 @@ const TruncateText = ({
       setIsOverflowing(textRef.current.scrollWidth > textRef.current.offsetWidth);
     }
   }, [children]);
-  const text = /* @__PURE__ */ React.createElement(Text, {
+  const text = /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     truncate: true
   }, /* @__PURE__ */ React.createElement(Box, {
@@ -3118,7 +3118,7 @@ const TruncateText = ({
     hoverDelay: 1e3,
     content: children,
     dismissOnMouseOut: true
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     truncate: true
   }, children)) : text;
@@ -3167,7 +3167,7 @@ function Section$3({
       paddingBlockEnd: "100",
       paddingInlineStart: "300",
       paddingInlineEnd: "300"
-    }, /* @__PURE__ */ React.createElement(Text, {
+    }, /* @__PURE__ */ React.createElement(Text$1, {
       as: "p",
       variant: "headingSm"
     }, section.title)) : /* @__PURE__ */ React.createElement(Box, {
@@ -3310,7 +3310,7 @@ function InlineError({
     className: styles$u.Icon
   }, /* @__PURE__ */ React.createElement(Icon, {
     source: AlertCircleIcon
-  })), /* @__PURE__ */ React.createElement(Text, {
+  })), /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd"
   }, message));
@@ -3340,7 +3340,7 @@ function Label({
     id: labelID(id),
     htmlFor: id,
     className: classNames(styles$t.Text, requiredIndicator && styles$t.RequiredIndicator)
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd"
   }, children)));
@@ -3368,7 +3368,7 @@ function Labelled({
     className: styles$v.HelpText,
     id: helpTextID$1(id),
     "aria-disabled": disabled
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     tone: "subdued",
     variant: "bodyMd",
@@ -3659,7 +3659,7 @@ function TextField({
     className: classNames(styles$w.Prefix, iconPrefix && styles$w.PrefixIcon),
     id: `${id}-Prefix`,
     ref: prefixRef
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd"
   }, prefix)) : null;
@@ -3667,7 +3667,7 @@ function TextField({
     className: styles$w.Suffix,
     id: `${id}-Suffix`,
     ref: suffixRef
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd"
   }, suffix)) : null;
@@ -3696,7 +3696,7 @@ function TextField({
       "aria-live": focus ? "polite" : "off",
       "aria-atomic": "true",
       onClick: handleClickChild
-    }, /* @__PURE__ */ React.createElement(Text, {
+    }, /* @__PURE__ */ React.createElement(Text$1, {
       as: "span",
       variant: "bodyMd"
     }, characterCountText));
@@ -3707,7 +3707,7 @@ function TextField({
     className: styles$w.ClearButton,
     onClick: handleClearButtonPress,
     disabled
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     visuallyHidden: true
   }, i18n.translate("Polaris.Common.clear")), /* @__PURE__ */ React.createElement(Icon, {
@@ -5131,7 +5131,7 @@ function Choice({
       className: styles$k.Control
     }, children), /* @__PURE__ */ React.createElement("span", {
       className: styles$k.Label
-    }, /* @__PURE__ */ React.createElement(Text, {
+    }, /* @__PURE__ */ React.createElement(Text$1, {
       as: "span",
       variant: "bodyMd"
     }, label)))
@@ -5139,7 +5139,7 @@ function Choice({
   const helpTextMarkup = helpText ? /* @__PURE__ */ React.createElement("div", {
     className: styles$k.HelpText,
     id: helpTextID(id)
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     tone: disabled ? void 0 : "subdued"
   }, helpText)) : null;
@@ -5533,7 +5533,7 @@ function BannerLayout({
   const sharedBannerProps = {
     backgroundColor: bannerColors.background,
     textColor: bannerColors.text,
-    bannerTitle: title ? /* @__PURE__ */ React.createElement(Text, {
+    bannerTitle: title ? /* @__PURE__ */ React.createElement(Text$1, {
       as: "h2",
       variant: "headingSm",
       breakWord: true
@@ -5559,7 +5559,7 @@ function BannerLayout({
       accessibilityLabel: i18n.translate("Polaris.Banner.dismissButton")
     }) : null
   };
-  const childrenMarkup = children ? /* @__PURE__ */ React.createElement(Text, {
+  const childrenMarkup = children ? /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd"
   }, children) : null;
@@ -6082,7 +6082,7 @@ function Pagination({
       padding: "300",
       paddingBlockStart: "0",
       paddingBlockEnd: "0"
-    }, /* @__PURE__ */ React.createElement(Text, {
+    }, /* @__PURE__ */ React.createElement(Text$1, {
       as: "span",
       variant: "bodySm",
       fontWeight: "medium"
@@ -6105,7 +6105,7 @@ function Pagination({
       "data-buttongroup-variant": "segmented"
     }, /* @__PURE__ */ React.createElement("div", null, constructedPrevious), labelMarkup2, /* @__PURE__ */ React.createElement("div", null, constructedNext)))));
   }
-  const labelTextMarkup = hasNext && hasPrevious ? /* @__PURE__ */ React.createElement("span", null, label) : /* @__PURE__ */ React.createElement(Text, {
+  const labelTextMarkup = hasNext && hasPrevious ? /* @__PURE__ */ React.createElement("span", null, label) : /* @__PURE__ */ React.createElement(Text$1, {
     tone: "subdued",
     as: "span"
   }, label);
@@ -7086,7 +7086,7 @@ function Group({
   }
   if (title) {
     titleId = `${id}Title`;
-    titleElement = /* @__PURE__ */ React.createElement(Text, {
+    titleElement = /* @__PURE__ */ React.createElement(Text$1, {
       id: titleId,
       as: "p"
     }, title);
@@ -7285,7 +7285,7 @@ function Dialog({
   };
   const ariaLiveAnnouncements = /* @__PURE__ */ React.createElement("div", {
     "aria-live": "assertive"
-  }, toastMessages ? toastMessages.map((toastMessage) => /* @__PURE__ */ React.createElement(Text, {
+  }, toastMessages ? toastMessages.map((toastMessage) => /* @__PURE__ */ React.createElement(Text$1, {
     visuallyHidden: true,
     as: "p",
     key: toastMessage.id
@@ -7384,7 +7384,7 @@ function Header$1({
   }, /* @__PURE__ */ React.createElement(InlineStack, {
     gap: "400",
     blockAlign: "center"
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     id,
     as: "h2",
     variant: "headingMd",
@@ -7584,7 +7584,7 @@ function AnnotatedSection({
   description,
   id
 }) {
-  const descriptionMarkup = typeof description === "string" ? /* @__PURE__ */ React.createElement(Text, {
+  const descriptionMarkup = typeof description === "string" ? /* @__PURE__ */ React.createElement(Text$1, {
     as: "p",
     variant: "bodyMd"
   }, description) : description;
@@ -7596,7 +7596,7 @@ function AnnotatedSection({
     className: styles$7.Annotation
   }, /* @__PURE__ */ React.createElement(TextContainer, {
     spacing: "tight"
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     id,
     variant: "headingMd",
     as: "h2"
@@ -7736,7 +7736,7 @@ function Title({
   const className = classNames(styles$1.Title, subtitle && styles$1.TitleWithSubtitle);
   const titleMarkup = title ? /* @__PURE__ */ React.createElement("h1", {
     className
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "headingLg",
     fontWeight: "bold"
@@ -7749,7 +7749,7 @@ function Title({
   }, titleMarkup, titleMetadataMarkup);
   const subtitleMarkup = subtitle ? /* @__PURE__ */ React.createElement("div", {
     className: classNames(styles$1.SubTitle, compactTitle && styles$1.SubtitleCompact, hasSubtitleMaxWidth && styles$1.SubtitleMaxWidth)
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "p",
     variant: "bodySm",
     tone: "subdued"
@@ -7810,7 +7810,7 @@ function Header({
   const labelForPageReadyAccessibilityLabel = pageReadyAccessibilityLabel || title;
   const pageReadyAccessibilityLabelMarkup = labelForPageReadyAccessibilityLabel ? /* @__PURE__ */ React.createElement("div", {
     role: "status"
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     visuallyHidden: true,
     as: "p"
   }, i18n.translate("Polaris.Page.Header.pageReadyAccessibilityLabel", {
@@ -7844,7 +7844,7 @@ function Header({
   }, breadcrumbMarkup, paginationMarkup)) : null;
   const additionalMetadataMarkup = additionalMetadata ? /* @__PURE__ */ React.createElement("div", {
     className: styles$2.AdditionalMetaData
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     tone: "subdued",
     as: "span",
     variant: "bodySm"
@@ -8106,7 +8106,7 @@ function Select({
   }
   const inlineLabelMarkup = labelInline && /* @__PURE__ */ React.createElement(Box, {
     paddingInlineEnd: "100"
-  }, /* @__PURE__ */ React.createElement(Text, {
+  }, /* @__PURE__ */ React.createElement(Text$1, {
     as: "span",
     variant: "bodyMd",
     tone: tone && tone === "magic" && !focused ? "magic-subdued" : "subdued",
@@ -8268,7 +8268,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App$2,
   links: links$2
 }, Symbol.toStringTag, { value: "Module" }));
-const action$7 = async ({ request }) => {
+const action$6 = async ({ request }) => {
   const raw = await request.text();
   const hmac = request.headers.get("x-shopify-hmac-sha256") ?? "";
   const digest = createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(raw, "utf8").digest("base64");
@@ -8280,10 +8280,10 @@ const action$7 = async ({ request }) => {
 const loader$9 = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7,
+  action: action$6,
   loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-const action$6 = async ({ request }) => {
+const action$5 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   const current = payload.current;
@@ -8301,14 +8301,14 @@ const action$6 = async ({ request }) => {
 };
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6
+  action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7,
+  action: action$6,
   loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-const action$5 = async ({ request }) => {
+const action$4 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   try {
@@ -8330,11 +8330,11 @@ const action$5 = async ({ request }) => {
 };
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$5
+  action: action$4
 }, Symbol.toStringTag, { value: "Module" }));
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7,
+  action: action$6,
   loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
@@ -8353,7 +8353,7 @@ const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
 const loader$8 = async () => {
   return json({ errors: {}, polarisTranslations });
 };
-const action$4 = async ({ request }) => {
+const action$3 = async ({ request }) => {
   const formData = await request.formData();
   const rawShop = (formData.get("shop") || "").toString();
   const shop = normalizeShop(rawShop);
@@ -8383,7 +8383,7 @@ function Auth() {
   const [shop, setShop] = useState("");
   const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
   return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
-    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
+    /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "Log in" }),
     /* @__PURE__ */ jsx(
       TextField,
       {
@@ -8402,12 +8402,12 @@ function Auth() {
 }
 const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$4,
+  action: action$3,
   default: Auth,
   links: links$1,
   loader: loader$8
 }, Symbol.toStringTag, { value: "Module" }));
-async function action$3() {
+async function action$2() {
   return json({
     status: "success",
     message: "API endpoint is working",
@@ -8423,7 +8423,7 @@ async function loader$7() {
 }
 const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$3,
+  action: action$2,
   loader: loader$7
 }, Symbol.toStringTag, { value: "Module" }));
 const loader$6 = async ({ request }) => {
@@ -8483,7 +8483,7 @@ function AdditionalPage() {
     /* @__PURE__ */ jsx(TitleBar, { title: "Additional page" }),
     /* @__PURE__ */ jsxs(Layout, { children: [
       /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
-        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
+        /* @__PURE__ */ jsxs(Text$1, { as: "p", variant: "bodyMd", children: [
           "The app template comes with an additional page which demonstrates how to create multiple pages within app navigation using",
           " ",
           /* @__PURE__ */ jsx(
@@ -8497,7 +8497,7 @@ function AdditionalPage() {
           ),
           "."
         ] }),
-        /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
+        /* @__PURE__ */ jsxs(Text$1, { as: "p", variant: "bodyMd", children: [
           "To create your own page and have it show up in the app navigation, add a page inside ",
           /* @__PURE__ */ jsx(Code, { children: "app/routes" }),
           ", and a link to it in the ",
@@ -8508,7 +8508,7 @@ function AdditionalPage() {
         ] })
       ] }) }) }),
       /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-        /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "Resources" }),
+        /* @__PURE__ */ jsx(Text$1, { as: "h2", variant: "headingMd", children: "Resources" }),
         /* @__PURE__ */ jsx(List, { children: /* @__PURE__ */ jsx(List.Item, { children: /* @__PURE__ */ jsx(
           Link,
           {
@@ -8823,7 +8823,7 @@ const loader$3 = async ({ request }) => {
     shopSetting
   });
 };
-const action$2 = async ({ request }) => {
+const action$1 = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
   const action2 = formData.get("action");
@@ -8978,37 +8978,69 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
       },
       children: /* @__PURE__ */ jsxs(Layout, { children: [
         /* @__PURE__ */ jsxs(Layout.Section, { children: [
-          goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
-            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
-              /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
-              /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "attention" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
-            ] }),
-            /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "店頭小売価格（税込）" }),
-                /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold" }, children: goldPrice.retailPriceFormatted })
+          goldPrice && /* @__PURE__ */ jsxs("div", { style: {
+            background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            borderRadius: "16px",
+            padding: "24px",
+            color: "white",
+            position: "relative",
+            overflow: "hidden",
+            marginBottom: "20px"
+          }, children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              position: "absolute",
+              top: "-30px",
+              right: "-30px",
+              width: "120px",
+              height: "120px",
+              background: "rgba(255,255,255,0.1)",
+              borderRadius: "50%"
+            } }),
+            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
+              /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+                  /* @__PURE__ */ jsx(Text, { variant: "headingLg", as: "h2", tone: "text-inverse", children: "田中貴金属 金価格" }),
+                  /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
+                ] }),
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "店頭小売価格（税込）" }),
+                    /* @__PURE__ */ jsx(Text, { variant: "headingXl", as: "p", tone: "text-inverse", children: goldPrice.retailPriceFormatted })
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "前日比" }),
+                    /* @__PURE__ */ jsx(Text, { variant: "headingLg", as: "p", tone: "text-inverse", children: goldPrice.change })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsx("div", { style: {
+                  padding: "16px",
+                  background: "rgba(255,255,255,0.2)",
+                  borderRadius: "12px",
+                  backdropFilter: "blur(10px)"
+                }, children: /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", tone: "text-inverse", children: [
+                  /* @__PURE__ */ jsxs("strong", { children: [
+                    "価格調整率: ",
+                    goldPrice.percentage,
+                    "%"
+                  ] }),
+                  " — この変動率で商品価格を自動調整"
+                ] }) })
               ] }),
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("p", { style: { color: "#6B7280", fontSize: "14px" }, children: "前日比" }),
-                /* @__PURE__ */ jsx("p", { style: { fontSize: "18px", fontWeight: "bold", color: goldPrice.changeDirection === "up" ? "#DC2626" : goldPrice.changeDirection === "down" ? "#059669" : "#6B7280" }, children: goldPrice.change })
+              /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "end", children: [
+                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "text-inverse", children: "最終更新" }),
+                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "text-inverse", children: new Date(goldPrice.lastUpdated).toLocaleString("ja-JP") })
               ] })
-            ] }),
-            /* @__PURE__ */ jsx("div", { style: { padding: "12px", backgroundColor: "#F3F4F6", borderRadius: "8px" }, children: /* @__PURE__ */ jsxs("p", { style: { margin: 0 }, children: [
-              /* @__PURE__ */ jsxs("strong", { children: [
-                "価格調整率: ",
-                goldPrice.percentage,
-                "%"
-              ] }),
-              "（この変動率で商品価格を自動調整します）"
-            ] }) }),
-            /* @__PURE__ */ jsxs("p", { style: { color: "#6B7280", fontSize: "12px", margin: 0 }, children: [
-              "最終更新: ",
-              new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
             ] })
-          ] }) }),
+          ] }),
           !goldPrice && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: "金価格情報の取得に失敗しました。価格調整機能をご利用いただけません。" })
         ] }),
-        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: {
+          background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+          padding: "24px",
+          borderRadius: "12px",
+          marginBottom: "20px"
+        }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+          /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h3", children: "商品検索・選択" }),
           /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
             /* @__PURE__ */ jsx("div", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
               TextField,
@@ -9034,7 +9066,12 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
               }
             ) })
           ] }),
-          /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsx("div", { style: {
+            background: "white",
+            padding: "20px",
+            borderRadius: "8px",
+            border: "1px solid #e2e8f0"
+          }, children: /* @__PURE__ */ jsx(
             TextField,
             {
               label: "価格下限設定 (%)",
@@ -9046,13 +9083,14 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
               min: "50",
               max: "100"
             }
-          ),
-          /* @__PURE__ */ jsxs(ButtonGroup, { children: [
+          ) }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
             /* @__PURE__ */ jsx(
               Button,
               {
                 onClick: () => handleSelectAll(true),
                 disabled: filteredProducts.length === 0,
+                size: "large",
                 children: "すべて選択"
               }
             ),
@@ -9061,6 +9099,7 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
               {
                 onClick: () => handleSelectAll(false),
                 disabled: selectedProducts.length === 0,
+                size: "large",
                 children: "選択解除"
               }
             ),
@@ -9070,17 +9109,37 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
                 onClick: saveSelection,
                 disabled: fetcher.state === "submitting",
                 variant: "primary",
+                size: "large",
                 children: "選択を保存"
               }
             )
           ] }),
-          selectedProductIds && selectedProductIds.length > 0 && /* @__PURE__ */ jsxs(Banner, { tone: "info", children: [
-            "現在 ",
-            selectedProductIds.length,
-            " 件の商品が自動更新対象として保存されています"
-          ] }),
-          ((_a = fetcher.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: fetcher.data.message })
-        ] }) }) }),
+          selectedProductIds && selectedProductIds.length > 0 && /* @__PURE__ */ jsx("div", { style: {
+            background: "#e0f2fe",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #0ea5e9"
+          }, children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: ProductIcon, tone: "info" }),
+            /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", children: [
+              "現在 ",
+              /* @__PURE__ */ jsxs("strong", { children: [
+                selectedProductIds.length,
+                "件"
+              ] }),
+              " の商品が自動更新対象として保存されています"
+            ] })
+          ] }) }),
+          ((_a = fetcher.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx("div", { style: {
+            background: "#dcfce7",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #10b981"
+          }, children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
+            /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: "success", children: fetcher.data.message })
+          ] }) })
+        ] }) }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(
           DataTable,
           {
@@ -9223,7 +9282,7 @@ function Products() {
 }
 const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$2,
+  action: action$1,
   default: Products,
   loader: loader$3
 }, Symbol.toStringTag, { value: "Module" }));
@@ -9242,7 +9301,7 @@ async function loader$2({ request }) {
   });
   return json({ setting });
 }
-async function action$1({ request }) {
+async function action({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const form = await request.formData();
@@ -9314,14 +9373,14 @@ function Settings() {
       children: /* @__PURE__ */ jsxs(Layout, { children: [
         showSuccessMessage && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Banner, { tone: "success", onDismiss: () => setShowSuccessMessage(false), children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", align: "center", children: [
           /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
-          /* @__PURE__ */ jsx(Text, { children: "設定が正常に保存されました" })
+          /* @__PURE__ */ jsx(Text$1, { children: "設定が正常に保存されました" })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: SettingsIcon, tone: "base" }),
             /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "自動更新設定" }),
-              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "田中貴金属の価格変動に基づいて商品価格を自動調整します" })
+              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "自動更新設定" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "田中貴金属の価格変動に基づいて商品価格を自動調整します" })
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
@@ -9367,8 +9426,8 @@ function Settings() {
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: NotificationIcon, tone: "base" }),
             /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "通知設定" }),
-              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "価格更新の実行結果やエラーを通知します" })
+              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "通知設定" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "価格更新の実行結果やエラーを通知します" })
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
@@ -9388,30 +9447,30 @@ function Settings() {
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "base" }),
             /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "実行スケジュール" }),
-              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動更新の実行タイミングについて" })
+              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h2", children: "実行スケジュール" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "自動更新の実行タイミングについて" })
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
           /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
             /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
               /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行曜日" }),
-                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "平日（月〜金曜日）" })
+                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行曜日" }),
+                /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "平日（月〜金曜日）" })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行時刻" }),
-                /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
+                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行時刻" }),
+                /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", tone: "subdued", children: [
                   String(setting.autoUpdateHour || 10).padStart(2, "0"),
                   ":00（日本時間）"
                 ] })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "祝日対応" }),
-                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動的にスキップ" })
+                /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "祝日対応" }),
+                /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "自動的にスキップ" })
               ] })
             ] }),
-            /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsx(Text, { children: "自動更新は平日の設定時刻に実行され、日本の祝日は自動的にスキップされます。 価格変動がない場合や取得エラー時は更新をスキップします。" }) })
+            /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsx(Text$1, { children: "自動更新は平日の設定時刻に実行され、日本の祝日は自動的にスキップされます。 価格変動がない場合や取得エラー時は更新をスキップします。" }) })
           ] })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(InlineStack, { align: "end", children: /* @__PURE__ */ jsx(
@@ -9430,399 +9489,474 @@ function Settings() {
 }
 const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$1,
+  action,
   default: Settings,
   loader: loader$2
 }, Symbol.toStringTag, { value: "Module" }));
 const loader$1 = async ({ request }) => {
-  await authenticate.admin(request);
-  return null;
+  var _a;
+  const { session } = await authenticate.admin(request);
+  try {
+    const goldData = await fetchGoldPriceDataTanaka();
+    const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
+      prisma.selectedProduct.count({
+        where: { shopDomain: session.shop, selected: true }
+      }),
+      prisma.priceUpdateLog.findMany({
+        where: { shopDomain: session.shop },
+        orderBy: { executedAt: "desc" },
+        take: 5
+      }),
+      prisma.shopSetting.findUnique({
+        where: { shopDomain: session.shop }
+      })
+    ]);
+    return json({
+      goldPrice: goldData ? {
+        ratio: goldData.changeRatio,
+        percentage: (goldData.changeRatio * 100).toFixed(2),
+        change: goldData.changePercent,
+        retailPrice: goldData.retailPrice,
+        retailPriceFormatted: goldData.retailPriceFormatted,
+        changeDirection: goldData.changeDirection,
+        lastUpdated: goldData.lastUpdated
+      } : null,
+      stats: {
+        selectedProducts,
+        totalLogs: recentLogs.length,
+        lastExecution: ((_a = recentLogs[0]) == null ? void 0 : _a.executedAt) || null,
+        autoScheduleEnabled: (shopSetting == null ? void 0 : shopSetting.autoScheduleEnabled) || false
+      },
+      recentLogs
+    });
+  } catch (error) {
+    console.error("Dashboard loader error:", error);
+    return json({
+      goldPrice: null,
+      stats: { selectedProducts: 0, totalLogs: 0, lastExecution: null, autoScheduleEnabled: false },
+      recentLogs: []
+    });
+  }
 };
-const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][Math.floor(Math.random() * 4)];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
-        }
-      }`,
+function Dashboard() {
+  const { goldPrice, stats, recentLogs } = useLoaderData();
+  return /* @__PURE__ */ jsx(
+    Page,
     {
-      variables: {
-        product: {
-          title: `${color} Snowboard`
-        }
-      }
-    }
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyRemixTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }]
-      }
-    }
-  );
-  const variantResponseJson = await variantResponse.json();
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants
-  };
-};
-function Index() {
-  var _a, _b, _c, _d;
-  const fetcher = useFetcher();
-  const shopify2 = useAppBridge();
-  const isLoading = ["loading", "submitting"].includes(fetcher.state) && fetcher.formMethod === "POST";
-  const productId = (_b = (_a = fetcher.data) == null ? void 0 : _a.product) == null ? void 0 : _b.id.replace(
-    "gid://shopify/Product/",
-    ""
-  );
-  useEffect(() => {
-    if (productId) {
-      shopify2.toast.show("Product created");
-    }
-  }, [productId, shopify2]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
-  return /* @__PURE__ */ jsxs(Page, { children: [
-    /* @__PURE__ */ jsx(TitleBar, { title: "Remix app template", children: /* @__PURE__ */ jsx("button", { variant: "primary", onClick: generateProduct, children: "Generate a product" }) }),
-    /* @__PURE__ */ jsx(BlockStack, { gap: "500", children: /* @__PURE__ */ jsxs(Layout, { children: [
-      /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
-        /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-          /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "Congrats on creating a new Shopify app 🎉" }),
-          /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", as: "p", children: [
-            "This embedded app template uses",
-            " ",
-            /* @__PURE__ */ jsx(
-              Link,
-              {
-                url: "https://shopify.dev/docs/apps/tools/app-bridge",
-                target: "_blank",
-                removeUnderline: true,
-                children: "App Bridge"
-              }
-            ),
-            " ",
-            "interface examples like an",
-            " ",
-            /* @__PURE__ */ jsx(Link, { url: "/app/additional", removeUnderline: true, children: "additional page in the app nav" }),
-            ", as well as an",
-            " ",
-            /* @__PURE__ */ jsx(
-              Link,
-              {
-                url: "https://shopify.dev/docs/api/admin-graphql",
-                target: "_blank",
-                removeUnderline: true,
-                children: "Admin GraphQL"
-              }
-            ),
-            " ",
-            "mutation demo, to provide a starting point for app development."
+      title: "金価格自動調整ダッシュボード",
+      subtitle: "K18商品の価格を田中貴金属の金価格に連動して自動調整",
+      children: /* @__PURE__ */ jsxs(BlockStack, { gap: "600", children: [
+        /* @__PURE__ */ jsxs("div", { style: {
+          background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+          borderRadius: "16px",
+          padding: "32px",
+          color: "white",
+          position: "relative",
+          overflow: "hidden"
+        }, children: [
+          /* @__PURE__ */ jsx("div", { style: {
+            position: "absolute",
+            top: "-50px",
+            right: "-50px",
+            width: "200px",
+            height: "200px",
+            background: "rgba(255,255,255,0.1)",
+            borderRadius: "50%"
+          } }),
+          /* @__PURE__ */ jsx("div", { style: {
+            position: "absolute",
+            bottom: "-30px",
+            left: "-30px",
+            width: "150px",
+            height: "150px",
+            background: "rgba(255,255,255,0.05)",
+            borderRadius: "50%"
+          } }),
+          /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+              /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+                /* @__PURE__ */ jsx("span", { style: { fontSize: "24px", marginRight: "8px" }, children: "📈" }),
+                /* @__PURE__ */ jsx(Text$1, { variant: "headingLg", as: "h2", tone: "text-inverse", children: "田中貴金属 金価格" })
+              ] }),
+              goldPrice ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", tone: "text-inverse", children: goldPrice.retailPriceFormatted }),
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
+                  /* @__PURE__ */ jsx(
+                    Badge,
+                    {
+                      tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info",
+                      size: "large",
+                      children: goldPrice.change
+                    }
+                  ),
+                  /* @__PURE__ */ jsxs(Text$1, { variant: "bodyLg", tone: "text-inverse", children: [
+                    "前日比 • 調整率: ",
+                    goldPrice.percentage,
+                    "%"
+                  ] })
+                ] })
+              ] }) : /* @__PURE__ */ jsx(Text$1, { variant: "headingLg", tone: "text-inverse", children: "価格情報取得中..." })
+            ] }),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "end", children: [
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "text-inverse", children: "最終更新" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "text-inverse", children: goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString("ja-JP") : "--" })
+            ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-          /* @__PURE__ */ jsx(Text, { as: "h3", variant: "headingMd", children: "Get started with products" }),
-          /* @__PURE__ */ jsxs(Text, { as: "p", variant: "bodyMd", children: [
-            "Generate a product with GraphQL and get the JSON output for that product. Learn more about the",
-            " ",
-            /* @__PURE__ */ jsx(
-              Link,
-              {
-                url: "https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate",
-                target: "_blank",
-                removeUnderline: true,
-                children: "productCreate"
-              }
-            ),
-            " ",
-            "mutation in our API references."
-          ] })
+        /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "20px", textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              width: "48px",
+              height: "48px",
+              background: "#e0f2fe",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }, children: /* @__PURE__ */ jsx(Icon, { source: ProductIcon, tone: "info" }) }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.selectedProducts }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "選択中の商品" })
+          ] }) }) }),
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "20px", textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              width: "48px",
+              height: "48px",
+              background: stats.autoScheduleEnabled ? "#dcfce7" : "#fef3c7",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }, children: /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: stats.autoScheduleEnabled ? "success" : "warning" }) }),
+            /* @__PURE__ */ jsx(Badge, { tone: stats.autoScheduleEnabled ? "success" : "warning", children: stats.autoScheduleEnabled ? "有効" : "無効" }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "自動スケジュール" })
+          ] }) }) }),
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "20px", textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              width: "48px",
+              height: "48px",
+              background: "#fce7f3",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }, children: /* @__PURE__ */ jsx(Icon, { source: NotificationIcon, tone: "base" }) }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalLogs }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "最近の実行" })
+          ] }) }) })
+        ] }) }) }),
+        /* @__PURE__ */ jsxs(Layout, { children: [
+          /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
+            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
+              /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "クイックアクション" }),
+              /* @__PURE__ */ jsx(InlineStack, { gap: "200", children: /* @__PURE__ */ jsx(Link$1, { to: "/app/settings", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { icon: SettingsIcon, children: "設定" }) }) })
+            ] }),
+            /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
+              /* @__PURE__ */ jsx(Link$1, { to: "/app/products", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { variant: "primary", size: "large", children: "商品価格を調整" }) }),
+              /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { children: "実行ログを確認" }) })
+            ] }),
+            stats.lastExecution && /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx(Divider, {}),
+              /* @__PURE__ */ jsx(BlockStack, { gap: "200", children: /* @__PURE__ */ jsxs(Text$1, { variant: "bodyMd", tone: "subdued", children: [
+                "最終実行: ",
+                new Date(stats.lastExecution).toLocaleString("ja-JP")
+              ] }) })
+            ] })
+          ] }) }) }),
+          /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+            /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "最近の実行ログ" }),
+            recentLogs.length === 0 ? /* @__PURE__ */ jsx("div", { style: { textAlign: "center", padding: "40px 20px" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", align: "center", children: [
+              /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "subdued" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "まだ実行履歴がありません" })
+            ] }) }) : /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+              recentLogs.slice(0, 3).map((log, index) => /* @__PURE__ */ jsx("div", { style: {
+                padding: "16px",
+                background: "#f9fafb",
+                borderRadius: "8px",
+                borderLeft: `4px solid ${log.success ? "#10b981" : "#ef4444"}`
+              }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+                /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
+                  /* @__PURE__ */ jsx(Badge, { tone: log.success ? "success" : "critical", children: log.success ? "成功" : "失敗" }),
+                  /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleDateString("ja-JP") })
+                ] }),
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+                  /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", children: [
+                    "商品: ",
+                    log.totalProducts || 0,
+                    "件"
+                  ] }),
+                  /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", children: [
+                    "成功: ",
+                    log.updatedCount || 0,
+                    "件"
+                  ] })
+                ] })
+              ] }) }, log.id)),
+              recentLogs.length > 3 && /* @__PURE__ */ jsx(Link$1, { to: "/app/logs", style: { textDecoration: "none" }, children: /* @__PURE__ */ jsx(Button, { variant: "plain", fullWidth: true, children: "すべてのログを表示" }) })
+            ] })
+          ] }) }) })
         ] }),
-        /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
-          /* @__PURE__ */ jsx(Button, { loading: isLoading, onClick: generateProduct, children: "Generate a product" }),
-          ((_c = fetcher.data) == null ? void 0 : _c.product) && /* @__PURE__ */ jsx(
-            Button,
-            {
-              url: `shopify:admin/products/${productId}`,
-              target: "_blank",
-              variant: "plain",
-              children: "View product"
-            }
-          )
-        ] }),
-        ((_d = fetcher.data) == null ? void 0 : _d.product) && /* @__PURE__ */ jsxs(Fragment, { children: [
-          /* @__PURE__ */ jsxs(Text, { as: "h3", variant: "headingMd", children: [
-            " ",
-            "productCreate mutation"
-          ] }),
-          /* @__PURE__ */ jsx(
-            Box,
-            {
-              padding: "400",
-              background: "bg-surface-active",
-              borderWidth: "025",
-              borderRadius: "200",
-              borderColor: "border",
-              overflowX: "scroll",
-              children: /* @__PURE__ */ jsx("pre", { style: { margin: 0 }, children: /* @__PURE__ */ jsx("code", { children: JSON.stringify(fetcher.data.product, null, 2) }) })
-            }
-          ),
-          /* @__PURE__ */ jsxs(Text, { as: "h3", variant: "headingMd", children: [
-            " ",
-            "productVariantsBulkUpdate mutation"
-          ] }),
-          /* @__PURE__ */ jsx(
-            Box,
-            {
-              padding: "400",
-              background: "bg-surface-active",
-              borderWidth: "025",
-              borderRadius: "200",
-              borderColor: "border",
-              overflowX: "scroll",
-              children: /* @__PURE__ */ jsx("pre", { style: { margin: 0 }, children: /* @__PURE__ */ jsx("code", { children: JSON.stringify(fetcher.data.variant, null, 2) }) })
-            }
-          )
-        ] })
-      ] }) }) }),
-      /* @__PURE__ */ jsx(Layout.Section, { variant: "oneThird", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
-        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-          /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "App template specs" }),
+        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: {
+          padding: "24px",
+          background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
+          borderRadius: "12px"
+        }, children: /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", blockAlign: "center", children: [
           /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
-              /* @__PURE__ */ jsx(Text, { as: "span", variant: "bodyMd", children: "Framework" }),
-              /* @__PURE__ */ jsx(
-                Link,
-                {
-                  url: "https://remix.run",
-                  target: "_blank",
-                  removeUnderline: true,
-                  children: "Remix"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
-              /* @__PURE__ */ jsx(Text, { as: "span", variant: "bodyMd", children: "Database" }),
-              /* @__PURE__ */ jsx(
-                Link,
-                {
-                  url: "https://www.prisma.io/",
-                  target: "_blank",
-                  removeUnderline: true,
-                  children: "Prisma"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
-              /* @__PURE__ */ jsx(Text, { as: "span", variant: "bodyMd", children: "Interface" }),
-              /* @__PURE__ */ jsxs("span", { children: [
-                /* @__PURE__ */ jsx(
-                  Link,
-                  {
-                    url: "https://polaris.shopify.com",
-                    target: "_blank",
-                    removeUnderline: true,
-                    children: "Polaris"
-                  }
-                ),
-                ", ",
-                /* @__PURE__ */ jsx(
-                  Link,
-                  {
-                    url: "https://shopify.dev/docs/apps/tools/app-bridge",
-                    target: "_blank",
-                    removeUnderline: true,
-                    children: "App Bridge"
-                  }
-                )
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
-              /* @__PURE__ */ jsx(Text, { as: "span", variant: "bodyMd", children: "API" }),
-              /* @__PURE__ */ jsx(
-                Link,
-                {
-                  url: "https://shopify.dev/docs/api/admin-graphql",
-                  target: "_blank",
-                  removeUnderline: true,
-                  children: "GraphQL API"
-                }
-              )
-            ] })
+            /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "Gold Price Updater" }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "田中貴金属の金価格に連動したK18商品の自動価格調整システム" })
+          ] }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
+            /* @__PURE__ */ jsx(Badge, { children: "Version 7" }),
+            /* @__PURE__ */ jsx(Badge, { tone: "success", children: "稼働中" })
           ] })
-        ] }) }),
-        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-          /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: "Next steps" }),
-          /* @__PURE__ */ jsxs(List, { children: [
-            /* @__PURE__ */ jsxs(List.Item, { children: [
-              "Build an",
-              " ",
-              /* @__PURE__ */ jsxs(
-                Link,
-                {
-                  url: "https://shopify.dev/docs/apps/getting-started/build-app-example",
-                  target: "_blank",
-                  removeUnderline: true,
-                  children: [
-                    " ",
-                    "example app"
-                  ]
-                }
-              ),
-              " ",
-              "to get started"
-            ] }),
-            /* @__PURE__ */ jsxs(List.Item, { children: [
-              "Explore Shopify’s API with",
-              " ",
-              /* @__PURE__ */ jsx(
-                Link,
-                {
-                  url: "https://shopify.dev/docs/apps/tools/graphiql-admin-api",
-                  target: "_blank",
-                  removeUnderline: true,
-                  children: "GraphiQL"
-                }
-              )
-            ] })
-          ] })
-        ] }) })
-      ] }) })
-    ] }) })
-  ] });
+        ] }) }) })
+      ] })
+    }
+  );
 }
 const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action,
-  default: Index,
+  default: Dashboard,
   loader: loader$1
 }, Symbol.toStringTag, { value: "Module" }));
 async function loader({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-  const logs = await prisma.priceUpdateLog.findMany({
-    where: { shopDomain: shop },
-    orderBy: { executedAt: "desc" },
-    take: 50
+  const [logs, stats] = await Promise.all([
+    prisma.priceUpdateLog.findMany({
+      where: { shopDomain: shop },
+      orderBy: { executedAt: "desc" },
+      take: 100
+    }),
+    prisma.priceUpdateLog.aggregate({
+      where: { shopDomain: shop },
+      _count: { id: true },
+      _sum: {
+        totalProducts: true,
+        updatedCount: true,
+        failedCount: true
+      }
+    })
+  ]);
+  return json({
+    logs,
+    stats: {
+      totalExecutions: stats._count.id,
+      totalProducts: stats._sum.totalProducts || 0,
+      totalSuccess: stats._sum.updatedCount || 0,
+      totalFailed: stats._sum.failedCount || 0
+    }
   });
-  return json({ logs });
 }
 function Logs() {
-  const { logs } = useLoaderData();
-  return /* @__PURE__ */ jsxs("div", { style: { padding: 16 }, children: [
-    /* @__PURE__ */ jsx("h1", { style: { fontSize: 20, fontWeight: 600, marginBottom: 12 }, children: "自動価格調整ログ" }),
-    logs.length === 0 ? /* @__PURE__ */ jsx("div", { style: { padding: 24, textAlign: "center", color: "#666" }, children: "まだ実行ログがありません" }) : /* @__PURE__ */ jsx("div", { style: { overflowX: "auto" }, children: /* @__PURE__ */ jsxs("table", { style: { borderCollapse: "collapse", width: "100%" }, children: [
-      /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { style: { background: "#f7f7f7" }, children: [
-        /* @__PURE__ */ jsx("th", { style: th, children: "実行日時" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "種類" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "状態" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "金価格変動率" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "下限%" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "対象商品" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "更新成功" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "更新失敗" }),
-        /* @__PURE__ */ jsx("th", { style: th, children: "エラー" })
-      ] }) }),
-      /* @__PURE__ */ jsx("tbody", { children: logs.map((log) => /* @__PURE__ */ jsxs("tr", { children: [
-        /* @__PURE__ */ jsx("td", { style: td, children: new Date(log.executedAt).toLocaleString("ja-JP") }),
-        /* @__PURE__ */ jsx("td", { style: td, children: /* @__PURE__ */ jsx("span", { style: {
-          padding: "2px 6px",
-          borderRadius: 4,
-          fontSize: 12,
-          backgroundColor: log.executionType === "auto" ? "#e6f3ff" : "#fff3e6",
-          color: log.executionType === "auto" ? "#0066cc" : "#cc6600"
-        }, children: log.executionType === "auto" ? "自動" : "手動" }) }),
-        /* @__PURE__ */ jsx("td", { style: td, children: /* @__PURE__ */ jsx("span", { style: {
-          padding: "2px 6px",
-          borderRadius: 4,
-          fontSize: 12,
-          backgroundColor: log.success ? "#e6ffe6" : "#ffe6e6",
-          color: log.success ? "#006600" : "#cc0000"
-        }, children: log.success ? "成功" : "失敗" }) }),
-        /* @__PURE__ */ jsx("td", { style: td, children: log.goldRatio !== null && log.goldRatio !== void 0 ? `${(log.goldRatio * 100).toFixed(2)}%` : "-" }),
-        /* @__PURE__ */ jsxs("td", { style: td, children: [
-          log.minPricePct,
-          "%"
-        ] }),
-        /* @__PURE__ */ jsx("td", { style: td, children: log.totalProducts || 0 }),
-        /* @__PURE__ */ jsx("td", { style: td, children: log.updatedCount || 0 }),
-        /* @__PURE__ */ jsx("td", { style: td, children: log.failedCount || 0 }),
-        /* @__PURE__ */ jsx("td", { style: td, children: log.errorMessage ? /* @__PURE__ */ jsx("span", { style: { color: "#cc0000", fontSize: 12 }, children: log.errorMessage.length > 50 ? log.errorMessage.substring(0, 50) + "..." : log.errorMessage }) : "-" })
-      ] }, log.id)) })
-    ] }) }),
-    /* @__PURE__ */ jsxs("div", { style: { marginTop: 24, padding: 12, backgroundColor: "#f9f9f9", borderRadius: 6 }, children: [
-      /* @__PURE__ */ jsx("h3", { style: { margin: 0, fontSize: 16 }, children: "📊 ログの見方" }),
-      /* @__PURE__ */ jsxs("ul", { style: { margin: "8px 0 0 20px", fontSize: 14, color: "#666" }, children: [
-        /* @__PURE__ */ jsxs("li", { children: [
-          /* @__PURE__ */ jsx("strong", { children: "自動" }),
-          ": スケジュールによる自動実行"
-        ] }),
-        /* @__PURE__ */ jsxs("li", { children: [
-          /* @__PURE__ */ jsx("strong", { children: "手動" }),
-          ": UIからの手動実行"
-        ] }),
-        /* @__PURE__ */ jsxs("li", { children: [
-          /* @__PURE__ */ jsx("strong", { children: "金価格変動率" }),
-          ": 田中貴金属から取得した前日比"
-        ] }),
-        /* @__PURE__ */ jsxs("li", { children: [
-          /* @__PURE__ */ jsx("strong", { children: "下限%" }),
-          ": 価格下落時の最低価格率"
-        ] })
+  const { logs, stats } = useLoaderData();
+  const [filterQuery, setFilterQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const filteredLogs = logs.filter((log) => {
+    var _a;
+    const matchesQuery = filterQuery === "" || ((_a = log.errorMessage) == null ? void 0 : _a.toLowerCase().includes(filterQuery.toLowerCase()));
+    const matchesStatus = statusFilter === "all" || statusFilter === "success" && log.success || statusFilter === "failed" && !log.success;
+    const matchesType = typeFilter === "all" || log.executionType === typeFilter;
+    return matchesQuery && matchesStatus && matchesType;
+  });
+  const tableRows = filteredLogs.map((log) => [
+    /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", as: "p", children: new Date(log.executedAt).toLocaleDateString("ja-JP") }),
+      /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleTimeString("ja-JP") })
+    ] }, `time-${log.id}`),
+    /* @__PURE__ */ jsx(Badge, { tone: log.executionType === "auto" ? "info" : "warning", children: log.executionType === "auto" ? "自動実行" : "手動実行" }, `type-${log.id}`),
+    /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+      /* @__PURE__ */ jsx(
+        Icon,
+        {
+          source: log.success ? CheckCircleIcon : AlertCircleIcon,
+          tone: log.success ? "success" : "critical"
+        }
+      ),
+      /* @__PURE__ */ jsx(Badge, { tone: log.success ? "success" : "critical", children: log.success ? "成功" : "失敗" })
+    ] }, `status-${log.id}`),
+    /* @__PURE__ */ jsx("div", { children: log.goldRatio !== null && log.goldRatio !== void 0 ? /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
+      /* @__PURE__ */ jsx("span", { style: {
+        fontSize: "16px",
+        color: log.goldRatio >= 0 ? "#dc2626" : "#059669"
+      }, children: log.goldRatio >= 0 ? "📈" : "📉" }),
+      /* @__PURE__ */ jsxs(Text$1, { children: [
+        (log.goldRatio * 100).toFixed(2),
+        "%"
       ] })
-    ] })
-  ] });
+    ] }) : /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "-" }) }, `ratio-${log.id}`),
+    /* @__PURE__ */ jsxs(Text$1, { children: [
+      log.minPricePct || "-",
+      "%"
+    ] }, `min-${log.id}`),
+    /* @__PURE__ */ jsxs(Text$1, { children: [
+      log.totalProducts || 0,
+      "件"
+    ] }, `products-${log.id}`),
+    /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
+      /* @__PURE__ */ jsx(Text$1, { tone: "success", children: log.updatedCount || 0 }),
+      /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "/" }),
+      /* @__PURE__ */ jsx(Text$1, { tone: "critical", children: log.failedCount || 0 })
+    ] }, `counts-${log.id}`),
+    /* @__PURE__ */ jsx("div", { children: log.errorMessage ? /* @__PURE__ */ jsx(Box, { padding: "200", background: "bg-critical-subdued", borderRadius: "100", children: /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "critical", children: log.errorMessage.length > 50 ? log.errorMessage.substring(0, 50) + "..." : log.errorMessage }) }) : /* @__PURE__ */ jsx(Text$1, { tone: "subdued", children: "-" }) }, `error-${log.id}`)
+  ]);
+  return /* @__PURE__ */ jsx(
+    Page,
+    {
+      title: "実行ログ",
+      subtitle: `${logs.length}件の実行履歴を表示`,
+      children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
+        /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "20px", textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              width: "48px",
+              height: "48px",
+              background: "#e0f2fe",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }, children: /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "info" }) }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalExecutions }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "総実行回数" })
+          ] }) }) }),
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "20px", textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              width: "48px",
+              height: "48px",
+              background: "#dcfce7",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }, children: /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }) }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalSuccess }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "成功更新数" })
+          ] }) }) }),
+          /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: { padding: "20px", textAlign: "center" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", align: "center", children: [
+            /* @__PURE__ */ jsx("div", { style: {
+              width: "48px",
+              height: "48px",
+              background: stats.totalFailed > 0 ? "#fecaca" : "#f3f4f6",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }, children: /* @__PURE__ */ jsx(Icon, { source: AlertCircleIcon, tone: stats.totalFailed > 0 ? "critical" : "subdued" }) }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "heading2xl", as: "p", children: stats.totalFailed }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: "失敗更新数" })
+          ] }) }) })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+          /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "フィルター" }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+            /* @__PURE__ */ jsx("div", { style: { minWidth: "200px" }, children: /* @__PURE__ */ jsx(
+              TextField,
+              {
+                label: "エラーメッセージ検索",
+                value: filterQuery,
+                onChange: setFilterQuery,
+                placeholder: "エラー内容で検索...",
+                clearButton: true,
+                onClearButtonClick: () => setFilterQuery("")
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
+              Select,
+              {
+                label: "実行結果",
+                options: [
+                  { label: "すべて", value: "all" },
+                  { label: "成功のみ", value: "success" },
+                  { label: "失敗のみ", value: "failed" }
+                ],
+                value: statusFilter,
+                onChange: setStatusFilter
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
+              Select,
+              {
+                label: "実行タイプ",
+                options: [
+                  { label: "すべて", value: "all" },
+                  { label: "自動実行", value: "auto" },
+                  { label: "手動実行", value: "manual" }
+                ],
+                value: typeFilter,
+                onChange: setTypeFilter
+              }
+            ) })
+          ] }),
+          /* @__PURE__ */ jsxs(Text$1, { variant: "bodySm", tone: "subdued", children: [
+            filteredLogs.length,
+            "件 / ",
+            logs.length,
+            "件を表示"
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsx(Card, { children: filteredLogs.length === 0 ? /* @__PURE__ */ jsx("div", { style: { textAlign: "center", padding: "60px 20px" }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", align: "center", children: [
+          /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "subdued" }),
+          /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", tone: "subdued", children: logs.length === 0 ? "まだ実行ログがありません" : "フィルター条件に一致するログがありません" }),
+          /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", tone: "subdued", children: logs.length === 0 ? "商品価格調整を実行すると、ここに履歴が表示されます。" : "フィルター条件を変更してください。" })
+        ] }) }) : /* @__PURE__ */ jsx(
+          DataTable,
+          {
+            columnContentTypes: ["text", "text", "text", "text", "text", "text", "text", "text"],
+            headings: [
+              "実行日時",
+              "種類",
+              "結果",
+              "金価格変動率",
+              "価格下限",
+              "対象商品",
+              "成功/失敗",
+              "エラー詳細"
+            ],
+            rows: tableRows,
+            pagination: {
+              hasNext: false,
+              hasPrevious: false
+            }
+          }
+        ) }),
+        /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: {
+          padding: "20px",
+          background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
+          borderRadius: "12px"
+        }, children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+            /* @__PURE__ */ jsx(Icon, { source: ClockIcon, tone: "base" }),
+            /* @__PURE__ */ jsx(Text$1, { variant: "headingMd", as: "h3", children: "ログの見方" })
+          ] }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", fontWeight: "semibold", children: "実行タイプ" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 自動実行: スケジュールによる定期実行" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 手動実行: UIからの手動実行" })
+            ] }),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", fontWeight: "semibold", children: "金価格変動率" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 田中貴金属から取得した前日比" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• この変動率で商品価格を調整" })
+            ] }),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodyMd", fontWeight: "semibold", children: "価格下限" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 価格下落時の最低価格率" }),
+              /* @__PURE__ */ jsx(Text$1, { variant: "bodySm", tone: "subdued", children: "• 例: 93% = 7%以上は下がらない" })
+            ] })
+          ] })
+        ] }) }) })
+      ] })
+    }
+  );
 }
-const th = {
-  border: "1px solid #ddd",
-  padding: "8px",
-  textAlign: "left",
-  fontWeight: 600,
-  fontSize: 14,
-  backgroundColor: "#f7f7f7"
-};
-const td = {
-  border: "1px solid #eee",
-  padding: "8px",
-  fontSize: 14
-};
 const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-C1NaqPX0.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CbPFOs8B.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/styles-C3i6sGs7.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-DGvm1xVx.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-C3i6sGs7.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/FormLayout-D7OHCHJE.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Bpu5PY13.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/styles-C3i6sGs7.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BVTGwYpF.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-tPcJA2Wd.js", "/assets/TitleBar-B7TtlRvj.js", "/assets/Layout-DylFXOet.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-71md2DJt.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/Layout-DylFXOet.js", "/assets/Select-BvGNw0HV.js", "/assets/context-AaFCZbCq.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-Bx-OPiFx.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/Layout-DylFXOet.js", "/assets/Select-BvGNw0HV.js", "/assets/FormLayout-D7OHCHJE.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-CzBE-i-N.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js", "/assets/Page-tPcJA2Wd.js", "/assets/TitleBar-B7TtlRvj.js", "/assets/Layout-DylFXOet.js", "/assets/context-AaFCZbCq.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-DUGY_YB2.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-B6iG4OGC.js"], "css": [] } }, "url": "/assets/manifest-b16f0fba.js", "version": "b16f0fba" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-D3-LF-Qi.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-C9S7AShW.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BNSVjd4w.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-DHDjkFid.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-DsNZ2v4T.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ProductIcon.svg-i01w094n.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-DKfoiLp7.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Select-DHDjkFid.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-7e2ff594.js", "version": "7e2ff594" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";

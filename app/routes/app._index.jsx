@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useFetcher } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import { useLoaderData, Link as RemixLink } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -8,320 +8,342 @@ import {
   Button,
   BlockStack,
   Box,
-  List,
-  Link,
   InlineStack,
+  Badge,
+  Icon,
+  Banner,
+  Divider,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import {
+  ClockIcon,
+  ProductIcon,
+  SettingsIcon,
+  NotificationIcon,
+} from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
+import { fetchGoldPriceDataTanaka } from "../models/gold.server";
+import prisma from "../db.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
 
-  return null;
+  try {
+    // 金価格情報を取得
+    const goldData = await fetchGoldPriceDataTanaka();
+    
+    // ダッシュボード統計を取得
+    const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
+      prisma.selectedProduct.count({
+        where: { shopDomain: session.shop, selected: true }
+      }),
+      prisma.priceUpdateLog.findMany({
+        where: { shopDomain: session.shop },
+        orderBy: { executedAt: 'desc' },
+        take: 5
+      }),
+      prisma.shopSetting.findUnique({
+        where: { shopDomain: session.shop }
+      })
+    ]);
+
+    return json({
+      goldPrice: goldData ? {
+        ratio: goldData.changeRatio,
+        percentage: (goldData.changeRatio * 100).toFixed(2),
+        change: goldData.changePercent,
+        retailPrice: goldData.retailPrice,
+        retailPriceFormatted: goldData.retailPriceFormatted,
+        changeDirection: goldData.changeDirection,
+        lastUpdated: goldData.lastUpdated
+      } : null,
+      stats: {
+        selectedProducts,
+        totalLogs: recentLogs.length,
+        lastExecution: recentLogs[0]?.executedAt || null,
+        autoScheduleEnabled: shopSetting?.autoScheduleEnabled || false
+      },
+      recentLogs
+    });
+  } catch (error) {
+    console.error('Dashboard loader error:', error);
+    return json({
+      goldPrice: null,
+      stats: { selectedProducts: 0, totalLogs: 0, lastExecution: null, autoScheduleEnabled: false },
+      recentLogs: []
+    });
+  }
 };
 
-export const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyRemixTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
-
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
-  };
-};
-
-export default function Index() {
-  const fetcher = useFetcher();
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
-  const productId = fetcher.data?.product?.id.replace(
-    "gid://shopify/Product/",
-    "",
-  );
-
-  useEffect(() => {
-    if (productId) {
-      shopify.toast.show("Product created");
-    }
-  }, [productId, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+export default function Dashboard() {
+  const { goldPrice, stats, recentLogs } = useLoaderData();
 
   return (
-    <Page>
-      <TitleBar title="Remix app template">
-        <button variant="primary" onClick={generateProduct}>
-          Generate a product
-        </button>
-      </TitleBar>
-      <BlockStack gap="500">
+    <Page
+      title="金価格自動調整ダッシュボード"
+      subtitle="K18商品の価格を田中貴金属の金価格に連動して自動調整"
+    >
+      <BlockStack gap="600">
+        {/* Hero Section - 金価格情報 */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+          borderRadius: '16px',
+          padding: '32px',
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '-50px',
+            right: '-50px',
+            width: '200px',
+            height: '200px',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '50%'
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '-30px',
+            left: '-30px',
+            width: '150px',
+            height: '150px',
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '50%'
+          }} />
+          
+          <InlineStack align="space-between" blockAlign="center">
+            <BlockStack gap="300">
+              <InlineStack gap="200" blockAlign="center">
+                <span style={{ fontSize: '24px', marginRight: '8px' }}>📈</span>
+                <Text variant="headingLg" as="h2" tone="text-inverse">
+                  田中貴金属 金価格
+                </Text>
+              </InlineStack>
+              
+              {goldPrice ? (
+                <>
+                  <Text variant="heading2xl" as="p" tone="text-inverse">
+                    {goldPrice.retailPriceFormatted}
+                  </Text>
+                  <InlineStack gap="300" blockAlign="center">
+                    <Badge 
+                      tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
+                      size="large"
+                    >
+                      {goldPrice.change}
+                    </Badge>
+                    <Text variant="bodyLg" tone="text-inverse">
+                      前日比 • 調整率: {goldPrice.percentage}%
+                    </Text>
+                  </InlineStack>
+                </>
+              ) : (
+                <Text variant="headingLg" tone="text-inverse">
+                  価格情報取得中...
+                </Text>
+              )}
+            </BlockStack>
+            
+            <BlockStack gap="200" align="end">
+              <Text variant="bodySm" tone="text-inverse">
+                最終更新
+              </Text>
+              <Text variant="bodyMd" tone="text-inverse">
+                {goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString('ja-JP') : '--'}
+              </Text>
+            </BlockStack>
+          </InlineStack>
+        </div>
+
+        {/* 統計カード */}
+        <Layout>
+          <Layout.Section>
+            <InlineStack gap="400">
+              <Card>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <BlockStack gap="300" align="center">
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      background: '#e0f2fe',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Icon source={ProductIcon} tone="info" />
+                    </div>
+                    <Text variant="heading2xl" as="p">{stats.selectedProducts}</Text>
+                    <Text variant="bodyMd" tone="subdued">選択中の商品</Text>
+                  </BlockStack>
+                </div>
+              </Card>
+
+              <Card>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <BlockStack gap="300" align="center">
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      background: stats.autoScheduleEnabled ? '#dcfce7' : '#fef3c7',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Icon source={ClockIcon} tone={stats.autoScheduleEnabled ? 'success' : 'warning'} />
+                    </div>
+                    <Badge tone={stats.autoScheduleEnabled ? 'success' : 'warning'}>
+                      {stats.autoScheduleEnabled ? '有効' : '無効'}
+                    </Badge>
+                    <Text variant="bodyMd" tone="subdued">自動スケジュール</Text>
+                  </BlockStack>
+                </div>
+              </Card>
+
+              <Card>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <BlockStack gap="300" align="center">
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      background: '#fce7f3',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Icon source={NotificationIcon} tone="base" />
+                    </div>
+                    <Text variant="heading2xl" as="p">{stats.totalLogs}</Text>
+                    <Text variant="bodyMd" tone="subdued">最近の実行</Text>
+                  </BlockStack>
+                </div>
+              </Card>
+            </InlineStack>
+          </Layout.Section>
+        </Layout>
+
+        {/* アクション & 最新ログ */}
         <Layout>
           <Layout.Section>
             <Card>
               <BlockStack gap="500">
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Congrats on creating a new Shopify app 🎉
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    This embedded app template uses{" "}
-                    <Link
-                      url="https://shopify.dev/docs/apps/tools/app-bridge"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      App Bridge
-                    </Link>{" "}
-                    interface examples like an{" "}
-                    <Link url="/app/additional" removeUnderline>
-                      additional page in the app nav
-                    </Link>
-                    , as well as an{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      Admin GraphQL
-                    </Link>{" "}
-                    mutation demo, to provide a starting point for app
-                    development.
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    Get started with products
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Generate a product with GraphQL and get the JSON output for
-                    that product. Learn more about the{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </Link>{" "}
-                    mutation in our API references.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct}>
-                    Generate a product
-                  </Button>
-                  {fetcher.data?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      View product
-                    </Button>
-                  )}
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingMd" as="h3">クイックアクション</Text>
+                  <InlineStack gap="200">
+                    <RemixLink to="/app/settings" style={{ textDecoration: 'none' }}>
+                      <Button icon={SettingsIcon}>設定</Button>
+                    </RemixLink>
+                  </InlineStack>
                 </InlineStack>
-                {fetcher.data?.product && (
+                
+                <InlineStack gap="300">
+                  <RemixLink to="/app/products" style={{ textDecoration: 'none' }}>
+                    <Button variant="primary" size="large">
+                      商品価格を調整
+                    </Button>
+                  </RemixLink>
+                  <RemixLink to="/app/logs" style={{ textDecoration: 'none' }}>
+                    <Button>実行ログを確認</Button>
+                  </RemixLink>
+                </InlineStack>
+
+                {stats.lastExecution && (
                   <>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productCreate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productVariantsBulkUpdate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
+                    <Divider />
+                    <BlockStack gap="200">
+                      <Text variant="bodyMd" tone="subdued">
+                        最終実行: {new Date(stats.lastExecution).toLocaleString('ja-JP')}
+                      </Text>
+                    </BlockStack>
                   </>
                 )}
               </BlockStack>
             </Card>
           </Layout.Section>
+
           <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    App template specs
-                  </Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Framework
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingMd" as="h3">最近の実行ログ</Text>
+                
+                {recentLogs.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                    <BlockStack gap="200" align="center">
+                      <Icon source={ClockIcon} tone="subdued" />
+                      <Text variant="bodyMd" tone="subdued">
+                        まだ実行履歴がありません
                       </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Remix
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Database
-                      </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Interface
-                      </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
-                      </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
-                      </Link>
-                    </InlineStack>
+                    </BlockStack>
+                  </div>
+                ) : (
+                  <BlockStack gap="300">
+                    {recentLogs.slice(0, 3).map((log, index) => (
+                      <div key={log.id} style={{
+                        padding: '16px',
+                        background: '#f9fafb',
+                        borderRadius: '8px',
+                        borderLeft: `4px solid ${log.success ? '#10b981' : '#ef4444'}`
+                      }}>
+                        <BlockStack gap="200">
+                          <InlineStack align="space-between" blockAlign="center">
+                            <Badge tone={log.success ? 'success' : 'critical'}>
+                              {log.success ? '成功' : '失敗'}
+                            </Badge>
+                            <Text variant="bodySm" tone="subdued">
+                              {new Date(log.executedAt).toLocaleDateString('ja-JP')}
+                            </Text>
+                          </InlineStack>
+                          
+                          <InlineStack gap="400">
+                            <Text variant="bodySm">
+                              商品: {log.totalProducts || 0}件
+                            </Text>
+                            <Text variant="bodySm">
+                              成功: {log.updatedCount || 0}件
+                            </Text>
+                          </InlineStack>
+                        </BlockStack>
+                      </div>
+                    ))}
+                    
+                    {recentLogs.length > 3 && (
+                      <RemixLink to="/app/logs" style={{ textDecoration: 'none' }}>
+                        <Button variant="plain" fullWidth>
+                          すべてのログを表示
+                        </Button>
+                      </RemixLink>
+                    )}
                   </BlockStack>
-                </BlockStack>
-              </Card>
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Next steps
-                  </Text>
-                  <List>
-                    <List.Item>
-                      Build an{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        {" "}
-                        example app
-                      </Link>{" "}
-                      to get started
-                    </List.Item>
-                    <List.Item>
-                      Explore Shopify’s API with{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphiQL
-                      </Link>
-                    </List.Item>
-                  </List>
-                </BlockStack>
-              </Card>
-            </BlockStack>
+                )}
+              </BlockStack>
+            </Card>
           </Layout.Section>
         </Layout>
+
+        {/* アプリ情報 */}
+        <Card>
+          <div style={{
+            padding: '24px',
+            background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+            borderRadius: '12px'
+          }}>
+            <InlineStack align="space-between" blockAlign="center">
+              <BlockStack gap="200">
+                <Text variant="headingMd" as="h3">Gold Price Updater</Text>
+                <Text variant="bodyMd" tone="subdued">
+                  田中貴金属の金価格に連動したK18商品の自動価格調整システム
+                </Text>
+              </BlockStack>
+              
+              <InlineStack gap="200">
+                <Badge>Version 7</Badge>
+                <Badge tone="success">稼働中</Badge>
+              </InlineStack>
+            </InlineStack>
+          </div>
+        </Card>
       </BlockStack>
     </Page>
   );
