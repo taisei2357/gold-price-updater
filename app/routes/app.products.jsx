@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
-import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import { json, defer } from "@remix-run/node";
+import { useLoaderData, useFetcher, Await } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -79,10 +79,8 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   return Math.ceil(finalPrice / 10) * 10;
 }
 
-export const loader = async ({ request }) => {
-  const { admin, session } = await authenticate.admin(request);
-
-  // ページネーションで全商品を取得
+// 重い商品取得処理を分離
+async function fetchAllProducts(admin) {
   let allProducts = [];
   let cursor = null;
   let hasNextPage = true;
@@ -135,26 +133,34 @@ export const loader = async ({ request }) => {
       : null;
   }
   
-  // 金価格取得
-  const goldPrice = await fetchGoldPrice();
+  return allProducts;
+}
 
-  // 選択済み商品を取得
-  const selectedProducts = await prisma.selectedProduct.findMany({
-    where: { 
-      shopDomain: session.shop,
-      selected: true 
-    },
-    select: { productId: true }
-  });
+export const loader = async ({ request }) => {
+  const { admin, session } = await authenticate.admin(request);
+
+  // 軽い処理は即座に実行
+  const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
+    fetchGoldPrice(),
+    prisma.selectedProduct.findMany({
+      where: { 
+        shopDomain: session.shop,
+        selected: true 
+      },
+      select: { productId: true }
+    }),
+    prisma.shopSetting.findUnique({
+      where: { shopDomain: session.shop }
+    })
+  ]);
+
   const selectedProductIds = selectedProducts.map(p => p.productId);
 
-  // ショップ設定を取得
-  const shopSetting = await prisma.shopSetting.findUnique({
-    where: { shopDomain: session.shop }
-  });
+  // 重い商品取得処理は非同期化
+  const productsPromise = fetchAllProducts(admin);
 
-  return json({
-    products: allProducts,
+  return defer({
+    products: productsPromise, // Promise を渡す
     goldPrice: goldPrice,
     selectedProductIds: selectedProductIds,
     shopSetting: shopSetting
@@ -223,8 +229,7 @@ export const action = async ({ request }) => {
   return json({ error: "不正なアクション" });
 };
 
-export default function Products() {
-  const { products, goldPrice, selectedProductIds, shopSetting } = useLoaderData();
+function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting }) {
   const fetcher = useFetcher();
   
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -585,5 +590,83 @@ export default function Products() {
         )}
       </Layout>
     </Page>
+  );
+}
+
+export default function Products() {
+  const data = useLoaderData();
+  const { goldPrice, selectedProductIds, shopSetting } = data;
+
+  return (
+    <Suspense
+      fallback={
+        <Page title="商品価格自動調整" subtitle="読み込み中...">
+          <Layout>
+            <Layout.Section>
+              {goldPrice && (
+                <Card>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <h3>田中貴金属 金価格情報</h3>
+                      <Badge tone={goldPrice.changeDirection === 'up' ? 'attention' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
+                        {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
+                      </Badge>
+                    </InlineStack>
+                    
+                    <InlineStack gap="600">
+                      <div>
+                        <p style={{color: '#6B7280', fontSize: '14px'}}>店頭小売価格（税込）</p>
+                        <p style={{fontSize: '18px', fontWeight: 'bold'}}>{goldPrice.retailPriceFormatted}</p>
+                      </div>
+                      <div>
+                        <p style={{color: '#6B7280', fontSize: '14px'}}>前日比</p>
+                        <p style={{fontSize: '18px', fontWeight: 'bold', color: goldPrice.changeDirection === 'up' ? '#DC2626' : goldPrice.changeDirection === 'down' ? '#059669' : '#6B7280'}}>
+                          {goldPrice.change}
+                        </p>
+                      </div>
+                    </InlineStack>
+                    
+                    <div style={{padding: '12px', backgroundColor: '#F3F4F6', borderRadius: '8px'}}>
+                      <p style={{margin: 0}}>
+                        <strong>価格調整率: {goldPrice.percentage}%</strong>
+                        （この変動率で商品価格を自動調整します）
+                      </p>
+                    </div>
+                    
+                    <p style={{color: '#6B7280', fontSize: '12px', margin: 0}}>
+                      最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}
+                    </p>
+                  </BlockStack>
+                </Card>
+              )}
+            </Layout.Section>
+            
+            <Layout.Section>
+              <Card>
+                <BlockStack gap="400">
+                  <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                    <Spinner size="large" />
+                    <p style={{ marginTop: '20px', color: '#6B7280' }}>
+                      商品データを読み込んでいます...
+                    </p>
+                  </div>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          </Layout>
+        </Page>
+      }
+    >
+      <Await resolve={data.products}>
+        {(products) => (
+          <ProductsContent
+            products={products}
+            goldPrice={goldPrice}
+            selectedProductIds={selectedProductIds}
+            shopSetting={shopSetting}
+          />
+        )}
+      </Await>
+    </Suspense>
   );
 }

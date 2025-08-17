@@ -19,13 +19,13 @@ export default function App() {
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
-        <Link to="/app" rel="home">
+        <Link to="/app" rel="home" prefetch="intent">
           ホーム
         </Link>
-        <Link to="/app/products">商品価格調整</Link>
-        <Link to="/app/settings">設定</Link>
-        <Link to="/app/logs">実行ログ</Link>
-        <Link to="/app/additional">Additional page</Link>
+        <Link to="/app/products" prefetch="intent">商品価格調整</Link>
+        <Link to="/app/settings" prefetch="intent">設定</Link>
+        <Link to="/app/logs" prefetch="intent">実行ログ</Link>
+        <Link to="/app/additional" prefetch="intent">Additional page</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
