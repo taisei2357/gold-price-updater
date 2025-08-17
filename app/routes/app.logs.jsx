@@ -105,12 +105,9 @@ export default function Logs() {
     <div key={`ratio-${log.id}`}>
       {log.goldRatio !== null && log.goldRatio !== undefined ? (
         <InlineStack gap="100" blockAlign="center">
-          <span style={{ 
-            fontSize: '16px',
-            color: log.goldRatio >= 0 ? '#dc2626' : '#059669' 
-          }}>
+          <Text variant="bodyMd" tone={log.goldRatio >= 0 ? 'critical' : 'success'}>
             {log.goldRatio >= 0 ? '📈' : '📉'}
-          </span>
+          </Text>
           <Text>{(log.goldRatio * 100).toFixed(2)}%</Text>
         </InlineStack>
       ) : (
@@ -156,19 +153,7 @@ export default function Logs() {
               <Card>
                 <Box padding="400">
                   <BlockStack gap="300" align="center">
-                    <Box
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        background: '#e0f2fe',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon source={ClockIcon} tone="info" />
-                    </Box>
+                    <Icon source={ClockIcon} tone="info" />
                     <Text variant="heading2xl" as="p">{stats.totalExecutions}</Text>
                     <Text variant="bodyMd" tone="subdued">総実行回数</Text>
                   </BlockStack>
@@ -178,19 +163,7 @@ export default function Logs() {
               <Card>
                 <Box padding="400">
                   <BlockStack gap="300" align="center">
-                    <Box
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        background: '#dcfce7',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon source={CheckCircleIcon} tone="success" />
-                    </Box>
+                    <Icon source={CheckCircleIcon} tone="success" />
                     <Text variant="heading2xl" as="p">{stats.totalSuccess}</Text>
                     <Text variant="bodyMd" tone="subdued">成功更新数</Text>
                   </BlockStack>
@@ -200,19 +173,7 @@ export default function Logs() {
               <Card>
                 <Box padding="400">
                   <BlockStack gap="300" align="center">
-                    <Box
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        background: stats.totalFailed > 0 ? '#fecaca' : '#f3f4f6',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon source={AlertCircleIcon} tone={stats.totalFailed > 0 ? 'critical' : 'subdued'} />
-                    </Box>
+                    <Icon source={AlertCircleIcon} tone={stats.totalFailed > 0 ? 'critical' : 'subdued'} />
                     <Text variant="heading2xl" as="p">{stats.totalFailed}</Text>
                     <Text variant="bodyMd" tone="subdued">失敗更新数</Text>
                   </BlockStack>
@@ -315,10 +276,7 @@ export default function Logs() {
         <Card>
           <Box
             padding="400"
-            style={{
-              background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-              borderRadius: '12px'
-            }}
+            background="bg-surface-secondary"
           >
             <BlockStack gap="300">
               <InlineStack gap="200" blockAlign="center">
