@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { json, defer } from "@remix-run/node";
-import { useLoaderData, useFetcher, Await } from "@remix-run/react";
+import { useLoaderData, useFetcher, Await, useRevalidator } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -20,11 +20,14 @@ import {
   Badge,
   Icon,
   Box,
+  Text,
 } from "@shopify/polaris";
 import {
   ProductIcon,
   CheckCircleIcon,
+  RefreshIcon,
 } from "@shopify/polaris-icons";
+import { ClientCache, CACHE_KEYS } from "../utils/cache";
 import { authenticate } from "../shopify.server";
 import { runBulkUpdateBySpec } from "../models/price.server";
 import { fetchGoldPriceDataTanaka } from "../models/gold.server";
@@ -144,6 +147,8 @@ async function fetchGoldPrice() {
 
 export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
+  const url = new URL(request.url);
+  const forceRefresh = url.searchParams.get('refresh') === 'true';
 
   // 軽い処理は即座に実行
   const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
@@ -169,7 +174,9 @@ export const loader = async ({ request }) => {
     products: productsPromise, // Promise を渡す
     goldPrice: goldPrice,
     selectedProductIds: selectedProductIds,
-    shopSetting: shopSetting
+    shopSetting: shopSetting,
+    forceRefresh: forceRefresh,
+    cacheTimestamp: Date.now()
   });
 };
 
@@ -235,8 +242,9 @@ export const action = async ({ request }) => {
   return json({ error: "不正なアクション" });
 };
 
-function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting }) {
+function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting, forceRefresh, cacheTimestamp }) {
   const fetcher = useFetcher();
+  const revalidator = useRevalidator();
   
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -244,14 +252,51 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
   const [minPriceRate, setMinPriceRate] = useState(shopSetting?.minPricePct || 93);
   const [showPreview, setShowPreview] = useState(false);
   const [pricePreview, setPricePreview] = useState([]);
+  const [isUsingCache, setIsUsingCache] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   
-  // 永続化された選択状態を初期化
+  // キャッシュ管理とデータ初期化
   useEffect(() => {
-    if (selectedProductIds && selectedProductIds.length > 0) {
-      const persistedSelected = products.filter(p => selectedProductIds.includes(p.id));
-      setSelectedProducts(persistedSelected);
+    // キャッシュからの復元試行
+    if (!forceRefresh) {
+      const cachedProducts = ClientCache.get(CACHE_KEYS.PRODUCTS);
+      if (cachedProducts && Array.isArray(cachedProducts) && cachedProducts.length > 0) {
+        setIsUsingCache(true);
+        const cacheInfo = ClientCache.getInfo(CACHE_KEYS.PRODUCTS);
+        if (cacheInfo) {
+          setLastUpdated(new Date(cacheInfo.timestamp));
+        }
+        
+        // キャッシュされた商品データで選択状態を初期化
+        if (selectedProductIds && selectedProductIds.length > 0) {
+          const persistedSelected = cachedProducts.filter(p => selectedProductIds.includes(p.id));
+          setSelectedProducts(persistedSelected);
+        }
+        return;
+      }
     }
-  }, [products, selectedProductIds]);
+    
+    // 新しいデータでキャッシュ更新
+    if (products && products.length > 0) {
+      ClientCache.set(CACHE_KEYS.PRODUCTS, products);
+      setIsUsingCache(false);
+      setLastUpdated(new Date(cacheTimestamp));
+      
+      // 選択状態の初期化
+      if (selectedProductIds && selectedProductIds.length > 0) {
+        const persistedSelected = products.filter(p => selectedProductIds.includes(p.id));
+        setSelectedProducts(persistedSelected);
+      }
+    }
+  }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
+
+  // 手動リロード
+  const handleRefresh = useCallback(() => {
+    ClientCache.clear(CACHE_KEYS.PRODUCTS);
+    const url = new URL(window.location);
+    url.searchParams.set('refresh', 'true');
+    window.location.href = url.toString();
+  }, []);
 
   // 商品フィルタリング
   const filteredProducts = filterProducts(products, searchValue, filterType);
@@ -364,6 +409,14 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
         disabled: selectedProducts.length === 0 || !goldPrice,
         loading: fetcher.state === "submitting"
       }}
+      secondaryActions={[
+        {
+          content: "商品を再読み込み",
+          icon: RefreshIcon,
+          onAction: handleRefresh,
+          loading: revalidator.state === "loading"
+        }
+      ]}
     >
       <Layout>
         <Layout.Section>
@@ -407,7 +460,27 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <h3>商品検索・選択</h3>
+              <InlineStack align="space-between">
+                <h3>商品検索・選択</h3>
+                <Button 
+                  icon={RefreshIcon} 
+                  variant="tertiary" 
+                  onClick={handleRefresh}
+                  loading={revalidator.state === "loading"}
+                >
+                  商品を再読み込み
+                </Button>
+              </InlineStack>
+              
+              {/* キャッシュ状態表示 */}
+              <div>
+                <Text variant="bodySm" tone="subdued">
+                  最終更新: {lastUpdated ? lastUpdated.toLocaleString('ja-JP') : '読み込み中...'} 
+                  {isUsingCache && (
+                    <Badge tone="info" size="small">キャッシュ</Badge>
+                  )}
+                </Text>
+              </div>
               
               <InlineStack gap="400">
                 <div style={{flex: 1}}>
@@ -599,12 +672,27 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
 
 export default function Products() {
   const data = useLoaderData();
-  const { goldPrice, selectedProductIds, shopSetting } = data;
+  const { goldPrice, selectedProductIds, shopSetting, forceRefresh, cacheTimestamp } = data;
 
   return (
     <Suspense
       fallback={
-        <Page title="商品価格自動調整" subtitle="読み込み中...">
+        <Page 
+          title="商品価格自動調整" 
+          subtitle="読み込み中..."
+          secondaryActions={[
+            {
+              content: "商品を再読み込み",
+              icon: RefreshIcon,
+              onAction: () => {
+                ClientCache.clear(CACHE_KEYS.PRODUCTS);
+                const url = new URL(window.location);
+                url.searchParams.set('refresh', 'true');
+                window.location.href = url.toString();
+              }
+            }
+          ]}
+        >
           <Layout>
             <Layout.Section>
               {goldPrice && (
@@ -646,6 +734,9 @@ export default function Products() {
                     <p style={{ marginTop: '20px' }}>
                       商品データを読み込んでいます...
                     </p>
+                    <Text variant="bodySm" tone="subdued">
+                      初回読み込みには時間がかかります。次回からキャッシュにより高速表示されます。
+                    </Text>
                   </div>
                 </BlockStack>
               </Card>
@@ -661,6 +752,8 @@ export default function Products() {
             goldPrice={goldPrice}
             selectedProductIds={selectedProductIds}
             shopSetting={shopSetting}
+            forceRefresh={forceRefresh}
+            cacheTimestamp={cacheTimestamp}
           />
         )}
       </Await>
