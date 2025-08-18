@@ -35,7 +35,7 @@ jobs:
           response=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            "${{ secrets.APP_URL }}/api/cron/price-update")
+            "${{ secrets.APP_URL }}/api/cron")
           
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n -1)

@@ -22,7 +22,7 @@ if (process.env.NODE_ENV !== "production") {
     global.prismaGlobal = new PrismaClient();
   }
 }
-const prisma$1 = global.prismaGlobal ?? new PrismaClient();
+const prisma$2 = global.prismaGlobal ?? new PrismaClient();
 const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
 const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
 const shopify = shopifyApp({
@@ -33,7 +33,7 @@ const shopify = shopifyApp({
   appUrl,
   // PartnersのApp URLと完全一致させる
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma$1),
+  sessionStorage: new PrismaSessionStorage(prisma$2),
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
@@ -8277,18 +8277,18 @@ const action$7 = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$a = () => new Response(null, { status: 405 });
+const loader$9 = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$7,
-  loader: loader$a
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
 const action$6 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   const current = payload.current;
   if (session) {
-    await prisma$1.session.update({
+    await prisma$2.session.update({
       where: {
         id: session.id
       },
@@ -8306,19 +8306,19 @@ const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$7,
-  loader: loader$a
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
 const action$5 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   try {
-    await prisma$1.$transaction([
+    await prisma$2.$transaction([
       // セッションデータ削除
-      prisma$1.session.deleteMany({ where: { shop } }),
+      prisma$2.session.deleteMany({ where: { shop } }),
       // 商品選択データ削除
-      prisma$1.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
+      prisma$2.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
       // ショップ設定削除
-      prisma$1.shopSetting.deleteMany({ where: { shopDomain: shop } })
+      prisma$2.shopSetting.deleteMany({ where: { shopDomain: shop } })
       // 実行ログは監査のため残す（必要に応じて削除）
       // db.priceUpdateLog.deleteMany({ where: { shopDomain: shop } }),
     ]);
@@ -8332,7 +8332,82 @@ const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   __proto__: null,
   action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
-const prisma = new PrismaClient();
+const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$7,
+  loader: loader$9
+}, Symbol.toStringTag, { value: "Module" }));
+const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
+const polarisTranslations = {
+  Polaris
+};
+function loginErrorMessage(loginErrors) {
+  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
+    return { shop: "Please enter your shop domain to log in" };
+  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
+    return { shop: "Please enter a valid shop domain to log in" };
+  }
+  return {};
+}
+const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
+const loader$8 = async () => {
+  return json({ errors: {}, polarisTranslations });
+};
+const action$4 = async ({ request }) => {
+  const formData = await request.formData();
+  const rawShop = (formData.get("shop") || "").toString();
+  const shop = normalizeShop(rawShop);
+  if (!shop) {
+    return json({ errors: { shop: "Shop domain is required" } }, { status: 400 });
+  }
+  try {
+    const url = new URL(request.url);
+    url.searchParams.set("shop", shop);
+    const newReq = new Request(url.toString(), { method: "POST", body: formData });
+    return await login(newReq);
+  } catch (e) {
+    return json({ errors: loginErrorMessage(e) }, { status: 400 });
+  }
+};
+function normalizeShop(input) {
+  const s = input.trim().toLowerCase();
+  if (!s) return "";
+  if (s.endsWith(".myshopify.com")) return s;
+  if (!s.includes(".")) return `${s}.myshopify.com`;
+  const base = s.split(".myshopify.com")[0].replace(/\.$/, "");
+  return `${base}.myshopify.com`;
+}
+function Auth() {
+  const loaderData = useLoaderData();
+  const actionData = useActionData();
+  const [shop, setShop] = useState("");
+  const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
+  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
+    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
+    /* @__PURE__ */ jsx(
+      TextField,
+      {
+        type: "text",
+        name: "shop",
+        label: "Shop domain",
+        helpText: "example.myshopify.com",
+        value: shop,
+        onChange: (v) => setShop(v),
+        autoComplete: "off",
+        error: errors.shop
+      }
+    ),
+    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
+  ] }) }) }) }) });
+}
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$4,
+  default: Auth,
+  links: links$1,
+  loader: loader$8
+}, Symbol.toStringTag, { value: "Module" }));
+const prisma$1 = new PrismaClient();
 class ShopifyAdminClient {
   constructor(shop, accessToken) {
     this.shop = shop;
@@ -8395,7 +8470,7 @@ async function updateShopPrices(shop, accessToken) {
         failed: 0
       };
     }
-    const setting = await prisma.shopSetting.findUnique({
+    const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop }
     });
     if (!setting || !setting.autoUpdateEnabled) {
@@ -8409,7 +8484,7 @@ async function updateShopPrices(shop, accessToken) {
       };
     }
     const minPct = setting.minPricePct || 93;
-    const targets = await prisma.selectedProduct.findMany({
+    const targets = await prisma$1.selectedProduct.findMany({
       where: { shopDomain: shop },
       select: { productId: true }
     });
@@ -8465,7 +8540,7 @@ async function updateShopPrices(shop, accessToken) {
       }
     }
     if (!entries.length) {
-      await prisma.priceUpdateLog.create({
+      await prisma$1.priceUpdateLog.create({
         data: {
           shopDomain: shop,
           executionType: "cron",
@@ -8541,7 +8616,7 @@ async function updateShopPrices(shop, accessToken) {
         failed += variants.length;
       }
     }
-    await prisma.priceUpdateLog.create({
+    await prisma$1.priceUpdateLog.create({
       data: {
         shopDomain: shop,
         executionType: "cron",
@@ -8564,7 +8639,7 @@ async function updateShopPrices(shop, accessToken) {
     };
   } catch (error) {
     console.error(`${shop}の処理でエラー:`, error);
-    await prisma.priceUpdateLog.create({
+    await prisma$1.priceUpdateLog.create({
       data: {
         shopDomain: shop,
         executionType: "cron",
@@ -8586,13 +8661,13 @@ async function updateShopPrices(shop, accessToken) {
     };
   }
 }
-const action$4 = async ({ request }) => {
+const action$3 = async ({ request }) => {
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
   try {
     console.log(`🕙 Cron実行開始: ${(/* @__PURE__ */ new Date()).toISOString()}`);
-    const enabledShops = await prisma.shopSetting.findMany({
+    const enabledShops = await prisma$1.shopSetting.findMany({
       where: { autoUpdateEnabled: true },
       select: { shopDomain: true }
     });
@@ -8606,7 +8681,7 @@ const action$4 = async ({ request }) => {
     }
     const results = [];
     for (const shop of enabledShops) {
-      const session = await prisma.session.findFirst({
+      const session = await prisma$1.session.findFirst({
         where: { shop: shop.shopDomain },
         orderBy: { expires: "desc" }
       });
@@ -8648,38 +8723,28 @@ const action$4 = async ({ request }) => {
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     }, { status: 500 });
   } finally {
-    await prisma.$disconnect();
+    await prisma$1.$disconnect();
   }
 };
-const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$4
+  action: action$3
 }, Symbol.toStringTag, { value: "Module" }));
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$7,
-  loader: loader$a
-}, Symbol.toStringTag, { value: "Module" }));
+const prisma = new PrismaClient();
 async function fetchGoldChangeRatioTanaka$1() {
   try {
     const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/");
     const html = await response.text();
     console.log("HTML取得成功、長さ:", html.length);
-    const k18Context = html.match(/K18.{0,200}/gi);
-    console.log("K18周辺のテキスト:", k18Context);
-    const changeContext = html.match(/.{0,100}前日比.{0,100}/gi);
-    console.log("前日比周辺のテキスト:", changeContext);
     const priceMatch = html.match(/K18.*?(\d{1,3}(?:,\d{3})*)/);
     const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) || html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
-    console.log("価格マッチ:", priceMatch);
-    console.log("変動マッチ:", changeMatch);
     if (!priceMatch || !changeMatch) {
       return {
         success: false,
         error: "金価格データの抽出に失敗",
-        html: html.substring(0, 1e3),
-        priceMatch,
-        changeMatch
+        htmlLength: html.length,
+        priceMatch: priceMatch ? priceMatch[0] : null,
+        changeMatch: changeMatch ? changeMatch[0] : null
       };
     }
     const retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
@@ -8691,110 +8756,94 @@ async function fetchGoldChangeRatioTanaka$1() {
       changeYen,
       changeRatio,
       changePercent: (changeRatio * 100).toFixed(2) + "%",
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      priceMatch: priceMatch[0],
+      changeMatch: changeMatch[0]
     };
   } catch (error) {
     console.error("金価格取得エラー:", error);
     return {
       success: false,
-      error: error.message,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      error: error.message
     };
   }
 }
-const loader$9 = async () => {
-  const result = await fetchGoldChangeRatioTanaka$1();
-  return json(result);
-};
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  loader: loader$9
-}, Symbol.toStringTag, { value: "Module" }));
-const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
-const polarisTranslations = {
-  Polaris
-};
-function loginErrorMessage(loginErrors) {
-  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
-    return { shop: "Please enter your shop domain to log in" };
-  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
-    return { shop: "Please enter a valid shop domain to log in" };
+const loader$7 = async ({ request }) => {
+  const url = new URL(request.url);
+  const test = url.searchParams.get("test");
+  if (test === "gold-price") {
+    const result = await fetchGoldChangeRatioTanaka$1();
+    return json({
+      test: "gold-price",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      ...result
+    });
   }
-  return {};
-}
-const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$8 = async () => {
-  return json({ errors: {}, polarisTranslations });
-};
-const action$3 = async ({ request }) => {
-  const formData = await request.formData();
-  const rawShop = (formData.get("shop") || "").toString();
-  const shop = normalizeShop(rawShop);
-  if (!shop) {
-    return json({ errors: { shop: "Shop domain is required" } }, { status: 400 });
+  if (test === "shop-settings") {
+    try {
+      const enabledShops = await prisma.shopSetting.findMany({
+        where: { autoUpdateEnabled: true },
+        select: { shopDomain: true, minPricePct: true, autoUpdateEnabled: true }
+      });
+      const allShops = await prisma.shopSetting.findMany({
+        select: { shopDomain: true, minPricePct: true, autoUpdateEnabled: true }
+      });
+      return json({
+        test: "shop-settings",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        enabledShops,
+        allShops,
+        totalShops: allShops.length,
+        enabledCount: enabledShops.length
+      });
+    } catch (error) {
+      return json({
+        test: "shop-settings",
+        error: error.message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
   }
-  try {
-    const url = new URL(request.url);
-    url.searchParams.set("shop", shop);
-    const newReq = new Request(url.toString(), { method: "POST", body: formData });
-    return await login(newReq);
-  } catch (e) {
-    return json({ errors: loginErrorMessage(e) }, { status: 400 });
-  }
-};
-function normalizeShop(input) {
-  const s = input.trim().toLowerCase();
-  if (!s) return "";
-  if (s.endsWith(".myshopify.com")) return s;
-  if (!s.includes(".")) return `${s}.myshopify.com`;
-  const base = s.split(".myshopify.com")[0].replace(/\.$/, "");
-  return `${base}.myshopify.com`;
-}
-function Auth() {
-  const loaderData = useLoaderData();
-  const actionData = useActionData();
-  const [shop, setShop] = useState("");
-  const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
-  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
-    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
-    /* @__PURE__ */ jsx(
-      TextField,
-      {
-        type: "text",
-        name: "shop",
-        label: "Shop domain",
-        helpText: "example.myshopify.com",
-        value: shop,
-        onChange: (v) => setShop(v),
-        autoComplete: "off",
-        error: errors.shop
-      }
-    ),
-    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
-  ] }) }) }) }) });
-}
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$3,
-  default: Auth,
-  links: links$1,
-  loader: loader$8
-}, Symbol.toStringTag, { value: "Module" }));
-async function action$2() {
-  return json({
-    status: "success",
-    message: "API endpoint is working",
-    timestamp: (/* @__PURE__ */ new Date()).toISOString()
-  });
-}
-async function loader$7() {
   return json({
     status: "ready",
-    message: "Test endpoint is ready",
+    message: "Test endpoint is ready. Use ?test=gold-price or ?test=shop-settings for specific tests",
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
-}
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+};
+const action$2 = async ({ request }) => {
+  const formData = await request.formData();
+  const action2 = formData.get("action");
+  if (action2 === "test-cron") {
+    try {
+      const cronResponse = await fetch(`${new URL(request.url).origin}/api/cron/price-update`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      const cronData = await cronResponse.json();
+      return json({
+        action: "test-cron",
+        cronStatus: cronResponse.status,
+        cronData,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } catch (error) {
+      return json({
+        action: "test-cron",
+        error: error.message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+  }
+  return json({
+    status: "success",
+    message: "API endpoint is working. Use action=test-cron to test cron execution",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+};
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -8806,7 +8855,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -8815,7 +8864,7 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8843,7 +8892,7 @@ function ErrorBoundary() {
 const headers = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
@@ -8903,7 +8952,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8968,9 +9017,9 @@ async function runBulkUpdateBySpec(admin, shop) {
   if (ratio === null) {
     return { ok: false, disabled: true, reason: "金価格の取得に失敗", updated: 0, failed: 0, details: [] };
   }
-  const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop } });
+  const setting = await prisma$2.shopSetting.findUnique({ where: { shopDomain: shop } });
   const minPct = (setting == null ? void 0 : setting.minPricePct) ?? 93;
-  const targets = await prisma$1.selectedProduct.findMany({
+  const targets = await prisma$2.selectedProduct.findMany({
     where: { shopDomain: shop },
     select: { productId: true }
   });
@@ -9167,14 +9216,14 @@ const loader$3 = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
     fetchGoldPrice(),
-    prisma$1.selectedProduct.findMany({
+    prisma$2.selectedProduct.findMany({
       where: {
         shopDomain: session.shop,
         selected: true
       },
       select: { productId: true }
     }),
-    prisma$1.shopSetting.findUnique({
+    prisma$2.shopSetting.findUnique({
       where: { shopDomain: session.shop }
     })
   ]);
@@ -9195,11 +9244,11 @@ const action$1 = async ({ request }) => {
   if (action2 === "saveSelection") {
     const ids = formData.getAll("productId").map(String);
     const uniqueIds = Array.from(new Set(ids));
-    await prisma$1.selectedProduct.deleteMany({
+    await prisma$2.selectedProduct.deleteMany({
       where: { shopDomain: session.shop }
     });
     if (uniqueIds.length > 0) {
-      await prisma$1.selectedProduct.createMany({
+      await prisma$2.selectedProduct.createMany({
         data: uniqueIds.map((productId) => ({
           shopDomain: session.shop,
           productId,
@@ -9593,7 +9642,7 @@ function Products() {
     }
   );
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
@@ -9602,7 +9651,7 @@ const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 async function loader$2({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-  const setting = await prisma$1.shopSetting.upsert({
+  const setting = await prisma$2.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {},
     create: {
@@ -9622,7 +9671,7 @@ async function action({ request }) {
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
   const autoUpdateHour = Math.max(0, Math.min(23, Number(form.get("autoUpdateHour") || 10)));
   const notificationEmail = String(form.get("notificationEmail") || "");
-  await prisma$1.shopSetting.upsert({
+  await prisma$2.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {
       autoUpdateEnabled,
@@ -9823,7 +9872,7 @@ function Settings() {
     }
   );
 }
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -9835,15 +9884,15 @@ const loader$1 = async ({ request }) => {
   try {
     const goldData = await fetchGoldPriceDataTanaka();
     const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
-      prisma$1.selectedProduct.count({
+      prisma$2.selectedProduct.count({
         where: { shopDomain: session.shop, selected: true }
       }),
-      prisma$1.priceUpdateLog.findMany({
+      prisma$2.priceUpdateLog.findMany({
         where: { shopDomain: session.shop },
         orderBy: { executedAt: "desc" },
         take: 5
       }),
-      prisma$1.shopSetting.findUnique({
+      prisma$2.shopSetting.findUnique({
         where: { shopDomain: session.shop }
       })
     ]);
@@ -9996,7 +10045,7 @@ function Dashboard() {
     }
   );
 }
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -10005,12 +10054,12 @@ async function loader({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const [logs, stats] = await Promise.all([
-    prisma$1.priceUpdateLog.findMany({
+    prisma$2.priceUpdateLog.findMany({
       where: { shopDomain: shop },
       orderBy: { executedAt: "desc" },
       take: 100
     }),
-    prisma$1.priceUpdateLog.aggregate({
+    prisma$2.priceUpdateLog.aggregate({
       where: { shopDomain: shop },
       _count: { id: true },
       _sum: {
@@ -10209,12 +10258,12 @@ function Logs() {
     }
   );
 }
-const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.cron.price-update": { "id": "routes/api.cron.price-update", "parentId": "root", "path": "api/cron/price-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron.price-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-gold-price": { "id": "routes/api.test-gold-price", "parentId": "root", "path": "api/test-gold-price", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-gold-price-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BH-kENwN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-iFha_njD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-XeyT_iBl.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-D28RdGze.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-06f9a48c.js", "version": "06f9a48c" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BH-kENwN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-iFha_njD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-XeyT_iBl.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-D28RdGze.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-1269dac9.js", "version": "1269dac9" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -10263,29 +10312,13 @@ const routes = {
     caseSensitive: void 0,
     module: route4
   },
-  "routes/api.cron.price-update": {
-    id: "routes/api.cron.price-update",
-    parentId: "root",
-    path: "api/cron/price-update",
-    index: void 0,
-    caseSensitive: void 0,
-    module: route5
-  },
   "routes/webhooks.shop.redact": {
     id: "routes/webhooks.shop.redact",
     parentId: "root",
     path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
-  },
-  "routes/api.test-gold-price": {
-    id: "routes/api.test-gold-price",
-    parentId: "root",
-    path: "api/test-gold-price",
-    index: void 0,
-    caseSensitive: void 0,
-    module: route7
+    module: route5
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -10293,7 +10326,15 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route6
+  },
+  "routes/api.cron": {
+    id: "routes/api.cron",
+    parentId: "root",
+    path: "api/cron",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route7
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -10301,7 +10342,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route9
+    module: route8
   },
   "routes/_index": {
     id: "routes/_index",
@@ -10309,7 +10350,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route10
+    module: route9
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -10317,7 +10358,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route10
   },
   "routes/app": {
     id: "routes/app",
@@ -10325,7 +10366,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route11
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -10333,7 +10374,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route12
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -10341,7 +10382,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route13
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -10349,7 +10390,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route15
+    module: route14
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -10357,7 +10398,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route16
+    module: route15
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -10365,7 +10406,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route17
+    module: route16
   }
 };
 export {
