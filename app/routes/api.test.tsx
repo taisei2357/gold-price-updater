@@ -13,53 +13,30 @@ async function fetchGoldChangeRatioTanaka() {
     
     console.log('HTML取得成功、長さ:', html.length);
     
-    // 新しいサイト構造に対応した価格抽出
+    // 正確なHTML構造に基づく価格抽出
+    // class="gold"のテーブル行から正確に抽出
     let retailPrice: number | null = null;
     let changeYen: number | null = null;
-
-    // 価格パターン
-    const k18Patterns = [
-      /K18.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /18金.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /<td[^>]*retail_tax[^>]*>([^<]*(\d{1,3}(?:,\d{3})*)[^<]*円)/gi,
-      /(\d{1,3}(?:,\d{3})*)\s*円(?!.*前日比)/g
-    ];
-
     let priceMatchResult = null;
-    for (const pattern of k18Patterns) {
-      const matches = [...html.matchAll(pattern)];
-      if (matches.length > 0) {
-        const priceStr = matches[0][1] || matches[0][2];
-        if (priceStr) {
-          const price = parseInt(priceStr.replace(/,/g, ''));
-          if (price > 10000 && price < 50000) {
-            retailPrice = price;
-            priceMatchResult = matches[0][0];
-            break;
-          }
-        }
-      }
-    }
-
-    // 前日比パターン
-    const changePatterns = [
-      /前日比[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /変動[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /([+\-]\d+(?:\.\d+)?)\s*円.*?前日比/gi,
-      /<td[^>]*>([+\-]?\d+(?:\.\d+)?)\s*円<\/td>/gi
-    ];
-
     let changeMatchResult = null;
-    for (const pattern of changePatterns) {
-      const matches = [...html.matchAll(pattern)];
-      if (matches.length > 0) {
-        const changeStr = matches[0][1];
-        const change = parseFloat(changeStr);
-        if (!isNaN(change) && Math.abs(change) <= 1000) {
-          changeYen = change;
-          changeMatchResult = matches[0][0];
-          break;
-        }
+
+    // 金のテーブル行を取得（class="gold"）
+    const goldRowMatch = html.match(/<tr[^>]*class="gold"[^>]*>.*?<\/tr>/is);
+    if (goldRowMatch) {
+      const goldRow = goldRowMatch[0];
+      
+      // 小売価格抽出: class="retail_tax"のセル
+      const priceMatch = goldRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
+      if (priceMatch) {
+        retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
+        priceMatchResult = priceMatch[0];
+      }
+      
+      // 前日比抽出: class="retail_ratio"のセル
+      const changeMatch = goldRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      if (changeMatch) {
+        changeYen = parseFloat(changeMatch[1]);
+        changeMatchResult = changeMatch[0];
       }
     }
 

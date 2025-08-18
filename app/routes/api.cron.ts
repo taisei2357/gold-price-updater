@@ -1,9 +1,8 @@
-// app/routes/api.cron.price-update.tsx
-import type { ActionFunction } from "@remix-run/node";
+// app/routes/api.cron.ts - GET/POST両対応の自動価格更新API
+import type { LoaderFunction, ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/db.server';
+import { fetchGoldPriceDataTanaka } from '../models/gold.server';
 
 // Shopify Admin API GraphQLクライアント
 class ShopifyAdminClient {
@@ -29,28 +28,17 @@ class ShopifyAdminClient {
   }
 }
 
-// 金価格変動率を取得
-async function fetchGoldChangeRatioTanaka() {
+// 金価格変動率を取得（修正済みロジック使用）
+async function fetchGoldChangeRatio() {
   try {
-    const response = await fetch('https://gold.tanaka.co.jp/commodity/souba/');
-    const html = await response.text();
-    
-    // K18の価格情報を抽出
-    const priceMatch = html.match(/K18.*?(\d{1,3}(?:,\d{3})*)/);
-    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) ||
-                       html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
-    
-    if (!priceMatch || !changeMatch) {
-      console.log('金価格データの抽出に失敗');
+    const goldData = await fetchGoldPriceDataTanaka();
+    if (!goldData || goldData.changeRatio === null) {
+      console.log('金価格データの取得に失敗');
       return null;
     }
     
-    const retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
-    const changeYen = parseFloat(changeMatch[1]);
-    const changeRatio = changeYen / retailPrice;
-    
-    console.log(`金価格情報: 小売価格=${retailPrice}円, 前日比=${changeYen}円, 変動率=${(changeRatio * 100).toFixed(2)}%`);
-    return changeRatio;
+    console.log(`金価格情報: ${goldData.retailPriceFormatted}, 前日比: ${goldData.changePercent}, 変動方向: ${goldData.changeDirection}`);
+    return goldData.changeRatio;
     
   } catch (error) {
     console.error('金価格取得エラー:', error);
@@ -58,11 +46,12 @@ async function fetchGoldChangeRatioTanaka() {
   }
 }
 
-// 価格計算
-function calcFinalPrice(current: number, ratio: number, minPct: number): string {
-  const calc = current * (1 + ratio);
-  const floor = current * (minPct / 100);
-  return String(Math.round(Math.max(calc, floor)));
+// 価格計算（最小変動付き）
+function calcFinalPriceWithStep(current: number, ratio: number, minPct01: number, step = 1): string {
+  const target = Math.max(current * (1 + ratio), current * minPct01);
+  // 上げ方向はMath.ceil、下げ方向はMath.floor で確実に変動させる
+  const rounded = ratio >= 0 ? Math.ceil(target / step) * step : Math.floor(target / step) * step;
+  return String(rounded);
 }
 
 // 単一ショップの価格更新処理
@@ -70,8 +59,8 @@ async function updateShopPrices(shop: string, accessToken: string) {
   const admin = new ShopifyAdminClient(shop, accessToken);
   
   try {
-    // 1) 金価格変動率取得
-    const ratio = await fetchGoldChangeRatioTanaka();
+    // 1) 金価格変動率取得（修正済みロジック）
+    const ratio = await fetchGoldChangeRatio();
     if (ratio === null) {
       return { 
         shop, 
@@ -98,7 +87,9 @@ async function updateShopPrices(shop: string, accessToken: string) {
       };
     }
 
-    const minPct = setting.minPricePct || 93;
+    // minPricePct の正規化（0.93 または 93 のどちらでも対応）
+    const minPctRaw = setting.minPricePct || 93;
+    const minPct01 = minPctRaw > 1 ? minPctRaw / 100 : minPctRaw;
 
     // 3) 対象商品取得
     const targets = await prisma.selectedProduct.findMany({
@@ -138,8 +129,30 @@ async function updateShopPrices(shop: string, accessToken: string) {
         `, { variables: { id: target.productId }});
         
         const body = await resp.json();
+        
+        // GraphQLエラーチェック
+        if (body?.errors?.length) {
+          console.error(`商品 ${target.productId} GraphQLエラー:`, body.errors[0].message);
+          details.push({ 
+            success: false, 
+            productId: target.productId, 
+            error: `GraphQLエラー: ${body.errors[0].message}` 
+          });
+          failed += 1;
+          continue;
+        }
+        
         const product = body?.data?.product;
-        if (!product) continue;
+        if (!product) {
+          console.error(`商品 ${target.productId} データが見つかりません`);
+          details.push({ 
+            success: false, 
+            productId: target.productId, 
+            error: "商品データが見つかりません" 
+          });
+          failed += 1;
+          continue;
+        }
 
         // 各バリアントの価格計算
         for (const edge of product.variants.edges) {
@@ -147,7 +160,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
           const current = Number(variant.price || 0);
           if (!current) continue;
 
-          const newPrice = calcFinalPrice(current, ratio, minPct);
+          const newPrice = calcFinalPriceWithStep(current, ratio, minPct01);
           if (parseFloat(newPrice) !== current) {
             entries.push({ 
               productId: target.productId, 
@@ -163,6 +176,12 @@ async function updateShopPrices(shop: string, accessToken: string) {
         await new Promise(r => setTimeout(r, 100));
       } catch (error) {
         console.error(`商品 ${target.productId} の処理でエラー:`, error);
+        details.push({ 
+          success: false, 
+          productId: target.productId, 
+          error: `商品処理エラー: ${error.message}` 
+        });
+        failed += 1;
       }
     }
 
@@ -173,7 +192,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
           shopDomain: shop,
           executionType: 'cron',
           goldRatio: ratio,
-          minPricePct: minPct,
+          minPricePct: minPctRaw,
           totalProducts: targets.length,
           updatedCount: 0,
           failedCount: 0,
@@ -220,6 +239,23 @@ async function updateShopPrices(shop: string, accessToken: string) {
         });
 
         const r = await res.json();
+        
+        // GraphQLエラーチェック
+        if (r?.errors?.length) {
+          console.error(`商品 ${productId} 更新GraphQLエラー:`, r.errors[0].message);
+          for (const variant of variants) {
+            details.push({ 
+              success: false,
+              productId, 
+              variantId: variant.id,
+              oldPrice: variant.oldPrice,
+              error: `更新GraphQLエラー: ${r.errors[0].message}`
+            });
+          }
+          failed += variants.length;
+          continue;
+        }
+        
         const errs = r?.data?.productVariantsBulkUpdate?.userErrors || [];
         
         if (errs.length) {
@@ -250,6 +286,15 @@ async function updateShopPrices(shop: string, accessToken: string) {
         await new Promise(r => setTimeout(r, 200));
       } catch (error) {
         console.error(`商品 ${productId} の更新でエラー:`, error);
+        for (const variant of variants) {
+          details.push({ 
+            success: false,
+            productId, 
+            variantId: variant.id,
+            oldPrice: variant.oldPrice,
+            error: `更新処理エラー: ${error.message}`
+          });
+        }
         failed += variants.length;
       }
     }
@@ -287,7 +332,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
         shopDomain: shop,
         executionType: 'cron',
         goldRatio: null,
-        minPricePct: 93,
+        minPricePct: minPctRaw || 93,
         totalProducts: 0,
         updatedCount: 0,
         failedCount: 0,
@@ -306,12 +351,8 @@ async function updateShopPrices(shop: string, accessToken: string) {
   }
 }
 
-export const action: ActionFunction = async ({ request }) => {
-  // POSTメソッドのみ許可
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
-  }
-
+// 共通の自動更新ロジック（GET/POST両方から使用）
+async function runAllShops() {
   try {
     console.log(`🕙 Cron実行開始: ${new Date().toISOString()}`);
 
@@ -323,11 +364,12 @@ export const action: ActionFunction = async ({ request }) => {
 
     if (!enabledShops.length) {
       console.log('自動更新有効なショップがありません');
-      return json({
+      return {
         message: "自動更新有効なショップなし",
         timestamp: new Date().toISOString(),
+        summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
         shops: []
-      });
+      };
     }
 
     // 各ショップのアクセストークンを取得
@@ -364,7 +406,7 @@ export const action: ActionFunction = async ({ request }) => {
 
     console.log(`🏁 Cron実行完了: 成功 ${successCount}/${results.length}ショップ, 更新 ${totalUpdated}件, 失敗 ${totalFailed}件`);
 
-    return json({
+    return {
       message: "自動価格更新完了",
       timestamp: new Date().toISOString(),
       summary: {
@@ -374,15 +416,35 @@ export const action: ActionFunction = async ({ request }) => {
         totalFailed
       },
       shops: results
-    });
+    };
 
   } catch (error) {
     console.error("Cron実行エラー:", error);
-    return json({ 
+    return {
       error: error.message,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
+      timestamp: new Date().toISOString(),
+      summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+      shops: []
+    };
   }
+}
+
+// Vercel Cron用のGETエンドポイント
+export const loader: LoaderFunction = async () => {
+  const result = await runAllShops();
+  return json(result, { 
+    headers: { "Cache-Control": "no-store" } 
+  });
+};
+
+// 手動実行用のPOSTエンドポイント
+export const action: ActionFunction = async ({ request }) => {
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405 });
+  }
+  
+  const result = await runAllShops();
+  return json(result, { 
+    headers: { "Cache-Control": "no-store" } 
+  });
 };

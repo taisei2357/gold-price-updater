@@ -23,6 +23,9 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+
+  @@index([shop])
+  @@index([state])
 }
 
 model SelectedProduct {
@@ -34,6 +37,7 @@ model SelectedProduct {
   updatedAt  DateTime @updatedAt
 
   @@unique([shopDomain, productId])
+  @@index([shopDomain])
 }
 
 model ShopSetting {
@@ -61,5 +65,7 @@ model PriceUpdateLog {
   success       Boolean
   errorMessage  String?
   executedAt    DateTime @default(now())
-  details       String?
+  details       String?  @db.Text
+
+  @@index([shopDomain, executedAt])
 }

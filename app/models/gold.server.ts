@@ -27,54 +27,29 @@ export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> 
 
     console.log('HTML取得成功、長さ:', html.length);
 
-    // 新しいサイト構造に対応した価格抽出
-    // テーブル構造を想定: K18やretail_tax クラスなどを使用
+    // 正確なHTML構造に基づく価格抽出
+    // class="gold"のテーブル行から正確に抽出
     let retailPrice: number | null = null;
     let changeYen: number | null = null;
 
-    // 価格パターン 1: K18の価格を検索
-    const k18Patterns = [
-      /K18.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /18金.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /<td[^>]*retail_tax[^>]*>([^<]*(\d{1,3}(?:,\d{3})*)[^<]*円)/gi,
-      /shop.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /(\d{1,3}(?:,\d{3})*)\s*円(?!.*前日比)/g
-    ];
-
-    for (const pattern of k18Patterns) {
-      const matches = [...html.matchAll(pattern)];
-      if (matches.length > 0) {
-        // 最初にマッチした価格を使用（通常最も大きな価格が店頭小売価格）
-        const priceStr = matches[0][1] || matches[0][2];
-        if (priceStr) {
-          const price = parseInt(priceStr.replace(/,/g, ''));
-          if (price > 10000 && price < 50000) { // 妥当な価格範囲
-            retailPrice = price;
-            console.log('価格マッチ:', matches[0][0], '→', price);
-            break;
-          }
-        }
+    // 金のテーブル行を取得（class="gold"）
+    const goldRowMatch = html.match(/<tr[^>]*class="gold"[^>]*>.*?<\/tr>/is);
+    if (goldRowMatch) {
+      const goldRow = goldRowMatch[0];
+      console.log('金行取得成功');
+      
+      // 小売価格抽出: class="retail_tax"のセル
+      const priceMatch = goldRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
+      if (priceMatch) {
+        retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
+        console.log('価格抽出:', priceMatch[0], '→', retailPrice);
       }
-    }
-
-    // 前日比パターン（改良版）
-    const changePatterns = [
-      /前日比[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /変動[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /([+\-]\d+(?:\.\d+)?)\s*円.*?前日比/gi,
-      /<td[^>]*>([+\-]?\d+(?:\.\d+)?)\s*円<\/td>/gi
-    ];
-
-    for (const pattern of changePatterns) {
-      const matches = [...html.matchAll(pattern)];
-      if (matches.length > 0) {
-        const changeStr = matches[0][1];
-        const change = parseFloat(changeStr);
-        if (!isNaN(change) && Math.abs(change) <= 1000) { // 妥当な変動範囲
-          changeYen = change;
-          console.log('変動マッチ:', matches[0][0], '→', change);
-          break;
-        }
+      
+      // 前日比抽出: class="retail_ratio"のセル
+      const changeMatch = goldRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      if (changeMatch) {
+        changeYen = parseFloat(changeMatch[1]);
+        console.log('前日比抽出:', changeMatch[0], '→', changeYen);
       }
     }
 

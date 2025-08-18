@@ -8760,21 +8760,40 @@ async function fetchGoldChangeRatioTanaka$1() {
       }
     }
     const changePatterns = [
-      /前日比[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /変動[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /([+\-]\d+(?:\.\d+)?)\s*円.*?前日比/gi,
-      /<td[^>]*>([+\-]?\d+(?:\.\d+)?)\s*円<\/td>/gi
+      // パターン1: 店頭小売価格の前日比
+      /店頭小売価格.*?前日比.*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gis,
+      // パターン2: 金の行の前日比
+      /金\s+[\d,]+\s*円\s+([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gi,
+      // パターン3: 前日比の直後
+      /前日比[^円]*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gi,
+      // パターン4: テーブルセル内
+      /<td[^>]*>[^<]*([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円[^<]*<\/td>/gi,
+      // パターン5: シンプルパターン
+      /([+\-]\d+(?:\.\d+)?)\s*[　\s]*円/g
     ];
     let changeMatchResult = null;
     for (const pattern of changePatterns) {
       const matches2 = [...html.matchAll(pattern)];
       if (matches2.length > 0) {
-        const changeStr = matches2[0][1];
-        const change = parseFloat(changeStr);
-        if (!isNaN(change) && Math.abs(change) <= 1e3) {
+        for (const match of matches2) {
+          const changeStr = match[1];
+          const change = parseFloat(changeStr);
+          if (!isNaN(change) && Math.abs(change) <= 500 && Math.abs(change) < 200) {
+            changeYen = change;
+            changeMatchResult = match[0];
+            break;
+          }
+        }
+        if (changeYen !== null) break;
+      }
+    }
+    if (changeYen === null) {
+      const goldRowMatch = html.match(/金\s+[\d,]+\s*円\s+([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/i);
+      if (goldRowMatch) {
+        const change = parseFloat(goldRowMatch[1]);
+        if (!isNaN(change) && Math.abs(change) <= 500) {
           changeYen = change;
-          changeMatchResult = matches2[0][0];
-          break;
+          changeMatchResult = goldRowMatch[0];
         }
       }
     }
@@ -9034,20 +9053,41 @@ async function fetchGoldPriceDataTanaka() {
       }
     }
     const changePatterns = [
-      /前日比[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /変動[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
-      /([+\-]\d+(?:\.\d+)?)\s*円.*?前日比/gi,
-      /<td[^>]*>([+\-]?\d+(?:\.\d+)?)\s*円<\/td>/gi
+      // パターン1: テーブル内の前日比セル（店頭小売価格の前日比）
+      /店頭小売価格.*?前日比.*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gis,
+      // パターン2: 金の行の前日比
+      /金.*?円.*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gis,
+      // パターン3: 前日比の直後
+      /前日比[^円]*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gi,
+      // パターン4: テーブルセル内の数値（前日比用）
+      /<td[^>]*>[^<]*([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円[^<]*<\/td>/gi,
+      // パターン5: シンプルな数値パターン
+      /([+\-]\d+(?:\.\d+)?)\s*[　\s]*円/g
     ];
     for (const pattern of changePatterns) {
       const matches2 = [...html.matchAll(pattern)];
       if (matches2.length > 0) {
-        const changeStr = matches2[0][1];
-        const change = parseFloat(changeStr);
-        if (!isNaN(change) && Math.abs(change) <= 1e3) {
+        for (const match of matches2) {
+          const changeStr = match[1];
+          const change = parseFloat(changeStr);
+          if (!isNaN(change) && Math.abs(change) <= 500) {
+            if (Math.abs(change) < 200) {
+              changeYen = change;
+              console.log("前日比マッチ:", match[0], "→", change);
+              break;
+            }
+          }
+        }
+        if (changeYen !== null) break;
+      }
+    }
+    if (changeYen === null) {
+      const goldRowMatch = html.match(/金\s+[\d,]+\s*円\s+([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/i);
+      if (goldRowMatch) {
+        const change = parseFloat(goldRowMatch[1]);
+        if (!isNaN(change) && Math.abs(change) <= 500) {
           changeYen = change;
-          console.log("変動マッチ:", matches2[0][0], "→", change);
-          break;
+          console.log("金行マッチ:", goldRowMatch[0], "→", change);
         }
       }
     }
