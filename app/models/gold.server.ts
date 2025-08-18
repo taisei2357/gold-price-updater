@@ -19,35 +19,81 @@ export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> 
   if (_cache && Date.now() - _cache.at < TTL_MS) return _cache.data;
 
   try {
-    // 田中貴金属の「本日の地金価格」ページ
-    const url = "https://gold.tanaka.co.jp/commodity/souba/index.php";
+    // 田中貴金属の相場情報ページ（2025年対応）
+    const url = "https://gold.tanaka.co.jp/commodity/souba/";
     const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
     const html = await resp.text();
 
-    // 店頭小売価格（税込）を抽出
-    // より包括的なパターンマッチング
-    const priceMatch = html.match(/店頭小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) ||
-                      html.match(/小売価格[^：]*：[^0-9]*([0-9,]+)[^0-9]*円/i) ||
-                      html.match(/金[^0-9]*([0-9,]+)[^0-9]*円/i) ||
-                      html.match(/(\d{1,2},\d{3})\s*円/i);
-    
-    const retailPriceStr = priceMatch ? priceMatch[1].replace(/,/g, '') : null;
-    const retailPrice = retailPriceStr ? parseInt(retailPriceStr) : null;
+    console.log('HTML取得成功、長さ:', html.length);
 
-    // 前日比を抽出（円単位）
-    // パターン例: "前日比 -72円" / "前日比：+50円"
-    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) ||
-                       html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
+    // 新しいサイト構造に対応した価格抽出
+    // テーブル構造を想定: K18やretail_tax クラスなどを使用
+    let retailPrice: number | null = null;
+    let changeYen: number | null = null;
+
+    // 価格パターン 1: K18の価格を検索
+    const k18Patterns = [
+      /K18.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
+      /18金.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
+      /<td[^>]*retail_tax[^>]*>([^<]*(\d{1,3}(?:,\d{3})*)[^<]*円)/gi,
+      /shop.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
+      /(\d{1,3}(?:,\d{3})*)\s*円(?!.*前日比)/g
+    ];
+
+    for (const pattern of k18Patterns) {
+      const matches = [...html.matchAll(pattern)];
+      if (matches.length > 0) {
+        // 最初にマッチした価格を使用（通常最も大きな価格が店頭小売価格）
+        const priceStr = matches[0][1] || matches[0][2];
+        if (priceStr) {
+          const price = parseInt(priceStr.replace(/,/g, ''));
+          if (price > 10000 && price < 50000) { // 妥当な価格範囲
+            retailPrice = price;
+            console.log('価格マッチ:', matches[0][0], '→', price);
+            break;
+          }
+        }
+      }
+    }
+
+    // 前日比パターン（改良版）
+    const changePatterns = [
+      /前日比[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
+      /変動[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
+      /([+\-]\d+(?:\.\d+)?)\s*円.*?前日比/gi,
+      /<td[^>]*>([+\-]?\d+(?:\.\d+)?)\s*円<\/td>/gi
+    ];
+
+    for (const pattern of changePatterns) {
+      const matches = [...html.matchAll(pattern)];
+      if (matches.length > 0) {
+        const changeStr = matches[0][1];
+        const change = parseFloat(changeStr);
+        if (!isNaN(change) && Math.abs(change) <= 1000) { // 妥当な変動範囲
+          changeYen = change;
+          console.log('変動マッチ:', matches[0][0], '→', change);
+          break;
+        }
+      }
+    }
+
+    // デバッグ: マッチしなかった場合、関連する部分を出力
+    if (!retailPrice) {
+      const priceContexts = html.match(/.{0,50}(\d{1,3}(?:,\d{3})*)\s*円.{0,50}/gi);
+      console.log('価格コンテキスト（最初の5つ）:', priceContexts?.slice(0, 5));
+    }
     
-    const changeYen = changeMatch ? Number(changeMatch[1]) : null;
+    if (changeYen === null) {
+      const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
+      console.log('前日比コンテキスト:', changeContexts?.slice(0, 3));
+    }
 
     // デバッグログ
-    console.log('Gold price extraction:', {
-      priceMatch: priceMatch?.[0],
+    console.log('Gold price extraction result:', {
       retailPrice,
-      changeMatch: changeMatch?.[0], 
-      changeYen
+      changeYen,
+      url: url
     });
     
     // 変動率を計算（前日比円 / 店頭小売価格）

@@ -13,23 +13,74 @@ async function fetchGoldChangeRatioTanaka() {
     
     console.log('HTML取得成功、長さ:', html.length);
     
-    // K18の価格情報を抽出
-    const priceMatch = html.match(/K18.*?(\d{1,3}(?:,\d{3})*)/);
-    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) ||
-                       html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
-    
-    if (!priceMatch || !changeMatch) {
+    // 新しいサイト構造に対応した価格抽出
+    let retailPrice: number | null = null;
+    let changeYen: number | null = null;
+
+    // 価格パターン
+    const k18Patterns = [
+      /K18.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
+      /18金.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
+      /<td[^>]*retail_tax[^>]*>([^<]*(\d{1,3}(?:,\d{3})*)[^<]*円)/gi,
+      /(\d{1,3}(?:,\d{3})*)\s*円(?!.*前日比)/g
+    ];
+
+    let priceMatchResult = null;
+    for (const pattern of k18Patterns) {
+      const matches = [...html.matchAll(pattern)];
+      if (matches.length > 0) {
+        const priceStr = matches[0][1] || matches[0][2];
+        if (priceStr) {
+          const price = parseInt(priceStr.replace(/,/g, ''));
+          if (price > 10000 && price < 50000) {
+            retailPrice = price;
+            priceMatchResult = matches[0][0];
+            break;
+          }
+        }
+      }
+    }
+
+    // 前日比パターン
+    const changePatterns = [
+      /前日比[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
+      /変動[^円\-+\d]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/gi,
+      /([+\-]\d+(?:\.\d+)?)\s*円.*?前日比/gi,
+      /<td[^>]*>([+\-]?\d+(?:\.\d+)?)\s*円<\/td>/gi
+    ];
+
+    let changeMatchResult = null;
+    for (const pattern of changePatterns) {
+      const matches = [...html.matchAll(pattern)];
+      if (matches.length > 0) {
+        const changeStr = matches[0][1];
+        const change = parseFloat(changeStr);
+        if (!isNaN(change) && Math.abs(change) <= 1000) {
+          changeYen = change;
+          changeMatchResult = matches[0][0];
+          break;
+        }
+      }
+    }
+
+    if (!retailPrice || changeYen === null) {
+      // デバッグ情報
+      const priceContexts = html.match(/.{0,50}(\d{1,3}(?:,\d{3})*)\s*円.{0,50}/gi);
+      const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
+      
       return {
         success: false,
         error: '金価格データの抽出に失敗',
         htmlLength: html.length,
-        priceMatch: priceMatch ? priceMatch[0] : null,
-        changeMatch: changeMatch ? changeMatch[0] : null
+        retailPrice,
+        changeYen,
+        priceMatchResult,
+        changeMatchResult,
+        priceContexts: priceContexts?.slice(0, 5),
+        changeContexts: changeContexts?.slice(0, 3)
       };
     }
     
-    const retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
-    const changeYen = parseFloat(changeMatch[1]);
     const changeRatio = changeYen / retailPrice;
     
     return {
@@ -38,8 +89,8 @@ async function fetchGoldChangeRatioTanaka() {
       changeYen,
       changeRatio,
       changePercent: (changeRatio * 100).toFixed(2) + '%',
-      priceMatch: priceMatch[0],
-      changeMatch: changeMatch[0]
+      priceMatchResult,
+      changeMatchResult
     };
     
   } catch (error) {
