@@ -21,7 +21,8 @@ export class ClientCache {
     try {
       sessionStorage.setItem(key, JSON.stringify(item));
     } catch (error) {
-      console.warn('キャッシュ保存に失敗:', error);
+      // ストレージ容量制限やプライベートモードでのエラー対応
+      console.warn('キャッシュ保存に失敗（Shopify認証影響なし）:', error);
     }
   }
   

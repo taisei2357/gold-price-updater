@@ -290,13 +290,14 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
 
-  // 手動リロード
+  // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
     ClientCache.clear(CACHE_KEYS.PRODUCTS);
-    const url = new URL(window.location);
-    url.searchParams.set('refresh', 'true');
-    window.location.href = url.toString();
-  }, []);
+    setIsUsingCache(false);
+    
+    // Remix revalidator使用でセッション保持
+    revalidator.revalidate();
+  }, [revalidator]);
 
   // 商品フィルタリング
   const filteredProducts = filterProducts(products, searchValue, filterType);
@@ -686,9 +687,8 @@ export default function Products() {
               icon: RefreshIcon,
               onAction: () => {
                 ClientCache.clear(CACHE_KEYS.PRODUCTS);
-                const url = new URL(window.location);
-                url.searchParams.set('refresh', 'true');
-                window.location.href = url.toString();
+                // ページ全体をリロードせずにRevalidator使用
+                window.location.search = '?refresh=true';
               }
             }
           ]}
