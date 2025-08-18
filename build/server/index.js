@@ -22,7 +22,7 @@ if (process.env.NODE_ENV !== "production") {
     global.prismaGlobal = new PrismaClient();
   }
 }
-const prisma = global.prismaGlobal ?? new PrismaClient();
+const prisma$1 = global.prismaGlobal ?? new PrismaClient();
 const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
 const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
 const shopify = shopifyApp({
@@ -33,7 +33,7 @@ const shopify = shopifyApp({
   appUrl,
   // PartnersのApp URLと完全一致させる
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: new PrismaSessionStorage(prisma$1),
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
@@ -8268,7 +8268,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App$2,
   links: links$2
 }, Symbol.toStringTag, { value: "Module" }));
-const action$6 = async ({ request }) => {
+const action$7 = async ({ request }) => {
   const raw = await request.text();
   const hmac = request.headers.get("x-shopify-hmac-sha256") ?? "";
   const digest = createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(raw, "utf8").digest("base64");
@@ -8277,18 +8277,18 @@ const action$6 = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$9 = () => new Response(null, { status: 405 });
+const loader$a = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6,
-  loader: loader$9
+  action: action$7,
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
-const action$5 = async ({ request }) => {
+const action$6 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   const current = payload.current;
   if (session) {
-    await prisma.session.update({
+    await prisma$1.session.update({
       where: {
         id: session.id
       },
@@ -8301,24 +8301,24 @@ const action$5 = async ({ request }) => {
 };
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$5
+  action: action$6
 }, Symbol.toStringTag, { value: "Module" }));
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6,
-  loader: loader$9
+  action: action$7,
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
-const action$4 = async ({ request }) => {
+const action$5 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   try {
-    await prisma.$transaction([
+    await prisma$1.$transaction([
       // セッションデータ削除
-      prisma.session.deleteMany({ where: { shop } }),
+      prisma$1.session.deleteMany({ where: { shop } }),
       // 商品選択データ削除
-      prisma.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
+      prisma$1.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
       // ショップ設定削除
-      prisma.shopSetting.deleteMany({ where: { shopDomain: shop } })
+      prisma$1.shopSetting.deleteMany({ where: { shopDomain: shop } })
       // 実行ログは監査のため残す（必要に応じて削除）
       // db.priceUpdateLog.deleteMany({ where: { shopDomain: shop } }),
     ]);
@@ -8330,11 +8330,384 @@ const action$4 = async ({ request }) => {
 };
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$4
+  action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
+const prisma = new PrismaClient();
+class ShopifyAdminClient {
+  constructor(shop, accessToken) {
+    this.shop = shop;
+    this.accessToken = accessToken;
+  }
+  async graphql(query, options = {}) {
+    const url = `https://${this.shop}/admin/api/2024-01/graphql.json`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": this.accessToken
+      },
+      body: JSON.stringify({
+        query,
+        variables: options.variables || {}
+      })
+    });
+    return {
+      json: async () => await response.json()
+    };
+  }
+}
+async function fetchGoldChangeRatioTanaka$2() {
+  try {
+    const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/");
+    const html = await response.text();
+    const priceMatch = html.match(/K18.*?(\d{1,3}(?:,\d{3})*)/);
+    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) || html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
+    if (!priceMatch || !changeMatch) {
+      console.log("金価格データの抽出に失敗");
+      return null;
+    }
+    const retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+    const changeYen = parseFloat(changeMatch[1]);
+    const changeRatio = changeYen / retailPrice;
+    console.log(`金価格情報: 小売価格=${retailPrice}円, 前日比=${changeYen}円, 変動率=${(changeRatio * 100).toFixed(2)}%`);
+    return changeRatio;
+  } catch (error) {
+    console.error("金価格取得エラー:", error);
+    return null;
+  }
+}
+function calcFinalPrice$1(current, ratio, minPct) {
+  const calc = current * (1 + ratio);
+  const floor = current * (minPct / 100);
+  return String(Math.round(Math.max(calc, floor)));
+}
+async function updateShopPrices(shop, accessToken) {
+  var _a, _b, _c, _d, _e, _f;
+  const admin = new ShopifyAdminClient(shop, accessToken);
+  try {
+    const ratio = await fetchGoldChangeRatioTanaka$2();
+    if (ratio === null) {
+      return {
+        shop,
+        success: false,
+        error: "金価格の取得に失敗",
+        updated: 0,
+        failed: 0
+      };
+    }
+    const setting = await prisma.shopSetting.findUnique({
+      where: { shopDomain: shop }
+    });
+    if (!setting || !setting.autoUpdateEnabled) {
+      console.log(`${shop}: 自動更新が無効です`);
+      return {
+        shop,
+        success: true,
+        message: "自動更新無効",
+        updated: 0,
+        failed: 0
+      };
+    }
+    const minPct = setting.minPricePct || 93;
+    const targets = await prisma.selectedProduct.findMany({
+      where: { shopDomain: shop },
+      select: { productId: true }
+    });
+    if (!targets.length) {
+      return {
+        shop,
+        success: true,
+        message: "対象商品なし",
+        updated: 0,
+        failed: 0
+      };
+    }
+    const entries = [];
+    for (const target of targets) {
+      try {
+        const resp = await admin.graphql(`
+          query($id: ID!) { 
+            product(id: $id) { 
+              id 
+              title
+              variants(first: 50) {
+                edges {
+                  node {
+                    id
+                    price
+                  }
+                }
+              }
+            } 
+          }
+        `, { variables: { id: target.productId } });
+        const body = await resp.json();
+        const product = (_a = body == null ? void 0 : body.data) == null ? void 0 : _a.product;
+        if (!product) continue;
+        for (const edge of product.variants.edges) {
+          const variant = edge.node;
+          const current = Number(variant.price || 0);
+          if (!current) continue;
+          const newPrice = calcFinalPrice$1(current, ratio, minPct);
+          if (parseFloat(newPrice) !== current) {
+            entries.push({
+              productId: target.productId,
+              productTitle: product.title,
+              variantId: variant.id,
+              newPrice,
+              oldPrice: current
+            });
+          }
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      } catch (error) {
+        console.error(`商品 ${target.productId} の処理でエラー:`, error);
+      }
+    }
+    if (!entries.length) {
+      await prisma.priceUpdateLog.create({
+        data: {
+          shopDomain: shop,
+          executionType: "cron",
+          goldRatio: ratio,
+          minPricePct: minPct,
+          totalProducts: targets.length,
+          updatedCount: 0,
+          failedCount: 0,
+          success: true,
+          errorMessage: null
+        }
+      });
+      return {
+        shop,
+        success: true,
+        message: "価格変更不要",
+        updated: 0,
+        failed: 0
+      };
+    }
+    const byProduct = /* @__PURE__ */ new Map();
+    for (const e of entries) {
+      const arr = byProduct.get(e.productId) || [];
+      arr.push({ id: e.variantId, price: e.newPrice, oldPrice: e.oldPrice });
+      byProduct.set(e.productId, arr);
+    }
+    let updated = 0, failed = 0;
+    const details = [];
+    for (const [productId, variants] of byProduct) {
+      try {
+        const res = await admin.graphql(`
+          mutation UpdateViaBulk($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+            productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+              product { id }
+              productVariants { id price }
+              userErrors { field message }
+            }
+          }
+        `, {
+          variables: {
+            productId,
+            variants: variants.map((v) => ({ id: v.id, price: v.price }))
+          }
+        });
+        const r = await res.json();
+        const errs = ((_c = (_b = r == null ? void 0 : r.data) == null ? void 0 : _b.productVariantsBulkUpdate) == null ? void 0 : _c.userErrors) || [];
+        if (errs.length) {
+          failed += variants.length;
+          for (const variant of variants) {
+            details.push({
+              success: false,
+              productId,
+              variantId: variant.id,
+              error: ((_d = errs[0]) == null ? void 0 : _d.message) || "不明なエラー"
+            });
+          }
+        } else {
+          const updatedVariants = ((_f = (_e = r == null ? void 0 : r.data) == null ? void 0 : _e.productVariantsBulkUpdate) == null ? void 0 : _f.productVariants) || [];
+          updated += updatedVariants.length;
+          for (const variant of variants) {
+            details.push({
+              success: true,
+              productId,
+              variantId: variant.id,
+              oldPrice: variant.oldPrice,
+              newPrice: parseFloat(variant.price)
+            });
+          }
+        }
+        await new Promise((r2) => setTimeout(r2, 200));
+      } catch (error) {
+        console.error(`商品 ${productId} の更新でエラー:`, error);
+        failed += variants.length;
+      }
+    }
+    await prisma.priceUpdateLog.create({
+      data: {
+        shopDomain: shop,
+        executionType: "cron",
+        goldRatio: ratio,
+        minPricePct: minPct,
+        totalProducts: targets.length,
+        updatedCount: updated,
+        failedCount: failed,
+        success: failed === 0,
+        errorMessage: failed > 0 ? `${failed}件の更新に失敗` : null,
+        details: JSON.stringify(details)
+      }
+    });
+    return {
+      shop,
+      success: true,
+      updated,
+      failed,
+      ratio: (ratio * 100).toFixed(2) + "%"
+    };
+  } catch (error) {
+    console.error(`${shop}の処理でエラー:`, error);
+    await prisma.priceUpdateLog.create({
+      data: {
+        shopDomain: shop,
+        executionType: "cron",
+        goldRatio: null,
+        minPricePct: 93,
+        totalProducts: 0,
+        updatedCount: 0,
+        failedCount: 0,
+        success: false,
+        errorMessage: error.message
+      }
+    });
+    return {
+      shop,
+      success: false,
+      error: error.message,
+      updated: 0,
+      failed: 0
+    };
+  }
+}
+const action$4 = async ({ request }) => {
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405 });
+  }
+  try {
+    console.log(`🕙 Cron実行開始: ${(/* @__PURE__ */ new Date()).toISOString()}`);
+    const enabledShops = await prisma.shopSetting.findMany({
+      where: { autoUpdateEnabled: true },
+      select: { shopDomain: true }
+    });
+    if (!enabledShops.length) {
+      console.log("自動更新有効なショップがありません");
+      return json({
+        message: "自動更新有効なショップなし",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        shops: []
+      });
+    }
+    const results = [];
+    for (const shop of enabledShops) {
+      const session = await prisma.session.findFirst({
+        where: { shop: shop.shopDomain },
+        orderBy: { expires: "desc" }
+      });
+      if (!session || !session.accessToken) {
+        console.log(`${shop.shopDomain}: 有効なセッションが見つかりません`);
+        results.push({
+          shop: shop.shopDomain,
+          success: false,
+          error: "有効なセッションなし",
+          updated: 0,
+          failed: 0
+        });
+        continue;
+      }
+      console.log(`${shop.shopDomain}: 価格更新を開始`);
+      const result = await updateShopPrices(shop.shopDomain, session.accessToken);
+      results.push(result);
+      await new Promise((r) => setTimeout(r, 1e3));
+    }
+    const totalUpdated = results.reduce((sum, r) => sum + (r.updated || 0), 0);
+    const totalFailed = results.reduce((sum, r) => sum + (r.failed || 0), 0);
+    const successCount = results.filter((r) => r.success).length;
+    console.log(`🏁 Cron実行完了: 成功 ${successCount}/${results.length}ショップ, 更新 ${totalUpdated}件, 失敗 ${totalFailed}件`);
+    return json({
+      message: "自動価格更新完了",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      summary: {
+        totalShops: results.length,
+        successShops: successCount,
+        totalUpdated,
+        totalFailed
+      },
+      shops: results
+    });
+  } catch (error) {
+    console.error("Cron実行エラー:", error);
+    return json({
+      error: error.message,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+};
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6,
+  action: action$4
+}, Symbol.toStringTag, { value: "Module" }));
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$7,
+  loader: loader$a
+}, Symbol.toStringTag, { value: "Module" }));
+async function fetchGoldChangeRatioTanaka$1() {
+  try {
+    const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/");
+    const html = await response.text();
+    console.log("HTML取得成功、長さ:", html.length);
+    const k18Context = html.match(/K18.{0,200}/gi);
+    console.log("K18周辺のテキスト:", k18Context);
+    const changeContext = html.match(/.{0,100}前日比.{0,100}/gi);
+    console.log("前日比周辺のテキスト:", changeContext);
+    const priceMatch = html.match(/K18.*?(\d{1,3}(?:,\d{3})*)/);
+    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) || html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
+    console.log("価格マッチ:", priceMatch);
+    console.log("変動マッチ:", changeMatch);
+    if (!priceMatch || !changeMatch) {
+      return {
+        success: false,
+        error: "金価格データの抽出に失敗",
+        html: html.substring(0, 1e3),
+        priceMatch,
+        changeMatch
+      };
+    }
+    const retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+    const changeYen = parseFloat(changeMatch[1]);
+    const changeRatio = changeYen / retailPrice;
+    return {
+      success: true,
+      retailPrice,
+      changeYen,
+      changeRatio,
+      changePercent: (changeRatio * 100).toFixed(2) + "%",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  } catch (error) {
+    console.error("金価格取得エラー:", error);
+    return {
+      success: false,
+      error: error.message,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+}
+const loader$9 = async () => {
+  const result = await fetchGoldChangeRatioTanaka$1();
+  return json(result);
+};
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
   loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
@@ -8400,7 +8773,7 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$3,
   default: Auth,
@@ -8421,7 +8794,7 @@ async function loader$7() {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 }
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -8433,7 +8806,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -8442,7 +8815,7 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8470,7 +8843,7 @@ function ErrorBoundary() {
 const headers = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
@@ -8530,7 +8903,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8595,9 +8968,9 @@ async function runBulkUpdateBySpec(admin, shop) {
   if (ratio === null) {
     return { ok: false, disabled: true, reason: "金価格の取得に失敗", updated: 0, failed: 0, details: [] };
   }
-  const setting = await prisma.shopSetting.findUnique({ where: { shopDomain: shop } });
+  const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop } });
   const minPct = (setting == null ? void 0 : setting.minPricePct) ?? 93;
-  const targets = await prisma.selectedProduct.findMany({
+  const targets = await prisma$1.selectedProduct.findMany({
     where: { shopDomain: shop },
     select: { productId: true }
   });
@@ -8794,14 +9167,14 @@ const loader$3 = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
     fetchGoldPrice(),
-    prisma.selectedProduct.findMany({
+    prisma$1.selectedProduct.findMany({
       where: {
         shopDomain: session.shop,
         selected: true
       },
       select: { productId: true }
     }),
-    prisma.shopSetting.findUnique({
+    prisma$1.shopSetting.findUnique({
       where: { shopDomain: session.shop }
     })
   ]);
@@ -8822,11 +9195,11 @@ const action$1 = async ({ request }) => {
   if (action2 === "saveSelection") {
     const ids = formData.getAll("productId").map(String);
     const uniqueIds = Array.from(new Set(ids));
-    await prisma.selectedProduct.deleteMany({
+    await prisma$1.selectedProduct.deleteMany({
       where: { shopDomain: session.shop }
     });
     if (uniqueIds.length > 0) {
-      await prisma.selectedProduct.createMany({
+      await prisma$1.selectedProduct.createMany({
         data: uniqueIds.map((productId) => ({
           shopDomain: session.shop,
           productId,
@@ -9220,7 +9593,7 @@ function Products() {
     }
   );
 }
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
@@ -9229,7 +9602,7 @@ const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 async function loader$2({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-  const setting = await prisma.shopSetting.upsert({
+  const setting = await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {},
     create: {
@@ -9249,7 +9622,7 @@ async function action({ request }) {
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
   const autoUpdateHour = Math.max(0, Math.min(23, Number(form.get("autoUpdateHour") || 10)));
   const notificationEmail = String(form.get("notificationEmail") || "");
-  await prisma.shopSetting.upsert({
+  await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {
       autoUpdateEnabled,
@@ -9450,7 +9823,7 @@ function Settings() {
     }
   );
 }
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -9462,15 +9835,15 @@ const loader$1 = async ({ request }) => {
   try {
     const goldData = await fetchGoldPriceDataTanaka();
     const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
-      prisma.selectedProduct.count({
+      prisma$1.selectedProduct.count({
         where: { shopDomain: session.shop, selected: true }
       }),
-      prisma.priceUpdateLog.findMany({
+      prisma$1.priceUpdateLog.findMany({
         where: { shopDomain: session.shop },
         orderBy: { executedAt: "desc" },
         take: 5
       }),
-      prisma.shopSetting.findUnique({
+      prisma$1.shopSetting.findUnique({
         where: { shopDomain: session.shop }
       })
     ]);
@@ -9623,7 +9996,7 @@ function Dashboard() {
     }
   );
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -9632,12 +10005,12 @@ async function loader({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const [logs, stats] = await Promise.all([
-    prisma.priceUpdateLog.findMany({
+    prisma$1.priceUpdateLog.findMany({
       where: { shopDomain: shop },
       orderBy: { executedAt: "desc" },
       take: 100
     }),
-    prisma.priceUpdateLog.aggregate({
+    prisma$1.priceUpdateLog.aggregate({
       where: { shopDomain: shop },
       _count: { id: true },
       _sum: {
@@ -9836,12 +10209,12 @@ function Logs() {
     }
   );
 }
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BH-kENwN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-iFha_njD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-XeyT_iBl.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-D28RdGze.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-effe4d1b.js", "version": "effe4d1b" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.cron.price-update": { "id": "routes/api.cron.price-update", "parentId": "root", "path": "api/cron/price-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron.price-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-gold-price": { "id": "routes/api.test-gold-price", "parentId": "root", "path": "api/test-gold-price", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-gold-price-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BH-kENwN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-iFha_njD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-XeyT_iBl.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-D28RdGze.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-06f9a48c.js", "version": "06f9a48c" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -9890,13 +10263,29 @@ const routes = {
     caseSensitive: void 0,
     module: route4
   },
+  "routes/api.cron.price-update": {
+    id: "routes/api.cron.price-update",
+    parentId: "root",
+    path: "api/cron/price-update",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route5
+  },
   "routes/webhooks.shop.redact": {
     id: "routes/webhooks.shop.redact",
     parentId: "root",
     path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
-    module: route5
+    module: route6
+  },
+  "routes/api.test-gold-price": {
+    id: "routes/api.test-gold-price",
+    parentId: "root",
+    path: "api/test-gold-price",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route7
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -9904,7 +10293,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
+    module: route8
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -9912,7 +10301,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route9
   },
   "routes/_index": {
     id: "routes/_index",
@@ -9920,7 +10309,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route8
+    module: route10
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -9928,7 +10317,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route9
+    module: route11
   },
   "routes/app": {
     id: "routes/app",
@@ -9936,7 +10325,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route10
+    module: route12
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -9944,7 +10333,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route13
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -9952,7 +10341,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route14
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -9960,7 +10349,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route15
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -9968,7 +10357,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route14
+    module: route16
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -9976,7 +10365,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route15
+    module: route17
   }
 };
 export {
