@@ -257,6 +257,24 @@ export const action = async ({ request }) => {
     });
   }
 
+  if (action === "unselectProducts") {
+    const productIds = formData.getAll("productId").map(String);
+    
+    // 指定された商品の選択を解除
+    await prisma.selectedProduct.deleteMany({
+      where: { 
+        shopDomain: session.shop,
+        productId: { in: productIds }
+      }
+    });
+    
+    return json({ 
+      success: true, 
+      message: `${productIds.length}件の商品選択を解除しました`,
+      unselectedProducts: productIds
+    });
+  }
+
   if (action === "updatePrices") {
     const selectedProducts = JSON.parse(formData.get("selectedProducts"));
     const minPriceRate = parseFloat(formData.get("minPriceRate"));
@@ -294,7 +312,6 @@ export const action = async ({ request }) => {
 function ProductsContent({ products, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
-  const didRevalidate = useRef(false);
   
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productMetalTypes, setProductMetalTypes] = useState({}); // 商品IDと金属種別のマッピング
@@ -372,16 +389,15 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
           savedProductIds.forEach(id => delete newTypes[id]);
           return newTypes;
         });
-        // サーバーの selectedProductIds を最新化（一度だけ実行）
-        if (!didRevalidate.current) {
-          didRevalidate.current = true;
-          revalidator.revalidate();
-          // 次回の保存アクションまでフラグを解除
-          setTimeout(() => { didRevalidate.current = false; }, 500);
-        }
+      }
+      
+      // 商品解除が成功した場合の処理
+      if (fetcher.data.unselectedProducts) {
+        // 解除された商品は既にサーバー側で削除されているため、ページを再読み込みして最新状態を反映
+        window.location.reload();
       }
     }
-  }, [fetcher.state, fetcher.data?.savedProducts?.length, revalidator]);
+  }, [fetcher.state, fetcher.data?.savedProducts, fetcher.data?.unselectedProducts]);
 
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
@@ -480,6 +496,15 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     
     fetcher.submit(formData, { method: "post" });
   }, [selectedProducts, productMetalTypes, fetcher]);
+
+  // 商品選択解除ハンドラー
+  const handleUnselectProduct = useCallback((productId) => {
+    const formData = new FormData();
+    formData.append("action", "unselectProducts");
+    formData.append("productId", productId);
+    
+    fetcher.submit(formData, { method: "post" });
+  }, [fetcher]);
 
   // 価格プレビュー生成
   const generatePricePreview = useCallback(() => {
@@ -868,8 +893,10 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
           <Card>
             <div style={{ 
               width: '100%', 
-              overflowAnchor: 'none',
-              overscrollBehaviorY: 'contain'
+              maxHeight: '70vh',
+              overflowY: 'auto',
+              overscrollBehaviorY: 'contain',
+              overflowAnchor: 'none'
             }}>
               <IndexTable
                   resourceName={{ singular: '商品', plural: '商品' }}
@@ -983,9 +1010,20 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                                 )}
                                 {isSaved && (
                                   <div style={{ marginTop: '4px' }}>
-                                    <Text variant="bodySm" tone="subdued">
-                                      保存済み設定
-                                    </Text>
+                                    <InlineStack gap="100" blockAlign="center">
+                                      <Text variant="bodySm" tone="subdued">
+                                        保存済み設定
+                                      </Text>
+                                      <Button 
+                                        size="micro"
+                                        variant="tertiary"
+                                        tone="critical"
+                                        onClick={() => handleUnselectProduct(product.id)}
+                                        disabled={fetcher.state === "submitting"}
+                                      >
+                                        解除
+                                      </Button>
+                                    </InlineStack>
                                   </div>
                                 )}
                               </div>
