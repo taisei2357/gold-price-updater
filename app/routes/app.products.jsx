@@ -68,6 +68,52 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   return Math.ceil(finalPrice / 10) * 10;
 }
 
+// コレクション取得処理
+async function fetchAllCollections(admin) {
+  let allCollections = [];
+  let cursor = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const response = await admin.graphql(
+      `#graphql
+        query getCollections($first: Int!, $after: String) {
+          collections(first: $first, after: $after) {
+            edges {
+              node {
+                id
+                title
+                handle
+                productsCount
+              }
+              cursor
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      `,
+      {
+        variables: {
+          first: 250,
+          after: cursor,
+        },
+      }
+    );
+
+    const body = await response.json();
+    const collections = body.data?.collections?.edges || [];
+    
+    allCollections.push(...collections.map(edge => edge.node));
+    
+    hasNextPage = body.data?.collections?.pageInfo?.hasNextPage || false;
+    cursor = collections.length > 0 ? collections[collections.length - 1].cursor : null;
+  }
+  
+  return allCollections;
+}
+
 // 重い商品取得処理を分離
 async function fetchAllProducts(admin) {
   let allProducts = [];
@@ -187,11 +233,13 @@ export const loader = async ({ request }) => {
 
   const selectedProductIds = selectedProducts.map(p => p.productId);
 
-  // 重い商品取得処理は非同期化
+  // 重い商品・コレクション取得処理は非同期化
   const productsPromise = fetchAllProducts(admin);
+  const collectionsPromise = fetchAllCollections(admin);
 
   return defer({
     products: productsPromise, // Promise を渡す
+    collections: collectionsPromise, // Promise を渡す
     goldPrice: metalPrices.gold,
     platinumPrice: metalPrices.platinum,
     selectedProductIds: selectedProductIds,
@@ -315,7 +363,7 @@ export const action = async ({ request }) => {
   return json({ error: "不正なアクション" });
 };
 
-function ProductsContent({ products, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
+function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
   
@@ -323,6 +371,8 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
   const [productMetalTypes, setProductMetalTypes] = useState({}); // 商品IDと金属種別のマッピング
   const [searchValue, setSearchValue] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [selectionType, setSelectionType] = useState("products"); // "products" or "collections"
+  const [selectedCollectionId, setSelectedCollectionId] = useState("all");
   const [minPriceRate, setMinPriceRate] = useState(shopSetting?.minPricePct || 93);
   const [showPreview, setShowPreview] = useState(false);
   const [pricePreview, setPricePreview] = useState([]);
@@ -758,27 +808,51 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
               </div>
               
               <InlineStack gap="400">
-                <div style={{flex: 1}}>
-                  <TextField
-                    label="商品検索"
-                    value={searchValue}
-                    onChange={setSearchValue}
-                    placeholder="商品名またはハンドルで検索..."
-                    clearButton
-                    onClearButtonClick={() => setSearchValue("")}
-                  />
-                </div>
-                <div style={{minWidth: '150px'}}>
+                <div style={{minWidth: '180px'}}>
                   <Select
-                    label="商品フィルター"
+                    label="表示する内容"
                     options={[
-                      {label: "すべての商品", value: "all"},
-                      {label: "K18商品のみ", value: "k18"}
+                      {label: "全ての商品", value: "products"},
+                      {label: "全てのコレクション", value: "collections"}
                     ]}
-                    value={filterType}
-                    onChange={setFilterType}
+                    value={selectionType}
+                    onChange={setSelectionType}
                   />
                 </div>
+                
+                {selectionType === "products" && (
+                  <>
+                    <div style={{flex: 1}}>
+                      <TextField
+                        label="商品検索"
+                        value={searchValue}
+                        onChange={setSearchValue}
+                        placeholder="商品名またはハンドルで検索..."
+                        clearButton
+                        onClearButtonClick={() => setSearchValue("")}
+                      />
+                    </div>
+                    <div style={{minWidth: '150px'}}>
+                      <Select
+                        label="商品フィルター"
+                        options={[
+                          {label: "すべての商品", value: "all"},
+                          {label: "K18商品のみ", value: "k18"}
+                        ]}
+                        value={filterType}
+                        onChange={setFilterType}
+                      />
+                    </div>
+                  </>
+                )}
+                
+                {selectionType === "collections" && (
+                  <div style={{minWidth: '200px'}}>
+                    <Text variant="bodySm" tone="subdued">
+                      コレクションを選択して商品を表示
+                    </Text>
+                  </div>
+                )}
               </InlineStack>
               
               <TextField
@@ -933,8 +1007,11 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
               overflowAnchor: 'none'
             }}>
               <IndexTable
-                  resourceName={{ singular: '商品', plural: '商品' }}
-                  itemCount={filteredProducts.length}
+                  resourceName={{ 
+                    singular: selectionType === 'products' ? '商品' : 'コレクション', 
+                    plural: selectionType === 'products' ? '商品' : 'コレクション' 
+                  }}
+                  itemCount={selectionType === 'products' ? filteredProducts.length : (collections?.length || 0)}
                   selectedItemsCount={selectedProducts.length}
                   onSelectionChange={(selectionType) => {
                     if (selectionType === 'all') {
@@ -943,17 +1020,22 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                       handleSelectAll(false);
                     }
                   }}
-                  headings={[
+                  headings={selectionType === 'products' ? [
                     { title: '選択' },
                     { title: '商品名' },
                     { title: 'ステータス' },
                     { title: '価格' },
                     { title: 'バリエーション' },
                     { title: '価格連動設定' }
+                  ] : [
+                    { title: 'コレクション名' },
+                    { title: '商品数' },
+                    { title: 'ハンドル' }
                   ]}
                   selectable={false}
                 >
-                  {filteredProducts.map((product, index) => {
+                  {selectionType === 'products' ? (
+                    filteredProducts.map((product, index) => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
                     const variants = product.variants.edges;
                     const priceRange = variants.length > 1 
@@ -1068,7 +1150,39 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                         </IndexTable.Cell>
                       </IndexTable.Row>
                     );
-                  })}
+                  })
+                  ) : (
+                    // コレクション表示モード
+                    collections?.map((collection) => (
+                      <IndexTable.Row
+                        id={collection.id}
+                        key={collection.id}
+                      >
+                        <IndexTable.Cell>
+                          <Box minWidth="200px">
+                            <InlineStack gap="200" blockAlign="center">
+                              <span style={{ fontSize: '16px' }}>📦</span>
+                              <Text variant="bodyMd" fontWeight="medium">
+                                {collection.title}
+                              </Text>
+                            </InlineStack>
+                          </Box>
+                        </IndexTable.Cell>
+                        
+                        <IndexTable.Cell>
+                          <Badge tone="info">
+                            {collection.productsCount}件の商品
+                          </Badge>
+                        </IndexTable.Cell>
+                        
+                        <IndexTable.Cell>
+                          <Text variant="bodySm" tone="subdued">
+                            {collection.handle}
+                          </Text>
+                        </IndexTable.Cell>
+                      </IndexTable.Row>
+                    )) || []
+                  )}
                 </IndexTable>
             </div>
           </Card>
@@ -1257,10 +1371,11 @@ export default function Products() {
         </Page>
       }
     >
-      <Await resolve={data.products}>
-        {(products) => (
+      <Await resolve={Promise.all([data.products, data.collections])}>
+        {([products, collections]) => (
           <ProductsContent
             products={products}
+            collections={collections}
             goldPrice={goldPrice}
             platinumPrice={platinumPrice}
             selectedProductIds={selectedProductIds}
