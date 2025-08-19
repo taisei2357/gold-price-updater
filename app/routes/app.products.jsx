@@ -70,62 +70,65 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
 
 // コレクション取得処理
 async function fetchAllCollections(admin) {
-  let allCollections = [];
-  let cursor = null;
-  let hasNextPage = true;
+  try {
+    let allCollections = [];
+    let cursor = null;
+    let hasNextPage = true;
 
-  while (hasNextPage) {
-    const response = await admin.graphql(
-      `#graphql
-        query getCollections($first: Int!, $after: String) {
-          collections(first: $first, after: $after) {
-            edges {
-              node {
-                id
-                title
-                handle
-                productsCount {
-                  count
+    while (hasNextPage) {
+      const response = await admin.graphql(
+        `#graphql
+          query getCollections($first: Int!, $after: String) {
+            collections(first: $first, after: $after) {
+              edges {
+                node {
+                  id
+                  title
+                  handle
+                  productsCount
                 }
+                cursor
               }
-              cursor
-            }
-            pageInfo {
-              hasNextPage
+              pageInfo {
+                hasNextPage
+              }
             }
           }
+        `,
+        {
+          variables: {
+            first: 250,
+            after: cursor,
+          },
         }
-      `,
-      {
-        variables: {
-          first: 250,
-          after: cursor,
-        },
-      }
-    );
+      );
 
-    const body = await response.json();
-    
-    if (body?.errors?.length) {
-      console.error('Collections query error:', body.errors);
-      throw new Error(body.errors[0].message || 'GraphQL error');
+      const body = await response.json();
+      
+      if (body?.errors?.length) {
+        console.error('Collections query error:', body.errors);
+        throw new Error(body.errors[0].message || 'GraphQL error');
+      }
+      
+      const edges = body.data?.collections?.edges || [];
+      const pageCollections = edges.map(({ node }) => ({
+        id: node.id,
+        title: node.title,
+        handle: node.handle,
+        productsCount: node.productsCount ?? 0,
+      }));
+      
+      allCollections.push(...pageCollections);
+      
+      hasNextPage = body.data?.collections?.pageInfo?.hasNextPage || false;
+      cursor = edges.length > 0 ? edges[edges.length - 1].cursor : null;
     }
     
-    const edges = body.data?.collections?.edges || [];
-    const pageCollections = edges.map(({ node }) => ({
-      id: node.id,
-      title: node.title,
-      handle: node.handle,
-      productsCount: node.productsCount?.count ?? 0,
-    }));
-    
-    allCollections.push(...pageCollections);
-    
-    hasNextPage = body.data?.collections?.pageInfo?.hasNextPage || false;
-    cursor = edges.length > 0 ? edges[edges.length - 1].cursor : null;
+    return allCollections;
+  } catch (e) {
+    console.error('fetchAllCollections failed:', e);
+    return []; // 失敗しても空配列を返す
   }
-  
-  return allCollections;
 }
 
 // 重い商品取得処理を分離
@@ -1400,24 +1403,24 @@ export default function Products() {
         </Page>
       }
     >
-      <Await resolve={data.products}>
-        {(products) => (
-          <Await resolve={data.collections}>
-            {(collections) => (
-              <ProductsContent
-                products={products}
-                collections={collections}
-                goldPrice={goldPrice}
-                platinumPrice={platinumPrice}
-                selectedProductIds={selectedProductIds}
-                savedSelectedProducts={savedSelectedProducts}
-                shopSetting={shopSetting}
-                forceRefresh={forceRefresh}
-                cacheTimestamp={cacheTimestamp}
-              />
-            )}
-          </Await>
-        )}
+      <Await resolve={Promise.allSettled([data.products, data.collections])}>
+        {([p, c]) => {
+          const products = p.status === 'fulfilled' ? p.value : [];
+          const collections = c.status === 'fulfilled' ? c.value : [];
+          return (
+            <ProductsContent
+              products={products}
+              collections={collections}
+              goldPrice={goldPrice}
+              platinumPrice={platinumPrice}
+              selectedProductIds={selectedProductIds}
+              savedSelectedProducts={savedSelectedProducts}
+              shopSetting={shopSetting}
+              forceRefresh={forceRefresh}
+              cacheTimestamp={cacheTimestamp}
+            />
+          );
+        }}
       </Await>
     </Suspense>
   );
