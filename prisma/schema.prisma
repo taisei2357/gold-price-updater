@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -65,7 +65,7 @@ model PriceUpdateLog {
   success       Boolean
   errorMessage  String?
   executedAt    DateTime @default(now())
-  details       String?  @db.Text
+  details       String?
 
   @@index([shopDomain, executedAt])
 }

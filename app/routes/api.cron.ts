@@ -4,7 +4,7 @@ import { json } from "@remix-run/node";
 import { prisma } from '../lib/db.server';
 import { fetchGoldPriceDataTanaka } from '../models/gold.server';
 
-// Shopify Admin API GraphQLクライアント
+// Shopify Admin API GraphQLクライアント（自己修復機能付き）
 class ShopifyAdminClient {
   constructor(private shop: string, private accessToken: string) {}
 
@@ -22,9 +22,14 @@ class ShopifyAdminClient {
       }),
     });
 
-    return {
-      json: async () => await response.json(),
-    };
+    const body = await response.json().catch(() => ({}));
+    
+    // エラー検知とステータス返却
+    if (!response.ok || body?.errors) {
+      return { status: response.status, body, ok: false };
+    }
+    
+    return { status: response.status, body, ok: true };
   }
 }
 
@@ -128,21 +133,51 @@ async function updateShopPrices(shop: string, accessToken: string) {
           }
         `, { variables: { id: target.productId }});
         
-        const body = await resp.json();
+        // 401エラー検知と自己修復
+        if (resp.status === 401 || resp.body?.errors?.[0]?.message?.includes("Invalid API key or access token")) {
+          console.error(`🚨 401 Unauthorized detected for shop: ${shop}`);
+          
+          // ログに記録
+          await prisma.priceUpdateLog.create({
+            data: {
+              shopDomain: shop,
+              executionType: 'cron',
+              goldRatio,
+              minPricePct: Math.round(minPct01 * 100),
+              success: false,
+              errorMessage: '401 Unauthorized: 再認証が必要',
+              totalProducts: targets.length,
+              updatedCount: 0,
+              failedCount: targets.length,
+            }
+          });
+          
+          // 古いセッションを無効化（次回の/authに誘導）
+          await prisma.session.deleteMany({ where: { shop } });
+          
+          return { 
+            shop, 
+            success: false, 
+            needsReauth: true, 
+            message: "認証エラー: アプリの再インストールが必要です", 
+            updated: 0, 
+            failed: targets.length 
+          };
+        }
         
-        // GraphQLエラーチェック
-        if (body?.errors?.length) {
-          console.error(`商品 ${target.productId} GraphQLエラー:`, body.errors[0].message);
+        // 通常のGraphQLエラーチェック
+        if (!resp.ok || resp.body?.errors?.length) {
+          console.error(`商品 ${target.productId} GraphQLエラー:`, resp.body.errors[0].message);
           details.push({ 
             success: false, 
             productId: target.productId, 
-            error: `GraphQLエラー: ${body.errors[0].message}` 
+            error: `GraphQLエラー: ${resp.body.errors[0].message}` 
           });
           failed += 1;
           continue;
         }
         
-        const product = body?.data?.product;
+        const product = resp.body?.data?.product;
         if (!product) {
           console.error(`商品 ${target.productId} データが見つかりません`);
           details.push({ 
@@ -238,25 +273,55 @@ async function updateShopPrices(shop: string, accessToken: string) {
           }
         });
 
-        const r = await res.json();
+        // 401エラー検知（価格更新時）
+        if (res.status === 401 || res.body?.errors?.[0]?.message?.includes("Invalid API key or access token")) {
+          console.error(`🚨 401 Unauthorized detected during price update for shop: ${shop}`);
+          
+          // 古いセッションを無効化
+          await prisma.session.deleteMany({ where: { shop } });
+          
+          // 残りの処理を中断し、ログに記録
+          await prisma.priceUpdateLog.create({
+            data: {
+              shopDomain: shop,
+              executionType: 'cron',
+              goldRatio: ratio,
+              minPricePct: Math.round(minPct01 * 100),
+              totalProducts: targets.length,
+              updatedCount: updated,
+              failedCount: entries.length - updated,
+              success: false,
+              errorMessage: '401 Unauthorized during price update: 再認証が必要',
+            }
+          });
+          
+          return { 
+            shop, 
+            success: false, 
+            needsReauth: true, 
+            message: "価格更新中に認証エラー: アプリの再インストールが必要です", 
+            updated, 
+            failed: entries.length - updated 
+          };
+        }
         
-        // GraphQLエラーチェック
-        if (r?.errors?.length) {
-          console.error(`商品 ${productId} 更新GraphQLエラー:`, r.errors[0].message);
+        // 通常のGraphQLエラーチェック
+        if (!res.ok || res.body?.errors?.length) {
+          console.error(`商品 ${productId} 更新GraphQLエラー:`, res.body.errors[0].message);
           for (const variant of variants) {
             details.push({ 
               success: false,
               productId, 
               variantId: variant.id,
               oldPrice: variant.oldPrice,
-              error: `更新GraphQLエラー: ${r.errors[0].message}`
+              error: `更新GraphQLエラー: ${res.body.errors[0].message}`
             });
           }
           failed += variants.length;
           continue;
         }
         
-        const errs = r?.data?.productVariantsBulkUpdate?.userErrors || [];
+        const errs = res.body?.data?.productVariantsBulkUpdate?.userErrors || [];
         
         if (errs.length) {
           failed += variants.length;
