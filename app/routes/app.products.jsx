@@ -477,109 +477,6 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     setShowPreview(false);
   }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, fetcher]);
 
-  // IndexTable用のレンダリングデータ
-  const renderTableContent = () => {
-    return filteredProducts.map((product, index) => {
-      const isSelected = selectedProducts.some(p => p.id === product.id);
-      const variants = product.variants.edges;
-      const priceRange = variants.length > 1 
-        ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
-        : `¥${variants[0]?.node.price || 0}`;
-      const metalType = productMetalTypes[product.id];
-      const isSaved = selectedProductIds.includes(product.id);
-
-      return (
-        <IndexTable.Row
-          id={product.id}
-          key={product.id}
-          selected={isSelected}
-          onSelectionChange={(selected) => handleSelectProduct(product.id, selected)}
-        >
-          <IndexTable.Cell>
-            <Box minWidth="300px" maxWidth="400px">
-              <InlineStack gap="200" blockAlign="center">
-                {isSelected && metalType && (
-                  <span style={{ fontSize: '16px' }}>
-                    {metalType === 'gold' ? '🥇' : '🥈'}
-                  </span>
-                )}
-                <Text as="span" truncate>
-                  {product.title}
-                </Text>
-                {isSelected && metalType && (
-                  <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
-                    {metalType === 'gold' ? '金' : 'Pt'}
-                  </Badge>
-                )}
-                {isSelected && !metalType && !isSaved && (
-                  <Badge tone="critical" size="small">
-                    未設定
-                  </Badge>
-                )}
-                {isSaved && (
-                  <Badge tone="success" size="small">
-                    保存済
-                  </Badge>
-                )}
-              </InlineStack>
-            </Box>
-          </IndexTable.Cell>
-          
-          <IndexTable.Cell>
-            <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
-              {product.status}
-            </Badge>
-          </IndexTable.Cell>
-          
-          <IndexTable.Cell>
-            <Text variant="bodySm">{priceRange}</Text>
-          </IndexTable.Cell>
-          
-          <IndexTable.Cell>
-            <Text variant="bodySm">{variants.length}</Text>
-          </IndexTable.Cell>
-          
-          <IndexTable.Cell>
-            <Box minWidth="240px" width="100%">
-              {isSelected ? (
-                <div>
-                  <Select
-                    label="金属種別"
-                    labelHidden
-                    options={[
-                      { label: "金属種別を選択...", value: "", disabled: true },
-                      { label: "🥇 金価格", value: "gold" },
-                      { label: "🥈 プラチナ価格", value: "platinum" }
-                    ]}
-                    value={metalType || ""}
-                    onChange={(value) => handleMetalTypeChange(product.id, value)}
-                    placeholder="選択してください"
-                    disabled={isSaved}
-                  />
-                  {!metalType && !isSaved && (
-                    <div style={{ marginTop: '4px' }}>
-                      <Text variant="bodySm" tone="critical">
-                        ※選択が必要です
-                      </Text>
-                    </div>
-                  )}
-                  {isSaved && (
-                    <div style={{ marginTop: '4px' }}>
-                      <Text variant="bodySm" tone="subdued">
-                        保存済み設定
-                      </Text>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Text variant="bodySm" tone="subdued">-</Text>
-              )}
-            </Box>
-          </IndexTable.Cell>
-        </IndexTable.Row>
-      );
-    });
-  };
 
   return (
     <Page
@@ -917,7 +814,106 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                   ]}
                   selectable
                 >
-                  {renderTableContent()}
+                  {filteredProducts.map((product, index) => {
+                    const isSelected = selectedProducts.some(p => p.id === product.id);
+                    const variants = product.variants.edges;
+                    const priceRange = variants.length > 1 
+                      ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
+                      : `¥${variants[0]?.node.price || 0}`;
+                    const metalType = productMetalTypes[product.id];
+                    const isSaved = selectedProductIds.includes(product.id);
+
+                    return (
+                      <IndexTable.Row
+                        id={product.id}
+                        key={product.id}
+                        selected={isSelected}
+                        onSelectionChange={(selected) => handleSelectProduct(product.id, selected)}
+                      >
+                        <IndexTable.Cell>
+                          <Box minWidth="300px" maxWidth="400px">
+                            <InlineStack gap="200" blockAlign="center">
+                              {isSelected && metalType && (
+                                <span style={{ fontSize: '16px' }}>
+                                  {metalType === 'gold' ? '🥇' : '🥈'}
+                                </span>
+                              )}
+                              <Text as="span" truncate>
+                                {product.title}
+                              </Text>
+                              {isSelected && metalType && (
+                                <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+                                  {metalType === 'gold' ? '金' : 'Pt'}
+                                </Badge>
+                              )}
+                              {isSelected && !metalType && !isSaved && (
+                                <Badge tone="critical" size="small">
+                                  未設定
+                                </Badge>
+                              )}
+                              {isSaved && (
+                                <Badge tone="success" size="small">
+                                  保存済
+                                </Badge>
+                              )}
+                            </InlineStack>
+                          </Box>
+                        </IndexTable.Cell>
+                        
+                        <IndexTable.Cell>
+                          <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
+                            {product.status}
+                          </Badge>
+                        </IndexTable.Cell>
+                        
+                        <IndexTable.Cell>
+                          <Text variant="bodySm">{priceRange}</Text>
+                        </IndexTable.Cell>
+                        
+                        <IndexTable.Cell>
+                          <Text variant="bodySm">{variants.length}</Text>
+                        </IndexTable.Cell>
+                        
+                        <IndexTable.Cell>
+                          <Box minWidth="240px" width="100%">
+                            {isSelected ? (
+                              <div>
+                                <Select
+                                  label="金属種別"
+                                  labelHidden
+                                  options={[
+                                    { label: "金属種別を選択...", value: "", disabled: true },
+                                    { label: "🥇 金価格", value: "gold" },
+                                    { label: "🥈 プラチナ価格", value: "platinum" }
+                                  ]}
+                                  value={metalType || ""}
+                                  onChange={(value) => handleMetalTypeChange(product.id, value)}
+                                  placeholder="選択してください"
+                                  disabled={isSaved}
+                                />
+                                {!metalType && !isSaved && (
+                                  <div style={{ marginTop: '4px' }}>
+                                    <Text variant="bodySm" tone="critical">
+                                      ※選択が必要です
+                                    </Text>
+                                  </div>
+                                )}
+                                {isSaved && (
+                                  <div style={{ marginTop: '4px' }}>
+                                    <Text variant="bodySm" tone="subdued">
+                                      保存済み設定
+                                    </Text>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <Text variant="bodySm" tone="subdued">-</Text>
+                            )}
+                          </Box>
+                        </IndexTable.Cell>
+                      </IndexTable.Row>
+                    );
+                  })}
                 </IndexTable>
               </div>
             </div>
