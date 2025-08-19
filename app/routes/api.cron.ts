@@ -1,15 +1,25 @@
 // app/routes/api.cron.ts - GET/POST両対応の自動価格更新API
 import type { LoaderFunction, ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { prisma } from '../lib/db.server';
+import prisma from '../db.server';
 import { fetchGoldPriceDataTanaka } from '../models/gold.server';
+
+// CRON認証チェック
+function verifyCronAuth(request: Request) {
+  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
+  const got = request.headers.get('authorization');
+  if (expected && got !== expected) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  return null;
+}
 
 // Shopify Admin API GraphQLクライアント（自己修復機能付き）
 class ShopifyAdminClient {
   constructor(private shop: string, private accessToken: string) {}
 
   async graphql(query: string, options: { variables?: any } = {}) {
-    const url = `https://${this.shop}/admin/api/2024-01/graphql.json`;
+    const url = `https://${this.shop}/admin/api/2025-01/graphql.json`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -170,12 +180,13 @@ async function updateShopPrices(shop: string, accessToken: string) {
         }
         
         // 通常のGraphQLエラーチェック
-        if (!resp.ok || resp.body?.errors?.length) {
-          console.error(`商品 ${target.productId} GraphQLエラー:`, resp.body.errors[0].message);
+        if (!resp.ok || (resp.body?.errors && resp.body.errors.length)) {
+          const msg = resp.body?.errors?.[0]?.message ?? `HTTP ${resp.status}`;
+          console.error(`商品 ${target.productId} GraphQLエラー:`, msg);
           details.push({ 
             success: false, 
             productId: target.productId, 
-            error: `GraphQLエラー: ${resp.body.errors[0].message}` 
+            error: `GraphQLエラー: ${msg}` 
           });
           failed += 1;
           continue;
@@ -310,15 +321,16 @@ async function updateShopPrices(shop: string, accessToken: string) {
         }
         
         // 通常のGraphQLエラーチェック
-        if (!res.ok || res.body?.errors?.length) {
-          console.error(`商品 ${productId} 更新GraphQLエラー:`, res.body.errors[0].message);
+        if (!res.ok || (res.body?.errors && res.body.errors.length)) {
+          const msg = res.body?.errors?.[0]?.message ?? `HTTP ${res.status}`;
+          console.error(`商品 ${productId} 更新GraphQLエラー:`, msg);
           for (const variant of variants) {
             details.push({ 
               success: false,
               productId, 
               variantId: variant.id,
               oldPrice: variant.oldPrice,
-              error: `更新GraphQLエラー: ${res.body.errors[0].message}`
+              error: `更新GraphQLエラー: ${msg}`
             });
           }
           failed += variants.length;
@@ -340,13 +352,15 @@ async function updateShopPrices(shop: string, accessToken: string) {
         } else {
           const updatedVariants = res.body?.data?.productVariantsBulkUpdate?.productVariants || [];
           updated += updatedVariants.length;
+          
           for (const variant of variants) {
+            const uv = updatedVariants.find((u: {id:string; price:string}) => u.id === variant.id);
             details.push({ 
               success: true,
               productId, 
               variantId: variant.id,
               oldPrice: variant.oldPrice,
-              newPrice: parseFloat(variant.price)
+              newPrice: uv ? parseFloat(uv.price) : parseFloat(variant.price),
             });
           }
         }
@@ -499,7 +513,10 @@ async function runAllShops() {
 }
 
 // Vercel Cron用のGETエンドポイント
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
+  const deny = verifyCronAuth(request);
+  if (deny) return deny;
+  
   const result = await runAllShops();
   return json(result, { 
     headers: { "Cache-Control": "no-store" } 
@@ -511,6 +528,9 @@ export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
+  
+  const deny = verifyCronAuth(request);
+  if (deny) return deny;
   
   const result = await runAllShops();
   return json(result, { 
