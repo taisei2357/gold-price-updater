@@ -1017,14 +1017,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
         <Layout.Section>
           <Card>
-            <div style={{ 
-              width: '100%', 
-              maxHeight: '70vh',
-              overflowY: 'auto',
-              overscrollBehaviorY: 'contain',
+            <div style={{
+              width: '100%',
+              overflowX: 'auto',
               overflowAnchor: 'none'
             }}>
-              <IndexTable
+              <div style={{ minWidth: 1680 }}>
+                <IndexTable
                   resourceName={{ 
                     singular: selectionType === 'products' ? '商品' : 'コレクション', 
                     plural: selectionType === 'products' ? '商品' : 'コレクション' 
@@ -1044,7 +1043,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     { title: 'ステータス' },
                     { title: '価格' },
                     { title: 'バリエーション' },
-                    { title: '価格連動設定' }
+                    { title: '連動設定' }
                   ] : [
                     { title: 'コレクション名' },
                     { title: '商品数' },
@@ -1068,14 +1067,16 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         key={product.id}
                       >
                         <IndexTable.Cell>
-                          <Checkbox
-                            checked={isSelected}
-                            onChange={(checked) => handleSelectProduct(product.id, checked)}
-                          />
+                          <Box minWidth="60px" maxWidth="60px">
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={(checked) => handleSelectProduct(product.id, checked)}
+                            />
+                          </Box>
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Box minWidth="200px">
+                          <Box minWidth="280px" maxWidth="380px">
                             <InlineStack gap="200" blockAlign="center">
                               {isSelected && metalType && (
                                 <span style={{ fontSize: '16px' }}>
@@ -1105,21 +1106,27 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
-                            {product.status}
-                          </Badge>
+                          <Box minWidth="100px" maxWidth="120px">
+                            <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
+                              {product.status}
+                            </Badge>
+                          </Box>
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Text variant="bodySm">{priceRange}</Text>
+                          <Box minWidth="140px" maxWidth="200px">
+                            <Text variant="bodySm">{priceRange}</Text>
+                          </Box>
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Text variant="bodySm">{variants.length}</Text>
+                          <Box minWidth="100px" maxWidth="140px">
+                            <Text variant="bodySm">{variants.length}</Text>
+                          </Box>
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Box minWidth="280px">
+                          <Box minWidth="360px" maxWidth="420px">
                             {isSelected ? (
                               <div>
                                 <Select
@@ -1202,6 +1209,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     )) || []
                   )}
                 </IndexTable>
+              </div>
             </div>
           </Card>
         </Layout.Section>
