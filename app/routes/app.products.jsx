@@ -343,10 +343,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     const product = products.find(p => p.id === productId);
     if (isSelected) {
       setSelectedProducts(prev => [...prev, product]);
-      // デフォルトで金を選択
-      if (!productMetalTypes[productId]) {
-        setProductMetalTypes(prev => ({ ...prev, [productId]: 'gold' }));
-      }
+      // チェック時は金属種別を自動設定しない（ユーザーが選択するまで待つ）
     } else {
       setSelectedProducts(prev => prev.filter(p => p.id !== productId));
       // 選択解除時は金属種別も削除
@@ -356,24 +353,19 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
         return newTypes;
       });
     }
-  }, [products, productMetalTypes]);
+  }, [products]);
 
   // 全選択/全解除
   const handleSelectAll = useCallback((isSelected) => {
     if (isSelected) {
       setSelectedProducts(filteredProducts);
-      // 全選択時は全商品をデフォルトの金に設定
-      const newMetalTypes = {};
-      filteredProducts.forEach(product => {
-        newMetalTypes[product.id] = productMetalTypes[product.id] || 'gold';
-      });
-      setProductMetalTypes(prev => ({ ...prev, ...newMetalTypes }));
+      // 全選択時は金属種別を自動設定しない（ユーザーが個別に選択する）
     } else {
       setSelectedProducts([]);
       // 全解除時は金属種別もクリア
       setProductMetalTypes({});
     }
-  }, [filteredProducts, productMetalTypes]);
+  }, [filteredProducts]);
 
   // 金属種別変更ハンドラー
   const handleMetalTypeChange = useCallback((productId, metalType) => {
@@ -382,11 +374,19 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 
   // 選択状態を保存
   const saveSelection = useCallback(() => {
+    // 金属種別が未選択の商品をチェック
+    const unsetProducts = selectedProducts.filter(product => !productMetalTypes[product.id]);
+    
+    if (unsetProducts.length > 0) {
+      alert(`以下の商品の金属種別を選択してください：\n${unsetProducts.map(p => p.title).join('\n')}`);
+      return;
+    }
+    
     const formData = new FormData();
     formData.append("action", "saveSelection");
     selectedProducts.forEach(product => {
       formData.append("productId", product.id);
-      formData.append("metalType", productMetalTypes[product.id] || 'gold');
+      formData.append("metalType", productMetalTypes[product.id]);
     });
     
     fetcher.submit(formData, { method: "post" });
@@ -471,7 +471,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     const priceRange = variants.length > 1 
       ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
       : `¥${variants[0]?.node.price || 0}`;
-    const metalType = productMetalTypes[product.id] || 'gold';
+    const metalType = productMetalTypes[product.id];
 
     return [
       <Checkbox
@@ -479,15 +479,20 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
         onChange={(checked) => handleSelectProduct(product.id, checked)}
       />,
       <InlineStack gap="200" blockAlign="center">
-        {isSelected && (
+        {isSelected && metalType && (
           <span style={{ fontSize: '16px' }}>
             {metalType === 'gold' ? '🥇' : '🥈'}
           </span>
         )}
         <span>{product.title}</span>
-        {isSelected && (
+        {isSelected && metalType && (
           <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
             {metalType === 'gold' ? '金' : 'Pt'}
+          </Badge>
+        )}
+        {isSelected && !metalType && (
+          <Badge tone="critical" size="small">
+            未設定
           </Badge>
         )}
       </InlineStack>,
@@ -497,14 +502,23 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
       priceRange,
       variants.length,
       isSelected ? (
-        <Select
-          options={[
-            { label: "🥇 金価格", value: "gold" },
-            { label: "🥈 プラチナ価格", value: "platinum" }
-          ]}
-          value={metalType}
-          onChange={(value) => handleMetalTypeChange(product.id, value)}
-        />
+        <div>
+          <Select
+            options={[
+              { label: "金属種別を選択...", value: "", disabled: true },
+              { label: "🥇 金価格", value: "gold" },
+              { label: "🥈 プラチナ価格", value: "platinum" }
+            ]}
+            value={productMetalTypes[product.id] || ""}
+            onChange={(value) => handleMetalTypeChange(product.id, value)}
+            placeholder="選択してください"
+          />
+          {!productMetalTypes[product.id] && (
+            <Text variant="bodySm" tone="critical">
+              ※金属種別を選択してください
+            </Text>
+          )}
+        </div>
       ) : (
         <Text variant="bodySm" tone="subdued">-</Text>
       )
@@ -706,7 +720,11 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                   </Button>
                   <Button 
                     onClick={saveSelection}
-                    disabled={fetcher.state === "submitting"}
+                    disabled={
+                      fetcher.state === "submitting" || 
+                      selectedProducts.length === 0 ||
+                      selectedProducts.some(p => !productMetalTypes[p.id])
+                    }
                     variant="primary"
                     size="large"
                   >
@@ -722,30 +740,46 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                         <h4>選択中の商品 ({selectedProducts.length}件)</h4>
                         <InlineStack gap="200">
                           <Badge tone="warning">
-                            🥇 金: {selectedProducts.filter(p => (productMetalTypes[p.id] || 'gold') === 'gold').length}件
+                            🥇 金: {selectedProducts.filter(p => productMetalTypes[p.id] === 'gold').length}件
                           </Badge>
                           <Badge tone="info">
                             🥈 プラチナ: {selectedProducts.filter(p => productMetalTypes[p.id] === 'platinum').length}件
+                          </Badge>
+                          <Badge tone="critical">
+                            ⚠️ 未設定: {selectedProducts.filter(p => !productMetalTypes[p.id]).length}件
                           </Badge>
                         </InlineStack>
                       </InlineStack>
                       
                       <BlockStack gap="200">
                         {selectedProducts.map(product => {
-                          const metalType = productMetalTypes[product.id] || 'gold';
+                          const metalType = productMetalTypes[product.id];
                           return (
                             <InlineStack key={product.id} gap="200" blockAlign="center">
                               <span style={{ fontSize: '14px' }}>
-                                {metalType === 'gold' ? '🥇' : '🥈'}
+                                {metalType === 'gold' ? '🥇' : metalType === 'platinum' ? '🥈' : '⚠️'}
                               </span>
                               <Text variant="bodySm">{product.title}</Text>
-                              <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
-                                {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
-                              </Badge>
+                              {metalType ? (
+                                <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+                                  {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
+                                </Badge>
+                              ) : (
+                                <Badge tone="critical" size="small">
+                                  金属種別未選択
+                                </Badge>
+                              )}
                             </InlineStack>
                           );
                         })}
                       </BlockStack>
+                      
+                      {selectedProducts.filter(p => !productMetalTypes[p.id]).length > 0 && (
+                        <Banner tone="warning">
+                          <strong>金属種別未選択の商品があります。</strong> 
+                          各商品の金属種別（金価格 または プラチナ価格）を選択してから保存してください。
+                        </Banner>
+                      )}
                     </BlockStack>
                   </Card>
                 )}
@@ -770,7 +804,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
           <Card>
             <DataTable
               columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
-              headings={["選択", "商品名", "ステータス", "価格", "バリエーション", "金属種別"]}
+              headings={["選択", "商品名", "ステータス", "価格", "バリエーション", "価格連動設定"]}
               rows={tableRows}
               pagination={{
                 hasNext: false,
