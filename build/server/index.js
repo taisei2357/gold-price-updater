@@ -1,7 +1,10 @@
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import { jsx, jsxs, Fragment } from "react/jsx-runtime";
 import { PassThrough } from "stream";
 import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer, Meta, Links, Outlet, ScrollRestoration, Scripts, useLoaderData, useActionData, Form, Link as Link$1, useRouteError, Await, useFetcher } from "@remix-run/react";
+import { RemixServer, Meta, Links, Outlet, ScrollRestoration, Scripts, useLoaderData, useActionData, Form, Link as Link$1, useRouteError, Await, useFetcher, useRevalidator } from "@remix-run/react";
 import { createReadableStreamFromReadable, json, redirect, defer } from "@remix-run/node";
 import { isbot } from "isbot";
 import "@shopify/shopify-app-remix/adapters/node";
@@ -11,7 +14,7 @@ import { PrismaClient } from "@prisma/client";
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, PureComponent, useCallback, useMemo, forwardRef, Component, memo, useId, useImperativeHandle, createElement, isValidElement, Children, createRef, useReducer, Suspense } from "react";
 import { themes, breakpointsAliases, themeNameDefault, createThemeClassName, themeDefault, getMediaConditions, themeNames } from "@shopify/polaris-tokens";
 import { createHmac, timingSafeEqual } from "crypto";
-import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon, ProductIcon } from "@shopify/polaris-icons";
+import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon, ProductIcon } from "@shopify/polaris-icons";
 import { createPortal } from "react-dom";
 import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
 import { NavMenu, TitleBar } from "@shopify/app-bridge-react";
@@ -22,7 +25,7 @@ if (process.env.NODE_ENV !== "production") {
     global.prismaGlobal = new PrismaClient();
   }
 }
-const prisma$2 = global.prismaGlobal ?? new PrismaClient();
+const prisma$1 = global.prismaGlobal ?? new PrismaClient();
 const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
 const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
 const shopify = shopifyApp({
@@ -33,7 +36,7 @@ const shopify = shopifyApp({
   appUrl,
   // PartnersのApp URLと完全一致させる
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma$2),
+  sessionStorage: new PrismaSessionStorage(prisma$1),
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
@@ -8277,18 +8280,18 @@ const action$7 = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$9 = () => new Response(null, { status: 405 });
+const loader$a = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$7,
-  loader: loader$9
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
 const action$6 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   const current = payload.current;
   if (session) {
-    await prisma$2.session.update({
+    await prisma$1.session.update({
       where: {
         id: session.id
       },
@@ -8306,19 +8309,19 @@ const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$7,
-  loader: loader$9
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
 const action$5 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   try {
-    await prisma$2.$transaction([
+    await prisma$1.$transaction([
       // セッションデータ削除
-      prisma$2.session.deleteMany({ where: { shop } }),
+      prisma$1.session.deleteMany({ where: { shop } }),
       // 商品選択データ削除
-      prisma$2.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
+      prisma$1.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
       // ショップ設定削除
-      prisma$2.shopSetting.deleteMany({ where: { shopDomain: shop } })
+      prisma$1.shopSetting.deleteMany({ where: { shopDomain: shop } })
       // 実行ログは監査のため残す（必要に応じて削除）
       // db.priceUpdateLog.deleteMany({ where: { shopDomain: shop } }),
     ]);
@@ -8335,7 +8338,7 @@ const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$7,
-  loader: loader$9
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
 const polarisTranslations = {
@@ -8350,7 +8353,7 @@ function loginErrorMessage(loginErrors) {
   return {};
 }
 const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$8 = async () => {
+const loader$9 = async () => {
   return json({ errors: {}, polarisTranslations });
 };
 const action$4 = async ({ request }) => {
@@ -8405,16 +8408,90 @@ const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   action: action$4,
   default: Auth,
   links: links$1,
-  loader: loader$8
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-const prisma$1 = new PrismaClient();
+let _cache = null;
+const TTL_MS = 10 * 60 * 1e3;
+async function fetchGoldPriceDataTanaka() {
+  if (_cache && Date.now() - _cache.at < TTL_MS) return _cache.data;
+  try {
+    const url = "https://gold.tanaka.co.jp/commodity/souba/";
+    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
+    const html = await resp.text();
+    console.log("HTML取得成功、長さ:", html.length);
+    let retailPrice = null;
+    let changeYen = null;
+    const goldRowMatch = html.match(/<tr[^>]*class="gold"[^>]*>.*?<\/tr>/is);
+    if (goldRowMatch) {
+      const goldRow = goldRowMatch[0];
+      console.log("金行取得成功");
+      const priceMatch = goldRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
+      if (priceMatch) {
+        retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+        console.log("価格抽出:", priceMatch[0], "→", retailPrice);
+      }
+      const changeMatch = goldRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      if (changeMatch) {
+        changeYen = parseFloat(changeMatch[1]);
+        console.log("前日比抽出:", changeMatch[0], "→", changeYen);
+      }
+    }
+    if (!retailPrice) {
+      const priceContexts = html.match(/.{0,50}(\d{1,3}(?:,\d{3})*)\s*円.{0,50}/gi);
+      console.log("価格コンテキスト（最初の5つ）:", priceContexts == null ? void 0 : priceContexts.slice(0, 5));
+    }
+    if (changeYen === null) {
+      const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
+      console.log("前日比コンテキスト:", changeContexts == null ? void 0 : changeContexts.slice(0, 3));
+    }
+    console.log("Gold price extraction result:", {
+      retailPrice,
+      changeYen,
+      url
+    });
+    const changeRatio = changeYen !== null && retailPrice !== null ? changeYen / retailPrice : null;
+    const changePercent = changeRatio !== null ? `${(changeRatio * 100).toFixed(2)}%` : "0.00%";
+    let changeDirection = "flat";
+    if (changeRatio !== null) {
+      if (changeRatio > 0) changeDirection = "up";
+      else if (changeRatio < 0) changeDirection = "down";
+    }
+    const data = {
+      retailPrice,
+      retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : "取得失敗",
+      changeRatio,
+      changePercent: changeRatio !== null ? changeRatio >= 0 ? `+${changePercent}` : changePercent : "0.00%",
+      changeDirection,
+      lastUpdated: /* @__PURE__ */ new Date()
+    };
+    _cache = { at: Date.now(), data };
+    return data;
+  } catch (error) {
+    console.error("田中貴金属価格取得エラー:", error);
+    _cache = { at: Date.now(), data: null };
+    return null;
+  }
+}
+async function fetchGoldChangeRatioTanaka$1() {
+  const data = await fetchGoldPriceDataTanaka();
+  return (data == null ? void 0 : data.changeRatio) || null;
+}
+function verifyCronAuth(request) {
+  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
+  const got = request.headers.get("authorization");
+  if (expected && got !== expected) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
 class ShopifyAdminClient {
   constructor(shop, accessToken) {
     this.shop = shop;
     this.accessToken = accessToken;
   }
   async graphql(query, options = {}) {
-    const url = `https://${this.shop}/admin/api/2024-01/graphql.json`;
+    const url = `https://${this.shop}/admin/api/2025-01/graphql.json`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -8426,41 +8503,38 @@ class ShopifyAdminClient {
         variables: options.variables || {}
       })
     });
-    return {
-      json: async () => await response.json()
-    };
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || (body == null ? void 0 : body.errors)) {
+      return { status: response.status, body, ok: false };
+    }
+    return { status: response.status, body, ok: true };
   }
 }
-async function fetchGoldChangeRatioTanaka$2() {
+async function fetchGoldChangeRatio() {
   try {
-    const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/");
-    const html = await response.text();
-    const priceMatch = html.match(/K18.*?(\d{1,3}(?:,\d{3})*)/);
-    const changeMatch = html.match(/前日比[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i) || html.match(/変動[^円\-+]*([+\-]?\d+(?:\.\d+)?)[^0-9]*円/i);
-    if (!priceMatch || !changeMatch) {
-      console.log("金価格データの抽出に失敗");
+    const goldData = await fetchGoldPriceDataTanaka();
+    if (!goldData || goldData.changeRatio === null) {
+      console.log("金価格データの取得に失敗");
       return null;
     }
-    const retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
-    const changeYen = parseFloat(changeMatch[1]);
-    const changeRatio = changeYen / retailPrice;
-    console.log(`金価格情報: 小売価格=${retailPrice}円, 前日比=${changeYen}円, 変動率=${(changeRatio * 100).toFixed(2)}%`);
-    return changeRatio;
+    console.log(`金価格情報: ${goldData.retailPriceFormatted}, 前日比: ${goldData.changePercent}, 変動方向: ${goldData.changeDirection}`);
+    return goldData.changeRatio;
   } catch (error) {
     console.error("金価格取得エラー:", error);
     return null;
   }
 }
-function calcFinalPrice$1(current, ratio, minPct) {
-  const calc = current * (1 + ratio);
-  const floor = current * (minPct / 100);
-  return String(Math.round(Math.max(calc, floor)));
+function calcFinalPriceWithStep(current, ratio, minPct01, step = 1) {
+  const target = Math.max(current * (1 + ratio), current * minPct01);
+  const rounded = ratio >= 0 ? Math.ceil(target / step) * step : Math.floor(target / step) * step;
+  return String(rounded);
 }
 async function updateShopPrices(shop, accessToken) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
   const admin = new ShopifyAdminClient(shop, accessToken);
+  let minPctSaved = 93;
   try {
-    const ratio = await fetchGoldChangeRatioTanaka$2();
+    const ratio = await fetchGoldChangeRatio();
     if (ratio === null) {
       return {
         shop,
@@ -8473,6 +8547,8 @@ async function updateShopPrices(shop, accessToken) {
     const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop }
     });
+    minPctSaved = (setting == null ? void 0 : setting.minPricePct) ?? 93;
+    const minPct01 = minPctSaved > 1 ? minPctSaved / 100 : minPctSaved;
     if (!setting || !setting.autoUpdateEnabled) {
       console.log(`${shop}: 自動更新が無効です`);
       return {
@@ -8483,7 +8559,6 @@ async function updateShopPrices(shop, accessToken) {
         failed: 0
       };
     }
-    const minPct = setting.minPricePct || 93;
     const targets = await prisma$1.selectedProduct.findMany({
       where: { shopDomain: shop },
       select: { productId: true }
@@ -8498,6 +8573,8 @@ async function updateShopPrices(shop, accessToken) {
       };
     }
     const entries = [];
+    let updated = 0, failed = 0;
+    const details = [];
     for (const target of targets) {
       try {
         const resp = await admin.graphql(`
@@ -8516,14 +8593,58 @@ async function updateShopPrices(shop, accessToken) {
             } 
           }
         `, { variables: { id: target.productId } });
-        const body = await resp.json();
-        const product = (_a = body == null ? void 0 : body.data) == null ? void 0 : _a.product;
-        if (!product) continue;
+        if (resp.status === 401 || ((_d = (_c = (_b = (_a = resp.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
+          console.error(`🚨 401 Unauthorized detected for shop: ${shop}`);
+          await prisma$1.priceUpdateLog.create({
+            data: {
+              shopDomain: shop,
+              executionType: "cron",
+              goldRatio: ratio,
+              minPricePct: minPctSaved,
+              success: false,
+              errorMessage: "401 Unauthorized: 再認証が必要",
+              totalProducts: targets.length,
+              updatedCount: 0,
+              failedCount: targets.length
+            }
+          });
+          await prisma$1.session.deleteMany({ where: { shop } });
+          return {
+            shop,
+            success: false,
+            needsReauth: true,
+            message: "認証エラー: アプリの再インストールが必要です",
+            updated: 0,
+            failed: targets.length
+          };
+        }
+        if (!resp.ok || ((_e = resp.body) == null ? void 0 : _e.errors) && resp.body.errors.length) {
+          const msg = ((_h = (_g = (_f = resp.body) == null ? void 0 : _f.errors) == null ? void 0 : _g[0]) == null ? void 0 : _h.message) ?? `HTTP ${resp.status}`;
+          console.error(`商品 ${target.productId} GraphQLエラー:`, msg);
+          details.push({
+            success: false,
+            productId: target.productId,
+            error: `GraphQLエラー: ${msg}`
+          });
+          failed += 1;
+          continue;
+        }
+        const product = (_j = (_i = resp.body) == null ? void 0 : _i.data) == null ? void 0 : _j.product;
+        if (!product) {
+          console.error(`商品 ${target.productId} データが見つかりません`);
+          details.push({
+            success: false,
+            productId: target.productId,
+            error: "商品データが見つかりません"
+          });
+          failed += 1;
+          continue;
+        }
         for (const edge of product.variants.edges) {
           const variant = edge.node;
           const current = Number(variant.price || 0);
           if (!current) continue;
-          const newPrice = calcFinalPrice$1(current, ratio, minPct);
+          const newPrice = calcFinalPriceWithStep(current, ratio, minPct01);
           if (parseFloat(newPrice) !== current) {
             entries.push({
               productId: target.productId,
@@ -8537,6 +8658,12 @@ async function updateShopPrices(shop, accessToken) {
         await new Promise((r) => setTimeout(r, 100));
       } catch (error) {
         console.error(`商品 ${target.productId} の処理でエラー:`, error);
+        details.push({
+          success: false,
+          productId: target.productId,
+          error: `商品処理エラー: ${error.message}`
+        });
+        failed += 1;
       }
     }
     if (!entries.length) {
@@ -8545,7 +8672,7 @@ async function updateShopPrices(shop, accessToken) {
           shopDomain: shop,
           executionType: "cron",
           goldRatio: ratio,
-          minPricePct: minPct,
+          minPricePct: minPctSaved,
           totalProducts: targets.length,
           updatedCount: 0,
           failedCount: 0,
@@ -8567,8 +8694,8 @@ async function updateShopPrices(shop, accessToken) {
       arr.push({ id: e.variantId, price: e.newPrice, oldPrice: e.oldPrice });
       byProduct.set(e.productId, arr);
     }
-    let updated = 0, failed = 0;
-    const details = [];
+    updated = 0;
+    failed = 0;
     for (const [productId, variants] of byProduct) {
       try {
         const res = await admin.graphql(`
@@ -8585,8 +8712,47 @@ async function updateShopPrices(shop, accessToken) {
             variants: variants.map((v) => ({ id: v.id, price: v.price }))
           }
         });
-        const r = await res.json();
-        const errs = ((_c = (_b = r == null ? void 0 : r.data) == null ? void 0 : _b.productVariantsBulkUpdate) == null ? void 0 : _c.userErrors) || [];
+        if (res.status === 401 || ((_n = (_m = (_l = (_k = res.body) == null ? void 0 : _k.errors) == null ? void 0 : _l[0]) == null ? void 0 : _m.message) == null ? void 0 : _n.includes("Invalid API key or access token"))) {
+          console.error(`🚨 401 Unauthorized detected during price update for shop: ${shop}`);
+          await prisma$1.session.deleteMany({ where: { shop } });
+          await prisma$1.priceUpdateLog.create({
+            data: {
+              shopDomain: shop,
+              executionType: "cron",
+              goldRatio: ratio,
+              minPricePct: minPctSaved,
+              totalProducts: targets.length,
+              updatedCount: updated,
+              failedCount: entries.length - updated,
+              success: false,
+              errorMessage: "401 Unauthorized during price update: 再認証が必要"
+            }
+          });
+          return {
+            shop,
+            success: false,
+            needsReauth: true,
+            message: "価格更新中に認証エラー: アプリの再インストールが必要です",
+            updated,
+            failed: entries.length - updated
+          };
+        }
+        if (!res.ok || ((_o = res.body) == null ? void 0 : _o.errors) && res.body.errors.length) {
+          const msg = ((_r = (_q = (_p = res.body) == null ? void 0 : _p.errors) == null ? void 0 : _q[0]) == null ? void 0 : _r.message) ?? `HTTP ${res.status}`;
+          console.error(`商品 ${productId} 更新GraphQLエラー:`, msg);
+          for (const variant of variants) {
+            details.push({
+              success: false,
+              productId,
+              variantId: variant.id,
+              oldPrice: variant.oldPrice,
+              error: `更新GraphQLエラー: ${msg}`
+            });
+          }
+          failed += variants.length;
+          continue;
+        }
+        const errs = ((_u = (_t = (_s = res.body) == null ? void 0 : _s.data) == null ? void 0 : _t.productVariantsBulkUpdate) == null ? void 0 : _u.userErrors) || [];
         if (errs.length) {
           failed += variants.length;
           for (const variant of variants) {
@@ -8594,25 +8760,35 @@ async function updateShopPrices(shop, accessToken) {
               success: false,
               productId,
               variantId: variant.id,
-              error: ((_d = errs[0]) == null ? void 0 : _d.message) || "不明なエラー"
+              error: ((_v = errs[0]) == null ? void 0 : _v.message) || "不明なエラー"
             });
           }
         } else {
-          const updatedVariants = ((_f = (_e = r == null ? void 0 : r.data) == null ? void 0 : _e.productVariantsBulkUpdate) == null ? void 0 : _f.productVariants) || [];
+          const updatedVariants = ((_y = (_x = (_w = res.body) == null ? void 0 : _w.data) == null ? void 0 : _x.productVariantsBulkUpdate) == null ? void 0 : _y.productVariants) || [];
           updated += updatedVariants.length;
           for (const variant of variants) {
+            const uv = updatedVariants.find((u) => u.id === variant.id);
             details.push({
               success: true,
               productId,
               variantId: variant.id,
               oldPrice: variant.oldPrice,
-              newPrice: parseFloat(variant.price)
+              newPrice: uv ? parseFloat(uv.price) : parseFloat(variant.price)
             });
           }
         }
-        await new Promise((r2) => setTimeout(r2, 200));
+        await new Promise((r) => setTimeout(r, 200));
       } catch (error) {
         console.error(`商品 ${productId} の更新でエラー:`, error);
+        for (const variant of variants) {
+          details.push({
+            success: false,
+            productId,
+            variantId: variant.id,
+            oldPrice: variant.oldPrice,
+            error: `更新処理エラー: ${error.message}`
+          });
+        }
         failed += variants.length;
       }
     }
@@ -8621,7 +8797,7 @@ async function updateShopPrices(shop, accessToken) {
         shopDomain: shop,
         executionType: "cron",
         goldRatio: ratio,
-        minPricePct: minPct,
+        minPricePct: minPctSaved,
         totalProducts: targets.length,
         updatedCount: updated,
         failedCount: failed,
@@ -8644,7 +8820,7 @@ async function updateShopPrices(shop, accessToken) {
         shopDomain: shop,
         executionType: "cron",
         goldRatio: null,
-        minPricePct: 93,
+        minPricePct: minPctSaved,
         totalProducts: 0,
         updatedCount: 0,
         failedCount: 0,
@@ -8661,10 +8837,7 @@ async function updateShopPrices(shop, accessToken) {
     };
   }
 }
-const action$3 = async ({ request }) => {
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
-  }
+async function runAllShops() {
   try {
     console.log(`🕙 Cron実行開始: ${(/* @__PURE__ */ new Date()).toISOString()}`);
     const enabledShops = await prisma$1.shopSetting.findMany({
@@ -8673,11 +8846,12 @@ const action$3 = async ({ request }) => {
     });
     if (!enabledShops.length) {
       console.log("自動更新有効なショップがありません");
-      return json({
+      return {
         message: "自動更新有効なショップなし",
         timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
         shops: []
-      });
+      };
     }
     const results = [];
     for (const shop of enabledShops) {
@@ -8705,7 +8879,7 @@ const action$3 = async ({ request }) => {
     const totalFailed = results.reduce((sum, r) => sum + (r.failed || 0), 0);
     const successCount = results.filter((r) => r.success).length;
     console.log(`🏁 Cron実行完了: 成功 ${successCount}/${results.length}ショップ, 更新 ${totalUpdated}件, 失敗 ${totalFailed}件`);
-    return json({
+    return {
       message: "自動価格更新完了",
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       summary: {
@@ -8715,86 +8889,63 @@ const action$3 = async ({ request }) => {
         totalFailed
       },
       shops: results
-    });
+    };
   } catch (error) {
     console.error("Cron実行エラー:", error);
-    return json({
+    return {
       error: error.message,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    }, { status: 500 });
-  } finally {
-    await prisma$1.$disconnect();
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+      shops: []
+    };
   }
+}
+const loader$8 = async ({ request }) => {
+  const deny = verifyCronAuth(request);
+  if (deny) return deny;
+  const result = await runAllShops();
+  return json(result, {
+    headers: { "Cache-Control": "no-store" }
+  });
+};
+const action$3 = async ({ request }) => {
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405 });
+  }
+  const deny = verifyCronAuth(request);
+  if (deny) return deny;
+  const result = await runAllShops();
+  return json(result, {
+    headers: { "Cache-Control": "no-store" }
+  });
 };
 const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$3
+  action: action$3,
+  loader: loader$8
 }, Symbol.toStringTag, { value: "Module" }));
 const prisma = new PrismaClient();
-async function fetchGoldChangeRatioTanaka$1() {
+async function fetchGoldChangeRatioTanaka() {
   try {
     const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/");
     const html = await response.text();
     console.log("HTML取得成功、長さ:", html.length);
     let retailPrice = null;
     let changeYen = null;
-    const k18Patterns = [
-      /K18.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /18金.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /<td[^>]*retail_tax[^>]*>([^<]*(\d{1,3}(?:,\d{3})*)[^<]*円)/gi,
-      /(\d{1,3}(?:,\d{3})*)\s*円(?!.*前日比)/g
-    ];
     let priceMatchResult = null;
-    for (const pattern of k18Patterns) {
-      const matches2 = [...html.matchAll(pattern)];
-      if (matches2.length > 0) {
-        const priceStr = matches2[0][1] || matches2[0][2];
-        if (priceStr) {
-          const price = parseInt(priceStr.replace(/,/g, ""));
-          if (price > 1e4 && price < 5e4) {
-            retailPrice = price;
-            priceMatchResult = matches2[0][0];
-            break;
-          }
-        }
-      }
-    }
-    const changePatterns = [
-      // パターン1: 店頭小売価格の前日比
-      /店頭小売価格.*?前日比.*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gis,
-      // パターン2: 金の行の前日比
-      /金\s+[\d,]+\s*円\s+([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gi,
-      // パターン3: 前日比の直後
-      /前日比[^円]*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gi,
-      // パターン4: テーブルセル内
-      /<td[^>]*>[^<]*([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円[^<]*<\/td>/gi,
-      // パターン5: シンプルパターン
-      /([+\-]\d+(?:\.\d+)?)\s*[　\s]*円/g
-    ];
     let changeMatchResult = null;
-    for (const pattern of changePatterns) {
-      const matches2 = [...html.matchAll(pattern)];
-      if (matches2.length > 0) {
-        for (const match of matches2) {
-          const changeStr = match[1];
-          const change = parseFloat(changeStr);
-          if (!isNaN(change) && Math.abs(change) <= 500 && Math.abs(change) < 200) {
-            changeYen = change;
-            changeMatchResult = match[0];
-            break;
-          }
-        }
-        if (changeYen !== null) break;
+    const goldRowMatch = html.match(/<tr[^>]*class="gold"[^>]*>.*?<\/tr>/is);
+    if (goldRowMatch) {
+      const goldRow = goldRowMatch[0];
+      const priceMatch = goldRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
+      if (priceMatch) {
+        retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+        priceMatchResult = priceMatch[0];
       }
-    }
-    if (changeYen === null) {
-      const goldRowMatch = html.match(/金\s+[\d,]+\s*円\s+([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/i);
-      if (goldRowMatch) {
-        const change = parseFloat(goldRowMatch[1]);
-        if (!isNaN(change) && Math.abs(change) <= 500) {
-          changeYen = change;
-          changeMatchResult = goldRowMatch[0];
-        }
+      const changeMatch = goldRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      if (changeMatch) {
+        changeYen = parseFloat(changeMatch[1]);
+        changeMatchResult = changeMatch[0];
       }
     }
     if (!retailPrice || changeYen === null) {
@@ -8834,7 +8985,7 @@ const loader$7 = async ({ request }) => {
   const url = new URL(request.url);
   const test = url.searchParams.get("test");
   if (test === "gold-price") {
-    const result = await fetchGoldChangeRatioTanaka$1();
+    const result = await fetchGoldChangeRatioTanaka();
     return json({
       test: "gold-price",
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -9019,118 +9170,77 @@ const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
-let _cache = null;
-const TTL_MS = 10 * 60 * 1e3;
-async function fetchGoldPriceDataTanaka() {
-  if (_cache && Date.now() - _cache.at < TTL_MS) return _cache.data;
-  try {
-    const url = "https://gold.tanaka.co.jp/commodity/souba/";
-    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
-    const html = await resp.text();
-    console.log("HTML取得成功、長さ:", html.length);
-    let retailPrice = null;
-    let changeYen = null;
-    const k18Patterns = [
-      /K18.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /18金.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /<td[^>]*retail_tax[^>]*>([^<]*(\d{1,3}(?:,\d{3})*)[^<]*円)/gi,
-      /shop.*?(\d{1,3}(?:,\d{3})*)\s*円/gi,
-      /(\d{1,3}(?:,\d{3})*)\s*円(?!.*前日比)/g
-    ];
-    for (const pattern of k18Patterns) {
-      const matches2 = [...html.matchAll(pattern)];
-      if (matches2.length > 0) {
-        const priceStr = matches2[0][1] || matches2[0][2];
-        if (priceStr) {
-          const price = parseInt(priceStr.replace(/,/g, ""));
-          if (price > 1e4 && price < 5e4) {
-            retailPrice = price;
-            console.log("価格マッチ:", matches2[0][0], "→", price);
-            break;
-          }
-        }
-      }
-    }
-    const changePatterns = [
-      // パターン1: テーブル内の前日比セル（店頭小売価格の前日比）
-      /店頭小売価格.*?前日比.*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gis,
-      // パターン2: 金の行の前日比
-      /金.*?円.*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gis,
-      // パターン3: 前日比の直後
-      /前日比[^円]*?([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/gi,
-      // パターン4: テーブルセル内の数値（前日比用）
-      /<td[^>]*>[^<]*([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円[^<]*<\/td>/gi,
-      // パターン5: シンプルな数値パターン
-      /([+\-]\d+(?:\.\d+)?)\s*[　\s]*円/g
-    ];
-    for (const pattern of changePatterns) {
-      const matches2 = [...html.matchAll(pattern)];
-      if (matches2.length > 0) {
-        for (const match of matches2) {
-          const changeStr = match[1];
-          const change = parseFloat(changeStr);
-          if (!isNaN(change) && Math.abs(change) <= 500) {
-            if (Math.abs(change) < 200) {
-              changeYen = change;
-              console.log("前日比マッチ:", match[0], "→", change);
-              break;
-            }
-          }
-        }
-        if (changeYen !== null) break;
-      }
-    }
-    if (changeYen === null) {
-      const goldRowMatch = html.match(/金\s+[\d,]+\s*円\s+([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/i);
-      if (goldRowMatch) {
-        const change = parseFloat(goldRowMatch[1]);
-        if (!isNaN(change) && Math.abs(change) <= 500) {
-          changeYen = change;
-          console.log("金行マッチ:", goldRowMatch[0], "→", change);
-        }
-      }
-    }
-    if (!retailPrice) {
-      const priceContexts = html.match(/.{0,50}(\d{1,3}(?:,\d{3})*)\s*円.{0,50}/gi);
-      console.log("価格コンテキスト（最初の5つ）:", priceContexts == null ? void 0 : priceContexts.slice(0, 5));
-    }
-    if (changeYen === null) {
-      const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
-      console.log("前日比コンテキスト:", changeContexts == null ? void 0 : changeContexts.slice(0, 3));
-    }
-    console.log("Gold price extraction result:", {
-      retailPrice,
-      changeYen,
-      url
-    });
-    const changeRatio = changeYen !== null && retailPrice !== null ? changeYen / retailPrice : null;
-    const changePercent = changeRatio !== null ? `${(changeRatio * 100).toFixed(2)}%` : "0.00%";
-    let changeDirection = "flat";
-    if (changeRatio !== null) {
-      if (changeRatio > 0) changeDirection = "up";
-      else if (changeRatio < 0) changeDirection = "down";
-    }
-    const data = {
-      retailPrice,
-      retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : "取得失敗",
-      changeRatio,
-      changePercent: changeRatio !== null ? changeRatio >= 0 ? `+${changePercent}` : changePercent : "0.00%",
-      changeDirection,
-      lastUpdated: /* @__PURE__ */ new Date()
+const _ClientCache = class _ClientCache {
+  // 5分
+  static set(key, data, ttl = _ClientCache.DEFAULT_TTL) {
+    if (typeof window === "undefined") return;
+    const item = {
+      data,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + ttl
     };
-    _cache = { at: Date.now(), data };
-    return data;
-  } catch (error) {
-    console.error("田中貴金属価格取得エラー:", error);
-    _cache = { at: Date.now(), data: null };
-    return null;
+    try {
+      sessionStorage.setItem(key, JSON.stringify(item));
+    } catch (error) {
+      console.warn("キャッシュ保存に失敗（Shopify認証影響なし）:", error);
+    }
   }
-}
-async function fetchGoldChangeRatioTanaka() {
-  const data = await fetchGoldPriceDataTanaka();
-  return (data == null ? void 0 : data.changeRatio) || null;
-}
+  static get(key) {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = sessionStorage.getItem(key);
+      if (!stored) return null;
+      const item = JSON.parse(stored);
+      if (Date.now() > item.expiresAt) {
+        sessionStorage.removeItem(key);
+        return null;
+      }
+      return item.data;
+    } catch (error) {
+      console.warn("キャッシュ取得に失敗:", error);
+      sessionStorage.removeItem(key);
+      return null;
+    }
+  }
+  static clear(key) {
+    if (typeof window === "undefined") return;
+    sessionStorage.removeItem(key);
+  }
+  static clearAll() {
+    if (typeof window === "undefined") return;
+    sessionStorage.clear();
+  }
+  static isExpired(key) {
+    if (typeof window === "undefined") return true;
+    try {
+      const stored = sessionStorage.getItem(key);
+      if (!stored) return true;
+      const item = JSON.parse(stored);
+      return Date.now() > item.expiresAt;
+    } catch {
+      return true;
+    }
+  }
+  static getInfo(key) {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = sessionStorage.getItem(key);
+      if (!stored) return null;
+      const item = JSON.parse(stored);
+      return {
+        timestamp: item.timestamp,
+        expiresAt: item.expiresAt
+      };
+    } catch {
+      return null;
+    }
+  }
+};
+__publicField(_ClientCache, "DEFAULT_TTL", 5 * 60 * 1e3);
+let ClientCache = _ClientCache;
+const CACHE_KEYS = {
+  PRODUCTS: "shopify_products_cache"
+};
 function roundInt(n) {
   return Math.round(n);
 }
@@ -9141,13 +9251,13 @@ function calcFinalPrice(current, ratio, minPct) {
 }
 async function runBulkUpdateBySpec(admin, shop) {
   var _a, _b, _c, _d, _e, _f;
-  const ratio = await fetchGoldChangeRatioTanaka();
+  const ratio = await fetchGoldChangeRatioTanaka$1();
   if (ratio === null) {
     return { ok: false, disabled: true, reason: "金価格の取得に失敗", updated: 0, failed: 0, details: [] };
   }
-  const setting = await prisma$2.shopSetting.findUnique({ where: { shopDomain: shop } });
+  const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop } });
   const minPct = (setting == null ? void 0 : setting.minPricePct) ?? 93;
-  const targets = await prisma$2.selectedProduct.findMany({
+  const targets = await prisma$1.selectedProduct.findMany({
     where: { shopDomain: shop },
     select: { productId: true }
   });
@@ -9342,16 +9452,18 @@ async function fetchGoldPrice() {
 }
 const loader$3 = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
+  const url = new URL(request.url);
+  const forceRefresh = url.searchParams.get("refresh") === "true";
   const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
     fetchGoldPrice(),
-    prisma$2.selectedProduct.findMany({
+    prisma$1.selectedProduct.findMany({
       where: {
         shopDomain: session.shop,
         selected: true
       },
       select: { productId: true }
     }),
-    prisma$2.shopSetting.findUnique({
+    prisma$1.shopSetting.findUnique({
       where: { shopDomain: session.shop }
     })
   ]);
@@ -9362,7 +9474,9 @@ const loader$3 = async ({ request }) => {
     // Promise を渡す
     goldPrice,
     selectedProductIds,
-    shopSetting
+    shopSetting,
+    forceRefresh,
+    cacheTimestamp: Date.now()
   });
 };
 const action$1 = async ({ request }) => {
@@ -9372,11 +9486,11 @@ const action$1 = async ({ request }) => {
   if (action2 === "saveSelection") {
     const ids = formData.getAll("productId").map(String);
     const uniqueIds = Array.from(new Set(ids));
-    await prisma$2.selectedProduct.deleteMany({
+    await prisma$1.selectedProduct.deleteMany({
       where: { shopDomain: session.shop }
     });
     if (uniqueIds.length > 0) {
-      await prisma$2.selectedProduct.createMany({
+      await prisma$1.selectedProduct.createMany({
         data: uniqueIds.map((productId) => ({
           shopDomain: session.shop,
           productId,
@@ -9413,21 +9527,49 @@ const action$1 = async ({ request }) => {
   }
   return json({ error: "不正なアクション" });
 };
-function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting }) {
+function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting, forceRefresh, cacheTimestamp }) {
   var _a, _b;
   const fetcher = useFetcher();
+  const revalidator = useRevalidator();
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [minPriceRate, setMinPriceRate] = useState((shopSetting == null ? void 0 : shopSetting.minPricePct) || 93);
   const [showPreview, setShowPreview] = useState(false);
   const [pricePreview, setPricePreview] = useState([]);
+  const [isUsingCache, setIsUsingCache] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   useEffect(() => {
-    if (selectedProductIds && selectedProductIds.length > 0) {
-      const persistedSelected = products.filter((p) => selectedProductIds.includes(p.id));
-      setSelectedProducts(persistedSelected);
+    if (!forceRefresh) {
+      const cachedProducts = ClientCache.get(CACHE_KEYS.PRODUCTS);
+      if (cachedProducts && Array.isArray(cachedProducts) && cachedProducts.length > 0) {
+        setIsUsingCache(true);
+        const cacheInfo = ClientCache.getInfo(CACHE_KEYS.PRODUCTS);
+        if (cacheInfo) {
+          setLastUpdated(new Date(cacheInfo.timestamp));
+        }
+        if (selectedProductIds && selectedProductIds.length > 0) {
+          const persistedSelected = cachedProducts.filter((p) => selectedProductIds.includes(p.id));
+          setSelectedProducts(persistedSelected);
+        }
+        return;
+      }
     }
-  }, [products, selectedProductIds]);
+    if (products && products.length > 0) {
+      ClientCache.set(CACHE_KEYS.PRODUCTS, products);
+      setIsUsingCache(false);
+      setLastUpdated(new Date(cacheTimestamp));
+      if (selectedProductIds && selectedProductIds.length > 0) {
+        const persistedSelected = products.filter((p) => selectedProductIds.includes(p.id));
+        setSelectedProducts(persistedSelected);
+      }
+    }
+  }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
+  const handleRefresh = useCallback(() => {
+    ClientCache.clear(CACHE_KEYS.PRODUCTS);
+    setIsUsingCache(false);
+    revalidator.revalidate();
+  }, [revalidator]);
   const filteredProducts = filterProducts(products, searchValue, filterType);
   const handleSelectProduct = useCallback((productId, isSelected) => {
     const product = products.find((p) => p.id === productId);
@@ -9518,6 +9660,14 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
         disabled: selectedProducts.length === 0 || !goldPrice,
         loading: fetcher.state === "submitting"
       },
+      secondaryActions: [
+        {
+          content: "商品を再読み込み",
+          icon: RefreshIcon,
+          onAction: handleRefresh,
+          loading: revalidator.state === "loading"
+        }
+      ],
       children: /* @__PURE__ */ jsxs(Layout, { children: [
         /* @__PURE__ */ jsxs(Layout.Section, { children: [
           goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
@@ -9551,7 +9701,24 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
           !goldPrice && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: "金価格情報の取得に失敗しました。価格調整機能をご利用いただけません。" })
         ] }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
-          /* @__PURE__ */ jsx("h3", { children: "商品検索・選択" }),
+          /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+            /* @__PURE__ */ jsx("h3", { children: "商品検索・選択" }),
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                icon: RefreshIcon,
+                variant: "tertiary",
+                onClick: handleRefresh,
+                loading: revalidator.state === "loading",
+                children: "商品を再読み込み"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
+            "最終更新: ",
+            lastUpdated ? lastUpdated.toLocaleString("ja-JP") : "読み込み中...",
+            isUsingCache && /* @__PURE__ */ jsx(Badge, { tone: "info", size: "small", children: "キャッシュ" })
+          ] }) }),
           /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
             /* @__PURE__ */ jsx("div", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
               TextField,
@@ -9720,51 +9887,71 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting 
 }
 function Products() {
   const data = useLoaderData();
-  const { goldPrice, selectedProductIds, shopSetting } = data;
+  const { goldPrice, selectedProductIds, shopSetting, forceRefresh, cacheTimestamp } = data;
   return /* @__PURE__ */ jsx(
     Suspense,
     {
-      fallback: /* @__PURE__ */ jsx(Page, { title: "商品価格自動調整", subtitle: "読み込み中...", children: /* @__PURE__ */ jsxs(Layout, { children: [
-        /* @__PURE__ */ jsx(Layout.Section, { children: goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
-          /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
-            /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
-            /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "attention" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
-          ] }),
-          /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("p", { children: "店頭小売価格（税込）" }),
-              /* @__PURE__ */ jsx("h4", { children: goldPrice.retailPriceFormatted })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("p", { children: "前日比" }),
-              /* @__PURE__ */ jsx("h4", { children: goldPrice.change })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { children: [
-            /* @__PURE__ */ jsxs("strong", { children: [
-              "価格調整率: ",
-              goldPrice.percentage,
-              "%"
-            ] }),
-            "（この変動率で商品価格を自動調整します）"
-          ] }) }),
-          /* @__PURE__ */ jsxs("p", { children: [
-            "最終更新: ",
-            new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
+      fallback: /* @__PURE__ */ jsx(
+        Page,
+        {
+          title: "商品価格自動調整",
+          subtitle: "読み込み中...",
+          secondaryActions: [
+            {
+              content: "商品を再読み込み",
+              icon: RefreshIcon,
+              onAction: () => {
+                ClientCache.clear(CACHE_KEYS.PRODUCTS);
+                window.location.search = "?refresh=true";
+              }
+            }
+          ],
+          children: /* @__PURE__ */ jsxs(Layout, { children: [
+            /* @__PURE__ */ jsx(Layout.Section, { children: goldPrice && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+              /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+                /* @__PURE__ */ jsx("h3", { children: "田中貴金属 金価格情報" }),
+                /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "attention" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
+              ] }),
+              /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("p", { children: "店頭小売価格（税込）" }),
+                  /* @__PURE__ */ jsx("h4", { children: goldPrice.retailPriceFormatted })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("p", { children: "前日比" }),
+                  /* @__PURE__ */ jsx("h4", { children: goldPrice.change })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { children: [
+                /* @__PURE__ */ jsxs("strong", { children: [
+                  "価格調整率: ",
+                  goldPrice.percentage,
+                  "%"
+                ] }),
+                "（この変動率で商品価格を自動調整します）"
+              ] }) }),
+              /* @__PURE__ */ jsxs("p", { children: [
+                "最終更新: ",
+                new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
+              ] })
+            ] }) }) }),
+            /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(BlockStack, { gap: "400", children: /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", padding: "60px 20px" }, children: [
+              /* @__PURE__ */ jsx(Spinner$1, { size: "large" }),
+              /* @__PURE__ */ jsx("p", { style: { marginTop: "20px" }, children: "商品データを読み込んでいます..." }),
+              /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "初回読み込みには時間がかかります。次回からキャッシュにより高速表示されます。" })
+            ] }) }) }) })
           ] })
-        ] }) }) }),
-        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(BlockStack, { gap: "400", children: /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", padding: "60px 20px" }, children: [
-          /* @__PURE__ */ jsx(Spinner$1, { size: "large" }),
-          /* @__PURE__ */ jsx("p", { style: { marginTop: "20px" }, children: "商品データを読み込んでいます..." })
-        ] }) }) }) })
-      ] }) }),
+        }
+      ),
       children: /* @__PURE__ */ jsx(Await, { resolve: data.products, children: (products) => /* @__PURE__ */ jsx(
         ProductsContent,
         {
           products,
           goldPrice,
           selectedProductIds,
-          shopSetting
+          shopSetting,
+          forceRefresh,
+          cacheTimestamp
         }
       ) })
     }
@@ -9779,7 +9966,7 @@ const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 async function loader$2({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-  const setting = await prisma$2.shopSetting.upsert({
+  const setting = await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {},
     create: {
@@ -9799,7 +9986,7 @@ async function action({ request }) {
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
   const autoUpdateHour = Math.max(0, Math.min(23, Number(form.get("autoUpdateHour") || 10)));
   const notificationEmail = String(form.get("notificationEmail") || "");
-  await prisma$2.shopSetting.upsert({
+  await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {
       autoUpdateEnabled,
@@ -10012,15 +10199,15 @@ const loader$1 = async ({ request }) => {
   try {
     const goldData = await fetchGoldPriceDataTanaka();
     const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
-      prisma$2.selectedProduct.count({
+      prisma$1.selectedProduct.count({
         where: { shopDomain: session.shop, selected: true }
       }),
-      prisma$2.priceUpdateLog.findMany({
+      prisma$1.priceUpdateLog.findMany({
         where: { shopDomain: session.shop },
         orderBy: { executedAt: "desc" },
         take: 5
       }),
-      prisma$2.shopSetting.findUnique({
+      prisma$1.shopSetting.findUnique({
         where: { shopDomain: session.shop }
       })
     ]);
@@ -10182,12 +10369,12 @@ async function loader({ request }) {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const [logs, stats] = await Promise.all([
-    prisma$2.priceUpdateLog.findMany({
+    prisma$1.priceUpdateLog.findMany({
       where: { shopDomain: shop },
       orderBy: { executedAt: "desc" },
       take: 100
     }),
-    prisma$2.priceUpdateLog.aggregate({
+    prisma$1.priceUpdateLog.aggregate({
       where: { shopDomain: shop },
       _count: { id: true },
       _sum: {
@@ -10391,7 +10578,7 @@ const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-cCrLS3HR.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BwlOh0sD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-Ce5mZqPr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CAtiM_lO.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BH-kENwN.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-iFha_njD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-XeyT_iBl.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-D28RdGze.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-CE-OXjA9.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-1269dac9.js", "version": "1269dac9" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-D8QXZ4ow.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-CUdf0xBo.js", "/assets/FormLayout-UJivAdCW.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BElBf7-m.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-B4r5ayy5.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-C3pwByoe.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/Banner-D_Rcuybh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-UJivAdCW.js", "/assets/Select-B40Z_D3S.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BdaezB01.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-CUdf0xBo.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-BjmvsHHQ.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-CUdf0xBo.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-CN1seCzE.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-B40Z_D3S.js", "/assets/DataTable-dk25Vxus.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-02b4524c.js", "version": "02b4524c" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";

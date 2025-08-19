@@ -92,6 +92,60 @@ export const loader: LoaderFunction = async ({ request }) => {
     });
   }
   
+  if (test === 'platinum-price') {
+    try {
+      // プラチナ価格取得（直接実装）
+      const url = "https://gold.tanaka.co.jp/commodity/souba/d-platinum.php";
+      const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
+      const html = await resp.text();
+
+      let retailPrice: number | null = null;
+      let changeYen: number | null = null;
+
+      // プラチナのテーブル行を取得（class="pt"）
+      const platinumRowMatch = html.match(/<tr[^>]*class="pt"[^>]*>.*?<\/tr>/is);
+      if (platinumRowMatch) {
+        const platinumRow = platinumRowMatch[0];
+        
+        // 小売価格抽出: class="retail_tax"のセル
+        const priceMatch = platinumRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
+        if (priceMatch) {
+          retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
+        }
+        
+        // 前日比抽出: class="retail_ratio"のセル
+        const changeMatch = platinumRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+        if (changeMatch) {
+          changeYen = parseFloat(changeMatch[1]);
+        }
+      }
+
+      // 変動率計算
+      const changeRatio = (changeYen !== null && retailPrice !== null) 
+        ? changeYen / retailPrice 
+        : null;
+
+      return json({
+        test: 'platinum-price',
+        timestamp: new Date().toISOString(),
+        success: retailPrice !== null && changeYen !== null,
+        retailPrice,
+        changeYen,
+        changeRatio,
+        changePercent: changeRatio ? (changeRatio * 100).toFixed(2) + '%' : null,
+        retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : '取得失敗'
+      });
+    } catch (error) {
+      return json({
+        test: 'platinum-price',
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: error.message
+      });
+    }
+  }
+  
   if (test === 'shop-settings') {
     try {
       const enabledShops = await prisma.shopSetting.findMany({

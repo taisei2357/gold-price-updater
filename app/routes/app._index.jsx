@@ -21,15 +21,18 @@ import {
   NotificationIcon,
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
-import { fetchGoldPriceDataTanaka } from "../models/gold.server";
+import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
 
   try {
-    // 金価格情報を取得
-    const goldData = await fetchGoldPriceDataTanaka();
+    // 金・プラチナ価格情報を取得
+    const [goldData, platinumData] = await Promise.all([
+      fetchGoldPriceDataTanaka(),
+      fetchPlatinumPriceDataTanaka()
+    ]);
     
     // ダッシュボード統計を取得
     const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
@@ -56,6 +59,15 @@ export const loader = async ({ request }) => {
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
+      platinumPrice: platinumData ? {
+        ratio: platinumData.changeRatio,
+        percentage: (platinumData.changeRatio * 100).toFixed(2),
+        change: platinumData.changePercent,
+        retailPrice: platinumData.retailPrice,
+        retailPriceFormatted: platinumData.retailPriceFormatted,
+        changeDirection: platinumData.changeDirection,
+        lastUpdated: platinumData.lastUpdated
+      } : null,
       stats: {
         selectedProducts,
         totalLogs: recentLogs.length,
@@ -68,6 +80,7 @@ export const loader = async ({ request }) => {
     console.error('Dashboard loader error:', error);
     return json({
       goldPrice: null,
+      platinumPrice: null,
       stats: { selectedProducts: 0, totalLogs: 0, lastExecution: null, autoScheduleEnabled: false },
       recentLogs: []
     });
@@ -75,62 +88,116 @@ export const loader = async ({ request }) => {
 };
 
 export default function Dashboard() {
-  const { goldPrice, stats, recentLogs } = useLoaderData();
+  const { goldPrice, platinumPrice, stats, recentLogs } = useLoaderData();
 
   return (
     <Page
-      title="金価格自動調整ダッシュボード"
-      subtitle="K18商品の価格を田中貴金属の金価格に連動して自動調整"
+      title="金・プラチナ価格自動調整ダッシュボード"
+      subtitle="商品の価格を田中貴金属の金・プラチナ価格に連動して自動調整"
     >
       <BlockStack gap="600">
-        {/* Hero Section - 金価格情報 */}
-        <Card>
-          <div style={{padding: '24px', background: '#fbbf24', borderRadius: '8px'}}>
-          
-          <InlineStack align="space-between" blockAlign="center">
-            <BlockStack gap="300">
-              <InlineStack gap="200" blockAlign="center">
-                <span style={{ fontSize: '24px', marginRight: '8px' }}>📈</span>
-                <Text variant="headingLg" as="h2" tone="text-inverse">
-                  田中貴金属 金価格
-                </Text>
-              </InlineStack>
-              
-              {goldPrice ? (
-                <>
-                  <Text variant="heading2xl" as="p" tone="text-inverse">
-                    {goldPrice.retailPriceFormatted}
-                  </Text>
-                  <InlineStack gap="300" blockAlign="center">
-                    <Badge 
-                      tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
-                      size="large"
-                    >
-                      {goldPrice.change}
-                    </Badge>
-                    <Text variant="bodyLg" tone="text-inverse">
-                      前日比 • 調整率: {goldPrice.percentage}%
+        {/* Hero Section - 金・プラチナ価格情報 */}
+        <Layout>
+          <Layout.Section>
+            {/* 金価格 */}
+            <Card>
+              <div style={{padding: '24px', background: '#fbbf24', borderRadius: '8px'}}>
+              <InlineStack align="space-between" blockAlign="center">
+                <BlockStack gap="300">
+                  <InlineStack gap="200" blockAlign="center">
+                    <span style={{ fontSize: '24px', marginRight: '8px' }}>🥇</span>
+                    <Text variant="headingLg" as="h2" tone="text-inverse">
+                      田中貴金属 金価格
                     </Text>
                   </InlineStack>
-                </>
-              ) : (
-                <Text variant="headingLg" tone="text-inverse">
-                  価格情報取得中...
-                </Text>
-              )}
-            </BlockStack>
-            
-            <BlockStack gap="200" align="end">
-              <Text variant="bodySm" tone="text-inverse">
-                最終更新
-              </Text>
-              <Text variant="bodyMd" tone="text-inverse">
-                {goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString('ja-JP') : '--'}
-              </Text>
-            </BlockStack>
-          </InlineStack>
-          </div>
-        </Card>
+                  
+                  {goldPrice ? (
+                    <>
+                      <Text variant="heading2xl" as="p" tone="text-inverse">
+                        {goldPrice.retailPriceFormatted}
+                      </Text>
+                      <InlineStack gap="300" blockAlign="center">
+                        <Badge 
+                          tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
+                          size="large"
+                        >
+                          {goldPrice.change}
+                        </Badge>
+                        <Text variant="bodyLg" tone="text-inverse">
+                          前日比 • 調整率: {goldPrice.percentage}%
+                        </Text>
+                      </InlineStack>
+                    </>
+                  ) : (
+                    <Text variant="headingLg" tone="text-inverse">
+                      価格情報取得中...
+                    </Text>
+                  )}
+                </BlockStack>
+                
+                <BlockStack gap="200" align="end">
+                  <Text variant="bodySm" tone="text-inverse">
+                    最終更新
+                  </Text>
+                  <Text variant="bodyMd" tone="text-inverse">
+                    {goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString('ja-JP') : '--'}
+                  </Text>
+                </BlockStack>
+              </InlineStack>
+              </div>
+            </Card>
+          </Layout.Section>
+          
+          <Layout.Section>
+            {/* プラチナ価格 */}
+            <Card>
+              <div style={{padding: '24px', background: '#94a3b8', borderRadius: '8px'}}>
+              <InlineStack align="space-between" blockAlign="center">
+                <BlockStack gap="300">
+                  <InlineStack gap="200" blockAlign="center">
+                    <span style={{ fontSize: '24px', marginRight: '8px' }}>🥈</span>
+                    <Text variant="headingLg" as="h2" tone="text-inverse">
+                      田中貴金属 プラチナ価格
+                    </Text>
+                  </InlineStack>
+                  
+                  {platinumPrice ? (
+                    <>
+                      <Text variant="heading2xl" as="p" tone="text-inverse">
+                        {platinumPrice.retailPriceFormatted}
+                      </Text>
+                      <InlineStack gap="300" blockAlign="center">
+                        <Badge 
+                          tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}
+                          size="large"
+                        >
+                          {platinumPrice.change}
+                        </Badge>
+                        <Text variant="bodyLg" tone="text-inverse">
+                          前日比 • 調整率: {platinumPrice.percentage}%
+                        </Text>
+                      </InlineStack>
+                    </>
+                  ) : (
+                    <Text variant="headingLg" tone="text-inverse">
+                      価格情報取得中...
+                    </Text>
+                  )}
+                </BlockStack>
+                
+                <BlockStack gap="200" align="end">
+                  <Text variant="bodySm" tone="text-inverse">
+                    最終更新
+                  </Text>
+                  <Text variant="bodyMd" tone="text-inverse">
+                    {platinumPrice ? new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP') : '--'}
+                  </Text>
+                </BlockStack>
+              </InlineStack>
+              </div>
+            </Card>
+          </Layout.Section>
+        </Layout>
 
         {/* 統計カード */}
         <Layout>
@@ -272,9 +339,9 @@ export default function Dashboard() {
           <div style={{padding: '24px', background: '#f8fafc'}}>
             <InlineStack align="space-between" blockAlign="center">
               <BlockStack gap="200">
-                <Text variant="headingMd" as="h3">Gold Price Updater</Text>
+                <Text variant="headingMd" as="h3">Gold & Platinum Price Updater</Text>
                 <Text variant="bodyMd" tone="subdued">
-                  田中貴金属の金価格に連動したK18商品の自動価格調整システム
+                  田中貴金属の金・プラチナ価格に連動した商品の自動価格調整システム
                 </Text>
               </BlockStack>
               

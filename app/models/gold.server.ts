@@ -1,8 +1,11 @@
 // app/models/gold.server.ts
-// 田中貴金属サイトから金価格情報を取得
+// 田中貴金属サイトから金・プラチナ価格情報を取得
 // 店頭小売価格、前日比、変動率を含む詳細な価格情報を返す
 
-export interface GoldPriceData {
+export type MetalType = 'gold' | 'platinum';
+
+export interface MetalPriceData {
+  metalType: MetalType;           // 金属種別
   retailPrice: number | null;     // 店頭小売価格（税込）
   retailPriceFormatted: string;   // フォーマット済み価格
   changeRatio: number | null;     // 前日比（小数）
@@ -11,42 +14,75 @@ export interface GoldPriceData {
   lastUpdated: Date;              // 取得時刻
 }
 
-let _cache: { at: number; data: GoldPriceData | null } | null = null;
+// 後方互換性のための型エイリアス
+export type GoldPriceData = MetalPriceData;
+
+// 金属種別ごとのキャッシュ
+let _goldCache: { at: number; data: MetalPriceData | null } | null = null;
+let _platinumCache: { at: number; data: MetalPriceData | null } | null = null;
 const TTL_MS = 10 * 60 * 1000; // 10分キャッシュ
 
-export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> {
+// 金属種別に応じたURL取得
+function getMetalUrl(metalType: MetalType): string {
+  switch (metalType) {
+    case 'gold':
+      return 'https://gold.tanaka.co.jp/commodity/souba/';
+    case 'platinum':
+      return 'https://gold.tanaka.co.jp/commodity/souba/d-platinum.php';
+    default:
+      throw new Error(`Unsupported metal type: ${metalType}`);
+  }
+}
+
+// 金属種別に応じたクラス名取得
+function getMetalRowClass(metalType: MetalType): string {
+  switch (metalType) {
+    case 'gold':
+      return 'gold';
+    case 'platinum':
+      return 'pt'; // プラチナのclass名
+    default:
+      throw new Error(`Unsupported metal type: ${metalType}`);
+  }
+}
+
+// 統一的な金属価格取得関数
+export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPriceData | null> {
+  // 適切なキャッシュを選択
+  const cache = metalType === 'gold' ? _goldCache : _platinumCache;
+  
   // キャッシュチェック
-  if (_cache && Date.now() - _cache.at < TTL_MS) return _cache.data;
+  if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
 
   try {
-    // 田中貴金属の相場情報ページ（2025年対応）
-    const url = "https://gold.tanaka.co.jp/commodity/souba/";
+    // 金属種別に応じたURL取得
+    const url = getMetalUrl(metalType);
     const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
     const html = await resp.text();
 
-    console.log('HTML取得成功、長さ:', html.length);
+    console.log(`${metalType} HTML取得成功、長さ:`, html.length);
 
     // 正確なHTML構造に基づく価格抽出
-    // class="gold"のテーブル行から正確に抽出
     let retailPrice: number | null = null;
     let changeYen: number | null = null;
 
-    // 金のテーブル行を取得（class="gold"）
-    const goldRowMatch = html.match(/<tr[^>]*class="gold"[^>]*>.*?<\/tr>/is);
-    if (goldRowMatch) {
-      const goldRow = goldRowMatch[0];
-      console.log('金行取得成功');
+    // 金属のテーブル行を取得（metalTypeに応じたclass）
+    const metalRowClass = getMetalRowClass(metalType);
+    const metalRowMatch = html.match(new RegExp(`<tr[^>]*class="${metalRowClass}"[^>]*>.*?</tr>`, 'is'));
+    if (metalRowMatch) {
+      const metalRow = metalRowMatch[0];
+      console.log(`${metalType}行取得成功`);
       
       // 小売価格抽出: class="retail_tax"のセル
-      const priceMatch = goldRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
+      const priceMatch = metalRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
       if (priceMatch) {
         retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
         console.log('価格抽出:', priceMatch[0], '→', retailPrice);
       }
       
       // 前日比抽出: class="retail_ratio"のセル
-      const changeMatch = goldRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      const changeMatch = metalRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
       if (changeMatch) {
         changeYen = parseFloat(changeMatch[1]);
         console.log('前日比抽出:', changeMatch[0], '→', changeYen);
@@ -65,7 +101,7 @@ export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> 
     }
 
     // デバッグログ
-    console.log('Gold price extraction result:', {
+    console.log(`${metalType} price extraction result:`, {
       retailPrice,
       changeYen,
       url: url
@@ -87,7 +123,8 @@ export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> 
       else if (changeRatio < 0) changeDirection = 'down';
     }
 
-    const data: GoldPriceData = {
+    const data: MetalPriceData = {
+      metalType,
       retailPrice,
       retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : '取得失敗',
       changeRatio,
@@ -96,17 +133,45 @@ export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> 
       lastUpdated: new Date()
     };
 
-    _cache = { at: Date.now(), data };
+    // 適切なキャッシュに保存
+    const cacheData = { at: Date.now(), data };
+    if (metalType === 'gold') {
+      _goldCache = cacheData;
+    } else {
+      _platinumCache = cacheData;
+    }
+    
     return data;
   } catch (error) {
-    console.error('田中貴金属価格取得エラー:', error);
-    _cache = { at: Date.now(), data: null };
+    console.error(`田中貴金属${metalType}価格取得エラー:`, error);
+    const cacheData = { at: Date.now(), data: null };
+    if (metalType === 'gold') {
+      _goldCache = cacheData;
+    } else {
+      _platinumCache = cacheData;
+    }
     return null;
   }
+}
+
+// 金専用の関数（後方互換性）
+export async function fetchGoldPriceDataTanaka(): Promise<GoldPriceData | null> {
+  return await fetchMetalPriceData('gold');
+}
+
+// プラチナ専用の関数
+export async function fetchPlatinumPriceDataTanaka(): Promise<MetalPriceData | null> {
+  return await fetchMetalPriceData('platinum');
 }
 
 // 後方互換性のための関数（既存コードで使用）
 export async function fetchGoldChangeRatioTanaka(): Promise<number | null> {
   const data = await fetchGoldPriceDataTanaka();
+  return data?.changeRatio || null;
+}
+
+// プラチナ価格変動率取得関数
+export async function fetchPlatinumChangeRatioTanaka(): Promise<number | null> {
+  const data = await fetchPlatinumPriceDataTanaka();
   return data?.changeRatio || null;
 }

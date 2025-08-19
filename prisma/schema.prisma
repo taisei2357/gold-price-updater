@@ -8,6 +8,11 @@ enum ExecutionType {
   webhook
 }
 
+enum MetalType {
+  gold
+  platinum
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -35,15 +40,17 @@ model Session {
 }
 
 model SelectedProduct {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   shopDomain String
   productId  String
-  selected   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  selected   Boolean   @default(true)
+  metalType  MetalType @default(gold) // 金属種別（デフォルト：金）
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([shopDomain, productId])
   @@index([shopDomain])
+  @@index([shopDomain, metalType])
 }
 
 model ShopSetting {
@@ -63,7 +70,8 @@ model PriceUpdateLog {
   id            String        @id @default(cuid())
   shopDomain    String
   executionType ExecutionType
-  goldRatio     Float?
+  metalType     MetalType     @default(gold) // 更新対象の金属種別
+  priceRatio    Float?        // 金価格またはプラチナ価格の変動率
   minPricePct   Int
   totalProducts Int           @default(0)
   updatedCount  Int           @default(0)
@@ -74,4 +82,5 @@ model PriceUpdateLog {
   details       String?       @db.Text
 
   @@index([shopDomain, executedAt])
+  @@index([shopDomain, metalType, executedAt])
 }
