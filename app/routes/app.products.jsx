@@ -84,7 +84,9 @@ async function fetchAllCollections(admin) {
                 id
                 title
                 handle
-                productsCount
+                productsCount {
+                  count
+                }
               }
               cursor
             }
@@ -103,12 +105,24 @@ async function fetchAllCollections(admin) {
     );
 
     const body = await response.json();
-    const collections = body.data?.collections?.edges || [];
     
-    allCollections.push(...collections.map(edge => edge.node));
+    if (body?.errors?.length) {
+      console.error('Collections query error:', body.errors);
+      throw new Error(body.errors[0].message || 'GraphQL error');
+    }
+    
+    const edges = body.data?.collections?.edges || [];
+    const pageCollections = edges.map(({ node }) => ({
+      id: node.id,
+      title: node.title,
+      handle: node.handle,
+      productsCount: node.productsCount?.count ?? 0,
+    }));
+    
+    allCollections.push(...pageCollections);
     
     hasNextPage = body.data?.collections?.pageInfo?.hasNextPage || false;
-    cursor = collections.length > 0 ? collections[collections.length - 1].cursor : null;
+    cursor = edges.length > 0 ? edges[edges.length - 1].cursor : null;
   }
   
   return allCollections;
@@ -639,7 +653,11 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     <Page
       fullWidth
       title="商品価格自動調整"
-      subtitle={`${filteredProducts.length}件の商品（全${products.length}件）`}
+      subtitle={
+        selectionType === 'products'
+          ? `${filteredProducts.length}件の商品（全${products.length}件）`
+          : `${collections?.length ?? 0}件のコレクション`
+      }
       primaryAction={{
         content: "価格調整プレビュー",
         onAction: generatePricePreview,
@@ -1371,19 +1389,23 @@ export default function Products() {
         </Page>
       }
     >
-      <Await resolve={Promise.all([data.products, data.collections])}>
-        {([products, collections]) => (
-          <ProductsContent
-            products={products}
-            collections={collections}
-            goldPrice={goldPrice}
-            platinumPrice={platinumPrice}
-            selectedProductIds={selectedProductIds}
-            savedSelectedProducts={savedSelectedProducts}
-            shopSetting={shopSetting}
-            forceRefresh={forceRefresh}
-            cacheTimestamp={cacheTimestamp}
-          />
+      <Await resolve={data.products}>
+        {(products) => (
+          <Await resolve={data.collections}>
+            {(collections) => (
+              <ProductsContent
+                products={products}
+                collections={collections}
+                goldPrice={goldPrice}
+                platinumPrice={platinumPrice}
+                selectedProductIds={selectedProductIds}
+                savedSelectedProducts={savedSelectedProducts}
+                shopSetting={shopSetting}
+                forceRefresh={forceRefresh}
+                cacheTimestamp={cacheTimestamp}
+              />
+            )}
+          </Await>
         )}
       </Await>
     </Suspense>
