@@ -103,13 +103,21 @@ export const loader: LoaderFunction = async ({ request }) => {
         select: { shopDomain: true, minPricePct: true, autoUpdateEnabled: true }
       });
       
+      // 選択商品数も取得
+      const selectedProducts = await prisma.selectedProduct.findMany({
+        where: { shopDomain: 'luxrexor2.myshopify.com', selected: true },
+        select: { shopDomain: true, productId: true }
+      });
+      
       return json({
         test: 'shop-settings',
         timestamp: new Date().toISOString(),
         enabledShops,
         allShops,
         totalShops: allShops.length,
-        enabledCount: enabledShops.length
+        enabledCount: enabledShops.length,
+        selectedProducts: selectedProducts.length,
+        selectedProductIds: selectedProducts.map(p => p.productId.split('/').pop()) // ID部分のみ
       });
     } catch (error) {
       return json({
