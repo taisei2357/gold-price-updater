@@ -202,34 +202,27 @@ export const action = async ({ request }) => {
   const action = formData.get("action");
 
   if (action === "saveSelection") {
+    // id -> metalType の安全なペアを作る（重複や順序ズレ対策）
     const ids = formData.getAll("productId").map(String);
-    const metalTypes = formData.getAll("metalType"); // 金属種別配列
-    const uniqueIds = Array.from(new Set(ids)); // フロント由来の重複を除去
-    
-    // 既存の選択をクリア
-    await prisma.selectedProduct.deleteMany({
-      where: { shopDomain: session.shop }
-    });
-    
-    // 新しい選択を保存（重複は既に除去済み）
-    if (uniqueIds.length > 0) {
-      await prisma.selectedProduct.createMany({
-        data: uniqueIds.map((productId, index) => ({
-          shopDomain: session.shop,
-          productId: productId,
-          selected: true,
-          metalType: metalTypes[index] === 'platinum' ? 'platinum' : 'gold' // デフォルトは金
-        }))
+    const types = formData.getAll("metalType").map(v => v === "platinum" ? "platinum" : "gold");
+    const pairs = Array.from(
+      new Map(ids.map((id, i) => [id, types[i]])).entries()
+    ); // [['gid://...','gold'], ...]
+
+    const saved = [];
+    for (const [productId, metalType] of pairs) {
+      await prisma.selectedProduct.upsert({
+        where: { shopDomain_productId: { shopDomain: session.shop, productId } },
+        update: { metalType, selected: true },
+        create: { shopDomain: session.shop, productId, selected: true, metalType }
       });
+      saved.push({ productId, metalType });
     }
     
     return json({ 
       success: true, 
-      message: `${uniqueIds.length}件の商品を選択しました`,
-      savedProducts: uniqueIds.map((productId, index) => ({ 
-        productId, 
-        metalType: metalTypes[index] === 'platinum' ? 'platinum' : 'gold' 
-      }))
+      message: `${saved.length}件を保存しました`, 
+      savedProducts: saved 
     });
   }
 
@@ -378,9 +371,11 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
           savedProductIds.forEach(id => delete newTypes[id]);
           return newTypes;
         });
+        // サーバーの selectedProductIds を最新化（以後の一括処理で誤混入を防ぐ）
+        revalidator.revalidate();
       }
     }
-  }, [fetcher.state, fetcher.data]);
+  }, [fetcher.state, fetcher.data, revalidator]);
 
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
