@@ -480,6 +480,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 
   return (
     <Page
+      fullWidth
       title="商品価格自動調整"
       subtitle={`${filteredProducts.length}件の商品（全${products.length}件）`}
       primaryAction={{
@@ -789,12 +790,8 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 
         <Layout.Section>
           <Card>
-            <div style={{ 
-              width: '100%',
-              overflowX: 'auto'
-            }}>
-              <div style={{ minWidth: '1280px' }}>
-                <IndexTable
+            <div style={{ width: '100%' }}>
+              <IndexTable
                   resourceName={{ singular: '商品', plural: '商品' }}
                   itemCount={filteredProducts.length}
                   selectedItemsCount={selectedProducts.length > 0 ? 'All' : 0}
@@ -837,7 +834,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Box minWidth="300px" maxWidth="400px">
+                          <Box minWidth="200px">
                             <InlineStack gap="200" blockAlign="center">
                               {isSelected && metalType && (
                                 <span style={{ fontSize: '16px' }}>
@@ -881,7 +878,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Box minWidth="240px" width="100%">
+                          <Box minWidth="280px">
                             {isSelected ? (
                               <div>
                                 <Select
@@ -921,7 +918,6 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                     );
                   })}
                 </IndexTable>
-              </div>
             </div>
           </Card>
         </Layout.Section>
@@ -1042,6 +1038,7 @@ export default function Products() {
     <Suspense
       fallback={
         <Page 
+          fullWidth
           title="商品価格自動調整" 
           subtitle="読み込み中..."
           secondaryActions={[
