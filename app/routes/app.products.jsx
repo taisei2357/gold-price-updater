@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { json, defer } from "@remix-run/node";
 import { useLoaderData, useFetcher, Await, useRevalidator } from "@remix-run/react";
 import {
@@ -294,6 +294,7 @@ export const action = async ({ request }) => {
 function ProductsContent({ products, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
+  const didRevalidate = useRef(false);
   
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productMetalTypes, setProductMetalTypes] = useState({}); // 商品IDと金属種別のマッピング
@@ -371,11 +372,16 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
           savedProductIds.forEach(id => delete newTypes[id]);
           return newTypes;
         });
-        // サーバーの selectedProductIds を最新化（以後の一括処理で誤混入を防ぐ）
-        revalidator.revalidate();
+        // サーバーの selectedProductIds を最新化（一度だけ実行）
+        if (!didRevalidate.current) {
+          didRevalidate.current = true;
+          revalidator.revalidate();
+          // 次回の保存アクションまでフラグを解除
+          setTimeout(() => { didRevalidate.current = false; }, 500);
+        }
       }
     }
-  }, [fetcher.state, fetcher.data, revalidator]);
+  }, [fetcher.state, fetcher.data?.savedProducts?.length, revalidator]);
 
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
@@ -860,11 +866,15 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 
         <Layout.Section>
           <Card>
-            <div style={{ width: '100%' }}>
+            <div style={{ 
+              width: '100%', 
+              overflowAnchor: 'none',
+              overscrollBehaviorY: 'contain'
+            }}>
               <IndexTable
                   resourceName={{ singular: '商品', plural: '商品' }}
                   itemCount={filteredProducts.length}
-                  selectedItemsCount={selectedProducts.length > 0 ? 'All' : 0}
+                  selectedItemsCount={selectedProducts.length}
                   onSelectionChange={(selectionType) => {
                     if (selectionType === 'all') {
                       handleSelectAll(true);
