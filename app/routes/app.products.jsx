@@ -223,7 +223,45 @@ export const action = async ({ request }) => {
       });
     }
     
-    return json({ success: true, message: `${uniqueIds.length}件の商品を選択しました` });
+    return json({ 
+      success: true, 
+      message: `${uniqueIds.length}件の商品を選択しました`,
+      savedProducts: uniqueIds.map((productId, index) => ({ 
+        productId, 
+        metalType: metalTypes[index] === 'platinum' ? 'platinum' : 'gold' 
+      }))
+    });
+  }
+
+  if (action === "saveSingleProduct") {
+    const productId = formData.get("productId");
+    const metalType = formData.get("metalType");
+    
+    // 個別商品の金属種別設定を保存（upsert）
+    await prisma.selectedProduct.upsert({
+      where: { 
+        shopDomain_productId: { 
+          shopDomain: session.shop, 
+          productId: productId 
+        } 
+      },
+      update: { 
+        metalType: metalType === 'platinum' ? 'platinum' : 'gold',
+        selected: true 
+      },
+      create: {
+        shopDomain: session.shop,
+        productId: productId,
+        selected: true,
+        metalType: metalType === 'platinum' ? 'platinum' : 'gold'
+      }
+    });
+    
+    return json({ 
+      success: true, 
+      message: `商品の金属種別を${metalType === 'platinum' ? 'プラチナ' : '金'}に設定しました`,
+      savedProducts: [{ productId, metalType }]
+    });
   }
 
   if (action === "updatePrices") {
@@ -327,6 +365,23 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
 
+  // 保存完了時の後処理
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.error) {
+      // 個別保存または一括保存が成功した場合、保存した商品を選択から除外
+      if (fetcher.data.savedProducts) {
+        const savedProductIds = fetcher.data.savedProducts.map(p => p.productId);
+        setSelectedProducts(prev => prev.filter(p => !savedProductIds.includes(p.id)));
+        // 保存した商品の金属種別設定もクリア（既に保存されているため）
+        setProductMetalTypes(prev => {
+          const newTypes = { ...prev };
+          savedProductIds.forEach(id => delete newTypes[id]);
+          return newTypes;
+        });
+      }
+    }
+  }, [fetcher.state, fetcher.data]);
+
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
     ClientCache.clear(CACHE_KEYS.PRODUCTS);
@@ -371,7 +426,15 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
   // 金属種別変更ハンドラー
   const handleMetalTypeChange = useCallback((productId, metalType) => {
     setProductMetalTypes(prev => ({ ...prev, [productId]: metalType }));
-  }, []);
+    
+    // 金属種別設定時に即座にサーバーに保存
+    const formData = new FormData();
+    formData.append("action", "saveSingleProduct");
+    formData.append("productId", productId);
+    formData.append("metalType", metalType);
+    
+    fetcher.submit(formData, { method: "post" });
+  }, [fetcher]);
 
   // 一括金属種別設定ハンドラー（新規選択商品のみ対象）
   const handleBulkMetalTypeChange = useCallback((metalType) => {
