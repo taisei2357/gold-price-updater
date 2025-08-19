@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, Suspense } from "react";
 import { json, defer } from "@remix-run/node";
 import { useLoaderData, useFetcher, Await, useRevalidator } from "@remix-run/react";
 import {
@@ -380,6 +380,13 @@ export const action = async ({ request }) => {
 function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
+  
+  // 保存済み金属種別のマップ
+  const savedTypeMap = useMemo(() => {
+    const m = {};
+    (savedSelectedProducts || []).forEach(sp => { m[sp.productId] = sp.metalType; });
+    return m;
+  }, [savedSelectedProducts]);
   
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productMetalTypes, setProductMetalTypes] = useState({}); // 商品IDと金属種別のマッピング
@@ -1060,6 +1067,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       : `¥${variants[0]?.node.price || 0}`;
                     const metalType = productMetalTypes[product.id];
                     const isSaved = selectedProductIds.includes(product.id);
+                    const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "";
 
                     return (
                       <IndexTable.Row
@@ -1127,7 +1135,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         
                         <IndexTable.Cell>
                           <Box minWidth="360px" maxWidth="420px">
-                            {isSelected ? (
+                            {(isSelected || isSaved) ? (
                               <div>
                                 <Select
                                   label="金属種別"
@@ -1137,12 +1145,12 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                     { label: "🥇 金価格", value: "gold" },
                                     { label: "🥈 プラチナ価格", value: "platinum" }
                                   ]}
-                                  value={metalType || ""}
+                                  value={displayType}
                                   onChange={(value) => handleMetalTypeChange(product.id, value)}
                                   placeholder="選択してください"
-                                  disabled={isSaved}
+                                  disabled={isSaved && !isSelected}
                                 />
-                                {!metalType && !isSaved && (
+                                {!displayType && isSelected && !isSaved && (
                                   <div style={{ marginTop: '4px' }}>
                                     <Text variant="bodySm" tone="critical">
                                       ※選択が必要です
@@ -1153,7 +1161,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                   <div style={{ marginTop: '4px' }}>
                                     <InlineStack gap="100" blockAlign="center">
                                       <Text variant="bodySm" tone="subdued">
-                                        保存済み設定
+                                        保存済み設定{isSelected ? "（編集可）" : ""}
                                       </Text>
                                       <Button 
                                         size="micro"
