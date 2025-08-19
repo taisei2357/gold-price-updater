@@ -460,12 +460,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       if (fetcher.data.savedProducts) {
         const savedProductIds = fetcher.data.savedProducts.map(p => p.productId);
         setSelectedProducts(prev => prev.filter(p => !savedProductIds.includes(p.id)));
-        // 保存した商品の金属種別設定もクリア（既に保存されているため）
-        setProductMetalTypes(prev => {
-          const newTypes = { ...prev };
-          savedProductIds.forEach(id => delete newTypes[id]);
-          return newTypes;
-        });
+        // 注意: productMetalTypesは削除せず保持（ドロップダウン表示のため）
       }
       
       // 商品解除が成功した場合の処理
