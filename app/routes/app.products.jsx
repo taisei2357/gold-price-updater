@@ -471,13 +471,26 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     const priceRange = variants.length > 1 
       ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
       : `¥${variants[0]?.node.price || 0}`;
+    const metalType = productMetalTypes[product.id] || 'gold';
 
     return [
       <Checkbox
         checked={isSelected}
         onChange={(checked) => handleSelectProduct(product.id, checked)}
       />,
-      product.title,
+      <InlineStack gap="200" blockAlign="center">
+        {isSelected && (
+          <span style={{ fontSize: '16px' }}>
+            {metalType === 'gold' ? '🥇' : '🥈'}
+          </span>
+        )}
+        <span>{product.title}</span>
+        {isSelected && (
+          <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+            {metalType === 'gold' ? '金' : 'Pt'}
+          </Badge>
+        )}
+      </InlineStack>,
       <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
         {product.status}
       </Badge>,
@@ -486,14 +499,14 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
       isSelected ? (
         <Select
           options={[
-            { label: "金価格", value: "gold" },
-            { label: "プラチナ価格", value: "platinum" }
+            { label: "🥇 金価格", value: "gold" },
+            { label: "🥈 プラチナ価格", value: "platinum" }
           ]}
-          value={productMetalTypes[product.id] || 'gold'}
+          value={metalType}
           onChange={(value) => handleMetalTypeChange(product.id, value)}
         />
       ) : (
-        <Text variant="bodySm" tone="subdued">未選択</Text>
+        <Text variant="bodySm" tone="subdued">-</Text>
       )
     ];
   });
@@ -521,39 +534,97 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     >
       <Layout>
         <Layout.Section>
-          {goldPrice && (
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <h3>田中貴金属 金価格情報</h3>
-                  <Badge tone={goldPrice.changeDirection === 'up' ? 'attention' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                    {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
-                  </Badge>
-                </InlineStack>
-                
-                <InlineStack gap="600">
-                  <div>
-                    <p>店頭小売価格（税込）</p>
-                    <h4>{goldPrice.retailPriceFormatted}</h4>
+          <Layout>
+            <Layout.Section>
+              {goldPrice && (
+                <Card>
+                  <div style={{padding: '16px', background: '#fbbf24', borderRadius: '8px'}}>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between">
+                        <InlineStack gap="200" blockAlign="center">
+                          <span style={{ fontSize: '20px' }}>🥇</span>
+                          <h3 style={{color: 'white'}}>田中貴金属 金価格情報</h3>
+                        </InlineStack>
+                        <Badge tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
+                          {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
+                        </Badge>
+                      </InlineStack>
+                      
+                      <InlineStack gap="600">
+                        <div>
+                          <p style={{color: 'white', margin: 0}}>店頭小売価格（税込）</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.retailPriceFormatted}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0}}>前日比</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.change}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0}}>価格調整率</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.percentage}%</h4>
+                        </div>
+                      </InlineStack>
+                      
+                      <p style={{color: 'white', margin: 0, fontSize: '12px'}}>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+                    </BlockStack>
                   </div>
-                  <div>
-                    <p>前日比</p>
-                    <h4>{goldPrice.change}</h4>
-                  </div>
-                </InlineStack>
-                
-                <div>
-                  <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
-                </div>
-                
-                <p>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
-              </BlockStack>
-            </Card>
-          )}
+                </Card>
+              )}
 
-          {!goldPrice && (
+              {!goldPrice && (
+                <Banner tone="critical">
+                  金価格情報の取得に失敗しました。
+                </Banner>
+              )}
+            </Layout.Section>
+
+            <Layout.Section>
+              {platinumPrice && (
+                <Card>
+                  <div style={{padding: '16px', background: '#94a3b8', borderRadius: '8px'}}>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between">
+                        <InlineStack gap="200" blockAlign="center">
+                          <span style={{ fontSize: '20px' }}>🥈</span>
+                          <h3 style={{color: 'white'}}>田中貴金属 プラチナ価格情報</h3>
+                        </InlineStack>
+                        <Badge tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}>
+                          {platinumPrice.changeDirection === 'up' ? '上昇' : platinumPrice.changeDirection === 'down' ? '下落' : '変動なし'}
+                        </Badge>
+                      </InlineStack>
+                      
+                      <InlineStack gap="600">
+                        <div>
+                          <p style={{color: 'white', margin: 0}}>店頭小売価格（税込）</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.retailPriceFormatted}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0}}>前日比</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.change}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0}}>価格調整率</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.percentage}%</h4>
+                        </div>
+                      </InlineStack>
+                      
+                      <p style={{color: 'white', margin: 0, fontSize: '12px'}}>最終更新: {new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+                    </BlockStack>
+                  </div>
+                </Card>
+              )}
+
+              {!platinumPrice && (
+                <Banner tone="critical">
+                  プラチナ価格情報の取得に失敗しました。
+                </Banner>
+              )}
+            </Layout.Section>
+          </Layout>
+
+          {(!goldPrice && !platinumPrice) && (
             <Banner tone="critical">
-              金価格情報の取得に失敗しました。価格調整機能をご利用いただけません。
+              金・プラチナ価格情報の取得に失敗しました。価格調整機能をご利用いただけません。
             </Banner>
           )}
         </Layout.Section>
@@ -644,8 +715,43 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                 </InlineStack>
                 
                 {/* 選択状態の表示 */}
+                {selectedProducts.length > 0 && (
+                  <Card>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between">
+                        <h4>選択中の商品 ({selectedProducts.length}件)</h4>
+                        <InlineStack gap="200">
+                          <Badge tone="warning">
+                            🥇 金: {selectedProducts.filter(p => (productMetalTypes[p.id] || 'gold') === 'gold').length}件
+                          </Badge>
+                          <Badge tone="info">
+                            🥈 プラチナ: {selectedProducts.filter(p => productMetalTypes[p.id] === 'platinum').length}件
+                          </Badge>
+                        </InlineStack>
+                      </InlineStack>
+                      
+                      <BlockStack gap="200">
+                        {selectedProducts.map(product => {
+                          const metalType = productMetalTypes[product.id] || 'gold';
+                          return (
+                            <InlineStack key={product.id} gap="200" blockAlign="center">
+                              <span style={{ fontSize: '14px' }}>
+                                {metalType === 'gold' ? '🥇' : '🥈'}
+                              </span>
+                              <Text variant="bodySm">{product.title}</Text>
+                              <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+                                {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
+                              </Badge>
+                            </InlineStack>
+                          );
+                        })}
+                      </BlockStack>
+                    </BlockStack>
+                  </Card>
+                )}
+                
                 {selectedProductIds && selectedProductIds.length > 0 && (
-                  <Banner tone="info">
+                  <Banner tone="success">
                     現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
                   </Banner>
                 )}
