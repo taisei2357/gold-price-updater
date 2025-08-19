@@ -140,6 +140,9 @@ async function fetchMetalPrices() {
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
+        buyPrice: goldData.buyPrice,
+        buyPriceFormatted: goldData.buyPriceFormatted,
+        buyChangePercent: goldData.buyChangePercent,
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
@@ -149,6 +152,9 @@ async function fetchMetalPrices() {
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,
+        buyPrice: platinumData.buyPrice,
+        buyPriceFormatted: platinumData.buyPriceFormatted,
+        buyChangePercent: platinumData.buyChangePercent,
         changeDirection: platinumData.changeDirection,
         lastUpdated: platinumData.lastUpdated
       } : null
@@ -619,20 +625,34 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                         </Badge>
                       </InlineStack>
                       
-                      <InlineStack gap="600">
+                      <InlineStack gap="400" wrap>
                         <div>
-                          <p style={{color: 'white', margin: 0}}>店頭小売価格（税込）</p>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭小売価格（税込）</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.retailPriceFormatted}</h4>
                         </div>
                         <div>
-                          <p style={{color: 'white', margin: 0}}>前日比</p>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>小売価格前日比</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.change}</h4>
                         </div>
                         <div>
-                          <p style={{color: 'white', margin: 0}}>価格調整率</p>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭買取価格（税込）</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.buyPriceFormatted || '取得失敗'}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>買取価格前日比</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.buyChangePercent || '0.00%'}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>価格調整率</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.percentage}%</h4>
                         </div>
                       </InlineStack>
+                      
+                      <div style={{marginTop: '12px'}}>
+                        <p style={{color: 'white', margin: 0, fontSize: '11px'}}>
+                          出典: <a href="https://gold.tanaka.co.jp/commodity/souba/" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'underline'}}>田中貴金属工業株式会社</a>
+                        </p>
+                      </div>
                       
                       <p style={{color: 'white', margin: 0, fontSize: '12px'}}>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                     </BlockStack>
@@ -662,20 +682,34 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                         </Badge>
                       </InlineStack>
                       
-                      <InlineStack gap="600">
+                      <InlineStack gap="400" wrap>
                         <div>
-                          <p style={{color: 'white', margin: 0}}>店頭小売価格（税込）</p>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭小売価格（税込）</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.retailPriceFormatted}</h4>
                         </div>
                         <div>
-                          <p style={{color: 'white', margin: 0}}>前日比</p>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>小売価格前日比</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.change}</h4>
                         </div>
                         <div>
-                          <p style={{color: 'white', margin: 0}}>価格調整率</p>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭買取価格（税込）</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.buyPriceFormatted || '取得失敗'}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>買取価格前日比</p>
+                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.buyChangePercent || '0.00%'}</h4>
+                        </div>
+                        <div>
+                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>価格調整率</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.percentage}%</h4>
                         </div>
                       </InlineStack>
+                      
+                      <div style={{marginTop: '12px'}}>
+                        <p style={{color: 'white', margin: 0, fontSize: '11px'}}>
+                          出典: <a href="https://gold.tanaka.co.jp/commodity/souba/d-platinum.php" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'underline'}}>田中貴金属工業株式会社</a>
+                        </p>
+                      </div>
                       
                       <p style={{color: 'white', margin: 0, fontSize: '12px'}}>最終更新: {new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                     </BlockStack>

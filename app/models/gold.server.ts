@@ -8,8 +8,12 @@ export interface MetalPriceData {
   metalType: MetalType;           // 金属種別
   retailPrice: number | null;     // 店頭小売価格（税込）
   retailPriceFormatted: string;   // フォーマット済み価格
+  buyPrice: number | null;        // 店頭買取価格（税込）
+  buyPriceFormatted: string;      // フォーマット済み買取価格
   changeRatio: number | null;     // 前日比（小数）
   changePercent: string;          // 前日比（%表示）
+  buyChangeRatio: number | null;  // 買取価格前日比（小数）
+  buyChangePercent: string;       // 買取価格前日比（%表示）
   changeDirection: 'up' | 'down' | 'flat'; // 変動方向
   lastUpdated: Date;              // 取得時刻
 }
@@ -66,6 +70,8 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
     // 正確なHTML構造に基づく価格抽出
     let retailPrice: number | null = null;
     let changeYen: number | null = null;
+    let buyPrice: number | null = null;
+    let buyChangeYen: number | null = null;
 
     // 金属のテーブル行を取得（metalTypeに応じたclass）
     const metalRowClass = getMetalRowClass(metalType);
@@ -78,14 +84,28 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
       const priceMatch = metalRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
       if (priceMatch) {
         retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
-        console.log('価格抽出:', priceMatch[0], '→', retailPrice);
+        console.log('小売価格抽出:', priceMatch[0], '→', retailPrice);
       }
       
-      // 前日比抽出: class="retail_ratio"のセル
+      // 買取価格抽出: class="purchase_tax"のセル
+      const buyPriceMatch = metalRow.match(/<td[^>]*class="purchase_tax"[^>]*>([\d,]+)\s*円/);
+      if (buyPriceMatch) {
+        buyPrice = parseInt(buyPriceMatch[1].replace(/,/g, ''));
+        console.log('買取価格抽出:', buyPriceMatch[0], '→', buyPrice);
+      }
+      
+      // 小売価格前日比抽出: class="retail_ratio"のセル
       const changeMatch = metalRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
       if (changeMatch) {
         changeYen = parseFloat(changeMatch[1]);
-        console.log('前日比抽出:', changeMatch[0], '→', changeYen);
+        console.log('小売価格前日比抽出:', changeMatch[0], '→', changeYen);
+      }
+      
+      // 買取価格前日比抽出: class="purchase_ratio"のセル
+      const buyChangeMatch = metalRow.match(/<td[^>]*class="purchase_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      if (buyChangeMatch) {
+        buyChangeYen = parseFloat(buyChangeMatch[1]);
+        console.log('買取価格前日比抽出:', buyChangeMatch[0], '→', buyChangeYen);
       }
     }
 
@@ -107,13 +127,22 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
       url: url
     });
     
-    // 変動率を計算（前日比円 / 店頭小売価格）
+    // 小売価格変動率を計算（前日比円 / 店頭小売価格）
     const changeRatio = (changeYen !== null && retailPrice !== null) 
       ? changeYen / retailPrice 
       : null;
     
     const changePercent = changeRatio !== null 
       ? `${(changeRatio * 100).toFixed(2)}%` 
+      : '0.00%';
+    
+    // 買取価格変動率を計算（前日比円 / 買取価格）
+    const buyChangeRatio = (buyChangeYen !== null && buyPrice !== null) 
+      ? buyChangeYen / buyPrice 
+      : null;
+    
+    const buyChangePercent = buyChangeRatio !== null 
+      ? `${(buyChangeRatio * 100).toFixed(2)}%` 
       : '0.00%';
     
     // 変動方向を判定
@@ -127,8 +156,12 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
       metalType,
       retailPrice,
       retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : '取得失敗',
+      buyPrice,
+      buyPriceFormatted: buyPrice ? `¥${buyPrice.toLocaleString()}/g` : '取得失敗',
       changeRatio,
       changePercent: changeRatio !== null ? (changeRatio >= 0 ? `+${changePercent}` : changePercent) : '0.00%',
+      buyChangeRatio,
+      buyChangePercent: buyChangeRatio !== null ? (buyChangeRatio >= 0 ? `+${buyChangePercent}` : buyChangePercent) : '0.00%',
       changeDirection,
       lastUpdated: new Date()
     };
