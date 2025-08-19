@@ -2,8 +2,14 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum ExecutionType {
+  cron
+  manual
+  webhook
+}
+
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -54,18 +60,18 @@ model ShopSetting {
 }
 
 model PriceUpdateLog {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   shopDomain    String
-  executionType String
+  executionType ExecutionType
   goldRatio     Float?
   minPricePct   Int
-  totalProducts Int      @default(0)
-  updatedCount  Int      @default(0)
-  failedCount   Int      @default(0)
+  totalProducts Int           @default(0)
+  updatedCount  Int           @default(0)
+  failedCount   Int           @default(0)
   success       Boolean
   errorMessage  String?
-  executedAt    DateTime @default(now())
-  details       String?
+  executedAt    DateTime      @default(now())
+  details       String?       @db.Text
 
   @@index([shopDomain, executedAt])
 }

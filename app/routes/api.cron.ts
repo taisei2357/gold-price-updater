@@ -155,7 +155,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
           await prisma.priceUpdateLog.create({
             data: {
               shopDomain: shop,
-              executionType: 'cron',
+              executionType: 'cron' as const,
               goldRatio: ratio,
               minPricePct: minPctSaved,
               success: false,
@@ -240,7 +240,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
       await prisma.priceUpdateLog.create({
         data: {
           shopDomain: shop,
-          executionType: 'cron',
+          executionType: 'cron' as const,
           goldRatio: ratio,
           minPricePct: minPctSaved,
           totalProducts: targets.length,
@@ -299,7 +299,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
           await prisma.priceUpdateLog.create({
             data: {
               shopDomain: shop,
-              executionType: 'cron',
+              executionType: 'cron' as const,
               goldRatio: ratio,
               minPricePct: minPctSaved,
               totalProducts: targets.length,
