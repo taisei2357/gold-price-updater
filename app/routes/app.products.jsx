@@ -6,6 +6,7 @@ import {
   Layout,
   Card,
   DataTable,
+  IndexTable,
   Button,
   TextField,
   Select,
@@ -372,14 +373,17 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     setProductMetalTypes(prev => ({ ...prev, [productId]: metalType }));
   }, []);
 
-  // 一括金属種別設定ハンドラー
+  // 一括金属種別設定ハンドラー（新規選択商品のみ対象）
   const handleBulkMetalTypeChange = useCallback((metalType) => {
     const newMetalTypes = {};
     selectedProducts.forEach(product => {
-      newMetalTypes[product.id] = metalType;
+      // 既に保存されている商品（selectedProductIds に含まれる）は除外
+      if (!selectedProductIds.includes(product.id)) {
+        newMetalTypes[product.id] = metalType;
+      }
     });
     setProductMetalTypes(prev => ({ ...prev, ...newMetalTypes }));
-  }, [selectedProducts]);
+  }, [selectedProducts, selectedProductIds]);
 
   // 選択状態を保存
   const saveSelection = useCallback(() => {
@@ -473,68 +477,109 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     setShowPreview(false);
   }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, fetcher]);
 
-  // データテーブル用の行データ
-  const tableRows = filteredProducts.map(product => {
-    const isSelected = selectedProducts.some(p => p.id === product.id);
-    const variants = product.variants.edges;
-    const priceRange = variants.length > 1 
-      ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
-      : `¥${variants[0]?.node.price || 0}`;
-    const metalType = productMetalTypes[product.id];
+  // IndexTable用のレンダリングデータ
+  const renderTableContent = () => {
+    return filteredProducts.map((product, index) => {
+      const isSelected = selectedProducts.some(p => p.id === product.id);
+      const variants = product.variants.edges;
+      const priceRange = variants.length > 1 
+        ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
+        : `¥${variants[0]?.node.price || 0}`;
+      const metalType = productMetalTypes[product.id];
+      const isSaved = selectedProductIds.includes(product.id);
 
-    return [
-      <Checkbox
-        checked={isSelected}
-        onChange={(checked) => handleSelectProduct(product.id, checked)}
-      />,
-      <InlineStack gap="200" blockAlign="center">
-        {isSelected && metalType && (
-          <span style={{ fontSize: '16px' }}>
-            {metalType === 'gold' ? '🥇' : '🥈'}
-          </span>
-        )}
-        <span>{product.title}</span>
-        {isSelected && metalType && (
-          <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
-            {metalType === 'gold' ? '金' : 'Pt'}
-          </Badge>
-        )}
-        {isSelected && !metalType && (
-          <Badge tone="critical" size="small">
-            未設定
-          </Badge>
-        )}
-      </InlineStack>,
-      <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
-        {product.status}
-      </Badge>,
-      priceRange,
-      variants.length,
-      isSelected ? (
-        <div style={{ minWidth: '180px' }}>
-          <Select
-            options={[
-              { label: "金属種別を選択...", value: "", disabled: true },
-              { label: "🥇 金価格", value: "gold" },
-              { label: "🥈 プラチナ価格", value: "platinum" }
-            ]}
-            value={productMetalTypes[product.id] || ""}
-            onChange={(value) => handleMetalTypeChange(product.id, value)}
-            placeholder="選択してください"
-          />
-          {!productMetalTypes[product.id] && (
-            <div style={{ marginTop: '4px' }}>
-              <Text variant="bodySm" tone="critical">
-                ※選択が必要です
-              </Text>
-            </div>
-          )}
-        </div>
-      ) : (
-        <Text variant="bodySm" tone="subdued">-</Text>
-      )
-    ];
-  });
+      return (
+        <IndexTable.Row
+          id={product.id}
+          key={product.id}
+          selected={isSelected}
+          onSelectionChange={(selected) => handleSelectProduct(product.id, selected)}
+        >
+          <IndexTable.Cell>
+            <Box minWidth="300px" maxWidth="400px">
+              <InlineStack gap="200" blockAlign="center">
+                {isSelected && metalType && (
+                  <span style={{ fontSize: '16px' }}>
+                    {metalType === 'gold' ? '🥇' : '🥈'}
+                  </span>
+                )}
+                <Text as="span" truncate>
+                  {product.title}
+                </Text>
+                {isSelected && metalType && (
+                  <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+                    {metalType === 'gold' ? '金' : 'Pt'}
+                  </Badge>
+                )}
+                {isSelected && !metalType && !isSaved && (
+                  <Badge tone="critical" size="small">
+                    未設定
+                  </Badge>
+                )}
+                {isSaved && (
+                  <Badge tone="success" size="small">
+                    保存済
+                  </Badge>
+                )}
+              </InlineStack>
+            </Box>
+          </IndexTable.Cell>
+          
+          <IndexTable.Cell>
+            <Badge status={product.status === "ACTIVE" ? "success" : "critical"}>
+              {product.status}
+            </Badge>
+          </IndexTable.Cell>
+          
+          <IndexTable.Cell>
+            <Text variant="bodySm">{priceRange}</Text>
+          </IndexTable.Cell>
+          
+          <IndexTable.Cell>
+            <Text variant="bodySm">{variants.length}</Text>
+          </IndexTable.Cell>
+          
+          <IndexTable.Cell>
+            <Box minWidth="240px" width="100%">
+              {isSelected ? (
+                <div>
+                  <Select
+                    label="金属種別"
+                    labelHidden
+                    options={[
+                      { label: "金属種別を選択...", value: "", disabled: true },
+                      { label: "🥇 金価格", value: "gold" },
+                      { label: "🥈 プラチナ価格", value: "platinum" }
+                    ]}
+                    value={metalType || ""}
+                    onChange={(value) => handleMetalTypeChange(product.id, value)}
+                    placeholder="選択してください"
+                    disabled={isSaved}
+                  />
+                  {!metalType && !isSaved && (
+                    <div style={{ marginTop: '4px' }}>
+                      <Text variant="bodySm" tone="critical">
+                        ※選択が必要です
+                      </Text>
+                    </div>
+                  )}
+                  {isSaved && (
+                    <div style={{ marginTop: '4px' }}>
+                      <Text variant="bodySm" tone="subdued">
+                        保存済み設定
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Text variant="bodySm" tone="subdued">-</Text>
+              )}
+            </Box>
+          </IndexTable.Cell>
+        </IndexTable.Row>
+      );
+    });
+  };
 
   return (
     <Page
@@ -747,25 +792,32 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                   {/* 一括金属種別設定 */}
                   {selectedProducts.length > 0 && (
                     <Card>
-                      <InlineStack gap="300" blockAlign="center">
-                        <Text variant="bodyMd" as="span">
-                          選択中の商品({selectedProducts.length}件)に一括設定:
-                        </Text>
-                        <Button 
-                          onClick={() => handleBulkMetalTypeChange('gold')}
-                          disabled={selectedProducts.length === 0}
-                          tone="warning"
-                        >
-                          🥇 すべて金価格に設定
-                        </Button>
-                        <Button 
-                          onClick={() => handleBulkMetalTypeChange('platinum')}
-                          disabled={selectedProducts.length === 0}
-                          tone="info"
-                        >
-                          🥈 すべてプラチナ価格に設定
-                        </Button>
-                      </InlineStack>
+                      <BlockStack gap="200">
+                        <InlineStack gap="300" blockAlign="center">
+                          <Text variant="bodyMd" as="span">
+                            新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括設定:
+                          </Text>
+                          <Button 
+                            onClick={() => handleBulkMetalTypeChange('gold')}
+                            disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                            tone="warning"
+                          >
+                            🥇 すべて金価格に設定
+                          </Button>
+                          <Button 
+                            onClick={() => handleBulkMetalTypeChange('platinum')}
+                            disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                            tone="info"
+                          >
+                            🥈 すべてプラチナ価格に設定
+                          </Button>
+                        </InlineStack>
+                        {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
+                          <Text variant="bodySm" tone="subdued">
+                            ※既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
+                          </Text>
+                        )}
+                      </BlockStack>
                     </Card>
                   )}
                 </BlockStack>
@@ -841,23 +893,32 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
         <Layout.Section>
           <Card>
             <div style={{ 
-              overflowX: 'auto',
               width: '100%',
-              maxWidth: '100vw'
+              overflowX: 'auto'
             }}>
-              <div style={{ 
-                minWidth: '1200px',
-                width: 'max-content'
-              }}>
-                <DataTable
-                  columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
-                  headings={["選択", "商品名", "ステータス", "価格", "バリエーション", "価格連動設定"]}
-                  rows={tableRows}
-                  pagination={{
-                    hasNext: false,
-                    hasPrevious: false,
+              <div style={{ minWidth: '1280px' }}>
+                <IndexTable
+                  resourceName={{ singular: '商品', plural: '商品' }}
+                  itemCount={filteredProducts.length}
+                  selectedItemsCount={selectedProducts.length}
+                  onSelectionChange={(type) => {
+                    if (type === 'all') {
+                      handleSelectAll(true);
+                    } else if (type === 'none') {
+                      handleSelectAll(false);
+                    }
                   }}
-                />
+                  headings={[
+                    { title: '商品名' },
+                    { title: 'ステータス' },
+                    { title: '価格' },
+                    { title: 'バリエーション' },
+                    { title: '価格連動設定' }
+                  ]}
+                  selectable
+                >
+                  {renderTableContent()}
+                </IndexTable>
               </div>
             </div>
           </Card>
