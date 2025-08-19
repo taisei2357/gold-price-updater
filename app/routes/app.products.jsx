@@ -30,7 +30,7 @@ import {
 import { ClientCache, CACHE_KEYS } from "../utils/cache";
 import { authenticate } from "../shopify.server";
 import { runBulkUpdateBySpec } from "../models/price.server";
-import { fetchGoldPriceDataTanaka } from "../models/gold.server";
+import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
 
 // 商品フィルタリング（検索条件による）
@@ -124,24 +124,37 @@ async function fetchAllProducts(admin) {
   return allProducts;
 }
 
-// 金価格情報を取得（詳細データ版）- Server-side only
-async function fetchGoldPrice() {
+// 金・プラチナ価格情報を取得（詳細データ版）- Server-side only
+async function fetchMetalPrices() {
   try {
-    const goldData = await fetchGoldPriceDataTanaka();
-    if (!goldData || goldData.changeRatio === null) return null;
+    const [goldData, platinumData] = await Promise.all([
+      fetchGoldPriceDataTanaka(),
+      fetchPlatinumPriceDataTanaka()
+    ]);
     
     return {
-      ratio: goldData.changeRatio,
-      percentage: (goldData.changeRatio * 100).toFixed(2),
-      change: goldData.changePercent,
-      retailPrice: goldData.retailPrice,
-      retailPriceFormatted: goldData.retailPriceFormatted,
-      changeDirection: goldData.changeDirection,
-      lastUpdated: goldData.lastUpdated
+      gold: goldData && goldData.changeRatio !== null ? {
+        ratio: goldData.changeRatio,
+        percentage: (goldData.changeRatio * 100).toFixed(2),
+        change: goldData.changePercent,
+        retailPrice: goldData.retailPrice,
+        retailPriceFormatted: goldData.retailPriceFormatted,
+        changeDirection: goldData.changeDirection,
+        lastUpdated: goldData.lastUpdated
+      } : null,
+      platinum: platinumData && platinumData.changeRatio !== null ? {
+        ratio: platinumData.changeRatio,
+        percentage: (platinumData.changeRatio * 100).toFixed(2),
+        change: platinumData.changePercent,
+        retailPrice: platinumData.retailPrice,
+        retailPriceFormatted: platinumData.retailPriceFormatted,
+        changeDirection: platinumData.changeDirection,
+        lastUpdated: platinumData.lastUpdated
+      } : null
     };
   } catch (error) {
-    console.error("金価格取得エラー:", error);
-    return null;
+    console.error("金属価格取得エラー:", error);
+    return { gold: null, platinum: null };
   }
 }
 
@@ -151,14 +164,14 @@ export const loader = async ({ request }) => {
   const forceRefresh = url.searchParams.get('refresh') === 'true';
 
   // 軽い処理は即座に実行
-  const [goldPrice, selectedProducts, shopSetting] = await Promise.all([
-    fetchGoldPrice(),
+  const [metalPrices, selectedProducts, shopSetting] = await Promise.all([
+    fetchMetalPrices(),
     prisma.selectedProduct.findMany({
       where: { 
         shopDomain: session.shop,
         selected: true 
       },
-      select: { productId: true }
+      select: { productId: true, metalType: true }
     }),
     prisma.shopSetting.findUnique({
       where: { shopDomain: session.shop }
@@ -172,8 +185,10 @@ export const loader = async ({ request }) => {
 
   return defer({
     products: productsPromise, // Promise を渡す
-    goldPrice: goldPrice,
+    goldPrice: metalPrices.gold,
+    platinumPrice: metalPrices.platinum,
     selectedProductIds: selectedProductIds,
+    savedSelectedProducts: selectedProducts,
     shopSetting: shopSetting,
     forceRefresh: forceRefresh,
     cacheTimestamp: Date.now()
@@ -187,6 +202,7 @@ export const action = async ({ request }) => {
 
   if (action === "saveSelection") {
     const ids = formData.getAll("productId").map(String);
+    const metalTypes = formData.getAll("metalType"); // 金属種別配列
     const uniqueIds = Array.from(new Set(ids)); // フロント由来の重複を除去
     
     // 既存の選択をクリア
@@ -197,10 +213,11 @@ export const action = async ({ request }) => {
     // 新しい選択を保存（重複は既に除去済み）
     if (uniqueIds.length > 0) {
       await prisma.selectedProduct.createMany({
-        data: uniqueIds.map(productId => ({
+        data: uniqueIds.map((productId, index) => ({
           shopDomain: session.shop,
           productId: productId,
-          selected: true
+          selected: true,
+          metalType: metalTypes[index] === 'platinum' ? 'platinum' : 'gold' // デフォルトは金
         }))
       });
     }
@@ -242,11 +259,12 @@ export const action = async ({ request }) => {
   return json({ error: "不正なアクション" });
 };
 
-function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting, forceRefresh, cacheTimestamp }) {
+function ProductsContent({ products, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
   
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [productMetalTypes, setProductMetalTypes] = useState({}); // 商品IDと金属種別のマッピング
   const [searchValue, setSearchValue] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [minPriceRate, setMinPriceRate] = useState(shopSetting?.minPricePct || 93);
@@ -271,6 +289,15 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
         if (selectedProductIds && selectedProductIds.length > 0) {
           const persistedSelected = cachedProducts.filter(p => selectedProductIds.includes(p.id));
           setSelectedProducts(persistedSelected);
+          
+          // 保存された金属種別設定を復元
+          if (savedSelectedProducts && savedSelectedProducts.length > 0) {
+            const metalTypeMap = {};
+            savedSelectedProducts.forEach(sp => {
+              metalTypeMap[sp.productId] = sp.metalType;
+            });
+            setProductMetalTypes(metalTypeMap);
+          }
         }
         return;
       }
@@ -286,6 +313,15 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
       if (selectedProductIds && selectedProductIds.length > 0) {
         const persistedSelected = products.filter(p => selectedProductIds.includes(p.id));
         setSelectedProducts(persistedSelected);
+        
+        // 保存された金属種別設定を復元
+        if (savedSelectedProducts && savedSelectedProducts.length > 0) {
+          const metalTypeMap = {};
+          savedSelectedProducts.forEach(sp => {
+            metalTypeMap[sp.productId] = sp.metalType;
+          });
+          setProductMetalTypes(metalTypeMap);
+        }
       }
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
@@ -307,19 +343,42 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
     const product = products.find(p => p.id === productId);
     if (isSelected) {
       setSelectedProducts(prev => [...prev, product]);
+      // デフォルトで金を選択
+      if (!productMetalTypes[productId]) {
+        setProductMetalTypes(prev => ({ ...prev, [productId]: 'gold' }));
+      }
     } else {
       setSelectedProducts(prev => prev.filter(p => p.id !== productId));
+      // 選択解除時は金属種別も削除
+      setProductMetalTypes(prev => {
+        const newTypes = { ...prev };
+        delete newTypes[productId];
+        return newTypes;
+      });
     }
-  }, [products]);
+  }, [products, productMetalTypes]);
 
   // 全選択/全解除
   const handleSelectAll = useCallback((isSelected) => {
     if (isSelected) {
       setSelectedProducts(filteredProducts);
+      // 全選択時は全商品をデフォルトの金に設定
+      const newMetalTypes = {};
+      filteredProducts.forEach(product => {
+        newMetalTypes[product.id] = productMetalTypes[product.id] || 'gold';
+      });
+      setProductMetalTypes(prev => ({ ...prev, ...newMetalTypes }));
     } else {
       setSelectedProducts([]);
+      // 全解除時は金属種別もクリア
+      setProductMetalTypes({});
     }
-  }, [filteredProducts]);
+  }, [filteredProducts, productMetalTypes]);
+
+  // 金属種別変更ハンドラー
+  const handleMetalTypeChange = useCallback((productId, metalType) => {
+    setProductMetalTypes(prev => ({ ...prev, [productId]: metalType }));
+  }, []);
 
   // 選択状態を保存
   const saveSelection = useCallback(() => {
@@ -327,39 +386,66 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
     formData.append("action", "saveSelection");
     selectedProducts.forEach(product => {
       formData.append("productId", product.id);
+      formData.append("metalType", productMetalTypes[product.id] || 'gold');
     });
     
     fetcher.submit(formData, { method: "post" });
-  }, [selectedProducts, fetcher]);
+  }, [selectedProducts, productMetalTypes, fetcher]);
 
   // 価格プレビュー生成
   const generatePricePreview = useCallback(() => {
-    if (selectedProducts.length === 0 || !goldPrice) return;
+    if (selectedProducts.length === 0) return;
 
-    const preview = selectedProducts.map(product => ({
-      ...product,
-      variants: product.variants.edges.map(edge => {
-        const variant = edge.node;
-        const currentPrice = parseFloat(variant.price);
-        const newPrice = calculateNewPrice(currentPrice, goldPrice.ratio, minPriceRate / 100);
-        
+    const preview = selectedProducts.map(product => {
+      const metalType = productMetalTypes[product.id] || 'gold';
+      const priceData = metalType === 'gold' ? goldPrice : platinumPrice;
+      
+      if (!priceData) {
         return {
-          ...variant,
-          currentPrice,
-          newPrice,
-          priceChange: newPrice - currentPrice,
-          changed: newPrice !== currentPrice
+          ...product,
+          metalType,
+          error: `${metalType === 'gold' ? '金' : 'プラチナ'}価格データが取得できません`,
+          variants: product.variants.edges.map(edge => ({
+            ...edge.node,
+            currentPrice: parseFloat(edge.node.price),
+            newPrice: parseFloat(edge.node.price),
+            priceChange: 0,
+            changed: false
+          }))
         };
-      })
-    }));
+      }
+
+      return {
+        ...product,
+        metalType,
+        variants: product.variants.edges.map(edge => {
+          const variant = edge.node;
+          const currentPrice = parseFloat(variant.price);
+          const newPrice = calculateNewPrice(currentPrice, priceData.ratio, minPriceRate / 100);
+          
+          return {
+            ...variant,
+            currentPrice,
+            newPrice,
+            priceChange: newPrice - currentPrice,
+            changed: newPrice !== currentPrice
+          };
+        })
+      };
+    });
 
     setPricePreview(preview);
     setShowPreview(true);
-  }, [selectedProducts, goldPrice, minPriceRate]);
+  }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate]);
 
   // 価格更新実行
   const executePriceUpdate = useCallback(() => {
-    if (!goldPrice) return;
+    // 金またはプラチナ価格が利用可能かチェック
+    const hasGoldProducts = selectedProducts.some(p => (productMetalTypes[p.id] || 'gold') === 'gold');
+    const hasPlatinumProducts = selectedProducts.some(p => productMetalTypes[p.id] === 'platinum');
+    
+    if (hasGoldProducts && !goldPrice) return;
+    if (hasPlatinumProducts && !platinumPrice) return;
     
     const updateData = selectedProducts.map(product => ({
       ...product,
@@ -376,7 +462,7 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
     );
 
     setShowPreview(false);
-  }, [selectedProducts, goldPrice, minPriceRate, fetcher]);
+  }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, fetcher]);
 
   // データテーブル用の行データ
   const tableRows = filteredProducts.map(product => {
@@ -396,7 +482,19 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
         {product.status}
       </Badge>,
       priceRange,
-      variants.length
+      variants.length,
+      isSelected ? (
+        <Select
+          options={[
+            { label: "金価格", value: "gold" },
+            { label: "プラチナ価格", value: "platinum" }
+          ]}
+          value={productMetalTypes[product.id] || 'gold'}
+          onChange={(value) => handleMetalTypeChange(product.id, value)}
+        />
+      ) : (
+        <Text variant="bodySm" tone="subdued">未選択</Text>
+      )
     ];
   });
 
@@ -407,7 +505,9 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
       primaryAction={{
         content: "価格調整プレビュー",
         onAction: generatePricePreview,
-        disabled: selectedProducts.length === 0 || !goldPrice,
+        disabled: selectedProducts.length === 0 || 
+          (selectedProducts.some(p => (productMetalTypes[p.id] || 'gold') === 'gold') && !goldPrice) ||
+          (selectedProducts.some(p => productMetalTypes[p.id] === 'platinum') && !platinumPrice),
         loading: fetcher.state === "submitting"
       }}
       secondaryActions={[
@@ -563,8 +663,8 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
         <Layout.Section>
           <Card>
             <DataTable
-              columnContentTypes={["text", "text", "text", "text", "numeric"]}
-              headings={["選択", "商品名", "ステータス", "価格", "バリエーション"]}
+              columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
+              headings={["選択", "商品名", "ステータス", "価格", "バリエーション", "金属種別"]}
               rows={tableRows}
               pagination={{
                 hasNext: false,
@@ -597,20 +697,31 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
               {pricePreview.map(product => (
                 <Card key={product.id}>
                   <BlockStack gap="300">
-                    <h4>{product.title}</h4>
-                    {product.variants.map(variant => (
-                      <InlineStack key={variant.id} align="space-between">
-                        <span>{variant.title || "デフォルト"}</span>
-                        <InlineStack gap="200">
-                          <span>¥{variant.currentPrice} → ¥{variant.newPrice}</span>
-                          {variant.changed && (
-                            <Badge tone={variant.priceChange > 0 ? "warning" : "success"}>
-                              {variant.priceChange > 0 ? '+' : ''}{variant.priceChange}円
-                            </Badge>
-                          )}
+                    <InlineStack align="space-between">
+                      <h4>{product.title}</h4>
+                      <Badge tone={product.metalType === 'gold' ? 'warning' : 'info'}>
+                        {product.metalType === 'gold' ? '金価格' : 'プラチナ価格'}
+                      </Badge>
+                    </InlineStack>
+                    {product.error ? (
+                      <Banner tone="critical">
+                        {product.error}
+                      </Banner>
+                    ) : (
+                      product.variants.map(variant => (
+                        <InlineStack key={variant.id} align="space-between">
+                          <span>{variant.title || "デフォルト"}</span>
+                          <InlineStack gap="200">
+                            <span>¥{variant.currentPrice} → ¥{variant.newPrice}</span>
+                            {variant.changed && (
+                              <Badge tone={variant.priceChange > 0 ? "warning" : "success"}>
+                                {variant.priceChange > 0 ? '+' : ''}{variant.priceChange}円
+                              </Badge>
+                            )}
+                          </InlineStack>
                         </InlineStack>
-                      </InlineStack>
-                    ))}
+                      ))
+                    )}
                   </BlockStack>
                 </Card>
               ))}
@@ -673,7 +784,7 @@ function ProductsContent({ products, goldPrice, selectedProductIds, shopSetting,
 
 export default function Products() {
   const data = useLoaderData();
-  const { goldPrice, selectedProductIds, shopSetting, forceRefresh, cacheTimestamp } = data;
+  const { goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp } = data;
 
   return (
     <Suspense
@@ -750,7 +861,9 @@ export default function Products() {
           <ProductsContent
             products={products}
             goldPrice={goldPrice}
+            platinumPrice={platinumPrice}
             selectedProductIds={selectedProductIds}
+            savedSelectedProducts={savedSelectedProducts}
             shopSetting={shopSetting}
             forceRefresh={forceRefresh}
             cacheTimestamp={cacheTimestamp}
