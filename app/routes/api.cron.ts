@@ -81,6 +81,10 @@ async function updateShopPrices(shop: string, accessToken: string) {
       where: { shopDomain: shop } 
     });
     
+    // 93 は「93%」の意味（整数%で保存）。内部計算は 0–1 に正規化。
+    const minPctSaved = setting?.minPricePct ?? 93;
+    const minPct01 = minPctSaved > 1 ? minPctSaved / 100 : minPctSaved;
+    
     if (!setting || !setting.autoUpdateEnabled) {
       console.log(`${shop}: 自動更新が無効です`);
       return { 
@@ -91,10 +95,6 @@ async function updateShopPrices(shop: string, accessToken: string) {
         failed: 0 
       };
     }
-
-    // minPricePct の正規化（0.93 または 93 のどちらでも対応）
-    const minPctRaw = setting.minPricePct || 93;
-    const minPct01 = minPctRaw > 1 ? minPctRaw / 100 : minPctRaw;
 
     // 3) 対象商品取得
     const targets = await prisma.selectedProduct.findMany({
@@ -146,7 +146,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
               shopDomain: shop,
               executionType: 'cron',
               goldRatio: ratio,
-              minPricePct: Math.round(minPct01 * 100),
+              minPricePct: minPctSaved,
               success: false,
               errorMessage: '401 Unauthorized: 再認証が必要',
               totalProducts: targets.length,
@@ -230,7 +230,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
           shopDomain: shop,
           executionType: 'cron',
           goldRatio: ratio,
-          minPricePct: minPctRaw,
+          minPricePct: minPctSaved,
           totalProducts: targets.length,
           updatedCount: 0,
           failedCount: 0,
@@ -289,7 +289,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
               shopDomain: shop,
               executionType: 'cron',
               goldRatio: ratio,
-              minPricePct: Math.round(minPct01 * 100),
+              minPricePct: minPctSaved,
               totalProducts: targets.length,
               updatedCount: updated,
               failedCount: entries.length - updated,
@@ -373,7 +373,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
         shopDomain: shop,
         executionType: 'cron',
         goldRatio: ratio,
-        minPricePct: Math.round(minPct01 * 100),
+        minPricePct: minPctSaved,
         totalProducts: targets.length,
         updatedCount: updated,
         failedCount: failed,
