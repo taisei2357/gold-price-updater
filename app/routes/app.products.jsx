@@ -438,15 +438,27 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 
   // 一括金属種別設定ハンドラー（新規選択商品のみ対象）
   const handleBulkMetalTypeChange = useCallback((metalType) => {
+    const targetProducts = selectedProducts.filter(product => !selectedProductIds.includes(product.id));
+    
+    if (targetProducts.length === 0) return;
+    
     const newMetalTypes = {};
-    selectedProducts.forEach(product => {
-      // 既に保存されている商品（selectedProductIds に含まれる）は除外
-      if (!selectedProductIds.includes(product.id)) {
-        newMetalTypes[product.id] = metalType;
-      }
+    targetProducts.forEach(product => {
+      newMetalTypes[product.id] = metalType;
     });
     setProductMetalTypes(prev => ({ ...prev, ...newMetalTypes }));
-  }, [selectedProducts, selectedProductIds]);
+    
+    // 一括設定時も即座にDBに保存
+    const formData = new FormData();
+    formData.append("action", "saveSelection");
+    
+    targetProducts.forEach(product => {
+      formData.append("productId", product.id);
+      formData.append("metalType", metalType);
+    });
+    
+    fetcher.submit(formData, { method: "post" });
+  }, [selectedProducts, selectedProductIds, fetcher]);
 
   // 選択状態を保存
   const saveSelection = useCallback(() => {
