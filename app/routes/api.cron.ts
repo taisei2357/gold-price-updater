@@ -62,6 +62,7 @@ function calcFinalPriceWithStep(current: number, ratio: number, minPct01: number
 // 単一ショップの価格更新処理
 async function updateShopPrices(shop: string, accessToken: string) {
   const admin = new ShopifyAdminClient(shop, accessToken);
+  let minPctSaved = 93; // デフォルト値
   
   try {
     // 1) 金価格変動率取得（修正済みロジック）
@@ -82,7 +83,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
     });
     
     // 93 は「93%」の意味（整数%で保存）。内部計算は 0–1 に正規化。
-    const minPctSaved = setting?.minPricePct ?? 93;
+    minPctSaved = setting?.minPricePct ?? 93;
     const minPct01 = minPctSaved > 1 ? minPctSaved / 100 : minPctSaved;
     
     if (!setting || !setting.autoUpdateEnabled) {
@@ -400,7 +401,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
         shopDomain: shop,
         executionType: 'cron',
         goldRatio: null,
-        minPricePct: 93,
+        minPricePct: minPctSaved,
         totalProducts: 0,
         updatedCount: 0,
         failedCount: 0,
