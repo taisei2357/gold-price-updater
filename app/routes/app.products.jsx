@@ -797,22 +797,23 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                 <IndexTable
                   resourceName={{ singular: '商品', plural: '商品' }}
                   itemCount={filteredProducts.length}
-                  selectedItemsCount={selectedProducts.length}
-                  onSelectionChange={(type) => {
-                    if (type === 'all') {
+                  selectedItemsCount={selectedProducts.length > 0 ? 'All' : 0}
+                  onSelectionChange={(selectionType) => {
+                    if (selectionType === 'all') {
                       handleSelectAll(true);
-                    } else if (type === 'none') {
+                    } else if (selectionType === 'none') {
                       handleSelectAll(false);
                     }
                   }}
                   headings={[
+                    { title: '選択' },
                     { title: '商品名' },
                     { title: 'ステータス' },
                     { title: '価格' },
                     { title: 'バリエーション' },
                     { title: '価格連動設定' }
                   ]}
-                  selectable
+                  selectable={false}
                 >
                   {filteredProducts.map((product, index) => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
@@ -827,9 +828,14 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                       <IndexTable.Row
                         id={product.id}
                         key={product.id}
-                        selected={isSelected}
-                        onSelectionChange={(selected) => handleSelectProduct(product.id, selected)}
                       >
+                        <IndexTable.Cell>
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={(checked) => handleSelectProduct(product.id, checked)}
+                          />
+                        </IndexTable.Cell>
+                        
                         <IndexTable.Cell>
                           <Box minWidth="300px" maxWidth="400px">
                             <InlineStack gap="200" blockAlign="center">
