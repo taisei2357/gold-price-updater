@@ -114,6 +114,9 @@ async function updateShopPrices(shop: string, accessToken: string) {
 
     // 4) 価格更新処理
     const entries: any[] = [];
+    let updated = 0, failed = 0;
+    const details: any[] = [];
+    
     for (const target of targets) {
       try {
         const resp = await admin.graphql(`
@@ -142,7 +145,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
             data: {
               shopDomain: shop,
               executionType: 'cron',
-              goldRatio,
+              goldRatio: ratio,
               minPricePct: Math.round(minPct01 * 100),
               success: false,
               errorMessage: '401 Unauthorized: 再認証が必要',
@@ -214,7 +217,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
         details.push({ 
           success: false, 
           productId: target.productId, 
-          error: `商品処理エラー: ${error.message}` 
+          error: `商品処理エラー: ${(error as Error).message}` 
         });
         failed += 1;
       }
@@ -253,8 +256,8 @@ async function updateShopPrices(shop: string, accessToken: string) {
       byProduct.set(e.productId, arr);
     }
 
-    let updated = 0, failed = 0;
-    const details: any[] = [];
+    updated = 0; // リセット
+    failed = 0;  // リセット
 
     for (const [productId, variants] of byProduct) {
       try {
@@ -334,7 +337,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
             });
           }
         } else {
-          const updatedVariants = r?.data?.productVariantsBulkUpdate?.productVariants || [];
+          const updatedVariants = res.body?.data?.productVariantsBulkUpdate?.productVariants || [];
           updated += updatedVariants.length;
           for (const variant of variants) {
             details.push({ 
@@ -357,7 +360,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
             productId, 
             variantId: variant.id,
             oldPrice: variant.oldPrice,
-            error: `更新処理エラー: ${error.message}`
+            error: `更新処理エラー: ${(error as Error).message}`
           });
         }
         failed += variants.length;
@@ -370,7 +373,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
         shopDomain: shop,
         executionType: 'cron',
         goldRatio: ratio,
-        minPricePct: minPct,
+        minPricePct: Math.round(minPct01 * 100),
         totalProducts: targets.length,
         updatedCount: updated,
         failedCount: failed,
@@ -397,19 +400,19 @@ async function updateShopPrices(shop: string, accessToken: string) {
         shopDomain: shop,
         executionType: 'cron',
         goldRatio: null,
-        minPricePct: minPctRaw || 93,
+        minPricePct: 93,
         totalProducts: 0,
         updatedCount: 0,
         failedCount: 0,
         success: false,
-        errorMessage: error.message,
+        errorMessage: (error as Error).message,
       }
     });
 
     return { 
       shop, 
       success: false, 
-      error: error.message, 
+      error: (error as Error).message, 
       updated: 0, 
       failed: 0 
     };
@@ -486,7 +489,7 @@ async function runAllShops() {
   } catch (error) {
     console.error("Cron実行エラー:", error);
     return {
-      error: error.message,
+      error: (error as Error).message,
       timestamp: new Date().toISOString(),
       summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
       shops: []
