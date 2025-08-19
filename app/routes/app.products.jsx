@@ -835,14 +835,14 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                             disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
                             tone="warning"
                           >
-                            🥇 すべて金価格に設定
+                            🥇 選択した全ての商品を金価格に設定
                           </Button>
                           <Button 
                             onClick={() => handleBulkMetalTypeChange('platinum')}
                             disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
                             tone="info"
                           >
-                            🥈 すべてプラチナ価格に設定
+                            🥈 選択した全ての商品をプラチナ価格に設定
                           </Button>
                         </InlineStack>
                         {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
