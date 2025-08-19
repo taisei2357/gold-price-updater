@@ -372,6 +372,15 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
     setProductMetalTypes(prev => ({ ...prev, [productId]: metalType }));
   }, []);
 
+  // 一括金属種別設定ハンドラー
+  const handleBulkMetalTypeChange = useCallback((metalType) => {
+    const newMetalTypes = {};
+    selectedProducts.forEach(product => {
+      newMetalTypes[product.id] = metalType;
+    });
+    setProductMetalTypes(prev => ({ ...prev, ...newMetalTypes }));
+  }, [selectedProducts]);
+
   // 選択状態を保存
   const saveSelection = useCallback(() => {
     // 金属種別が未選択の商品をチェック
@@ -502,7 +511,7 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
       priceRange,
       variants.length,
       isSelected ? (
-        <div>
+        <div style={{ minWidth: '180px' }}>
           <Select
             options={[
               { label: "金属種別を選択...", value: "", disabled: true },
@@ -514,9 +523,11 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
             placeholder="選択してください"
           />
           {!productMetalTypes[product.id] && (
-            <Text variant="bodySm" tone="critical">
-              ※金属種別を選択してください
-            </Text>
+            <div style={{ marginTop: '4px' }}>
+              <Text variant="bodySm" tone="critical">
+                ※選択が必要です
+              </Text>
+            </div>
           )}
         </div>
       ) : (
@@ -703,34 +714,61 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
                 max="100"
               />
 
-                <InlineStack gap="300">
-                  <Button 
-                    onClick={() => handleSelectAll(true)}
-                    disabled={filteredProducts.length === 0}
-                    size="large"
-                  >
-                    すべて選択
-                  </Button>
-                  <Button 
-                    onClick={() => handleSelectAll(false)}
-                    disabled={selectedProducts.length === 0}
-                    size="large"
-                  >
-                    選択解除
-                  </Button>
-                  <Button 
-                    onClick={saveSelection}
-                    disabled={
-                      fetcher.state === "submitting" || 
-                      selectedProducts.length === 0 ||
-                      selectedProducts.some(p => !productMetalTypes[p.id])
-                    }
-                    variant="primary"
-                    size="large"
-                  >
-                    選択を保存
-                  </Button>
-                </InlineStack>
+                <BlockStack gap="300">
+                  <InlineStack gap="300">
+                    <Button 
+                      onClick={() => handleSelectAll(true)}
+                      disabled={filteredProducts.length === 0}
+                      size="large"
+                    >
+                      すべて選択
+                    </Button>
+                    <Button 
+                      onClick={() => handleSelectAll(false)}
+                      disabled={selectedProducts.length === 0}
+                      size="large"
+                    >
+                      選択解除
+                    </Button>
+                    <Button 
+                      onClick={saveSelection}
+                      disabled={
+                        fetcher.state === "submitting" || 
+                        selectedProducts.length === 0 ||
+                        selectedProducts.some(p => !productMetalTypes[p.id])
+                      }
+                      variant="primary"
+                      size="large"
+                    >
+                      選択を保存
+                    </Button>
+                  </InlineStack>
+                  
+                  {/* 一括金属種別設定 */}
+                  {selectedProducts.length > 0 && (
+                    <Card>
+                      <InlineStack gap="300" blockAlign="center">
+                        <Text variant="bodyMd" as="span">
+                          選択中の商品({selectedProducts.length}件)に一括設定:
+                        </Text>
+                        <Button 
+                          onClick={() => handleBulkMetalTypeChange('gold')}
+                          disabled={selectedProducts.length === 0}
+                          tone="warning"
+                        >
+                          🥇 すべて金価格に設定
+                        </Button>
+                        <Button 
+                          onClick={() => handleBulkMetalTypeChange('platinum')}
+                          disabled={selectedProducts.length === 0}
+                          tone="info"
+                        >
+                          🥈 すべてプラチナ価格に設定
+                        </Button>
+                      </InlineStack>
+                    </Card>
+                  )}
+                </BlockStack>
                 
                 {/* 選択状態の表示 */}
                 {selectedProducts.length > 0 && (
@@ -802,15 +840,26 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 
         <Layout.Section>
           <Card>
-            <DataTable
-              columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
-              headings={["選択", "商品名", "ステータス", "価格", "バリエーション", "価格連動設定"]}
-              rows={tableRows}
-              pagination={{
-                hasNext: false,
-                hasPrevious: false,
-              }}
-            />
+            <div style={{ 
+              overflowX: 'auto',
+              width: '100%',
+              maxWidth: '100vw'
+            }}>
+              <div style={{ 
+                minWidth: '1200px',
+                width: 'max-content'
+              }}>
+                <DataTable
+                  columnContentTypes={["text", "text", "text", "text", "numeric", "text"]}
+                  headings={["選択", "商品名", "ステータス", "価格", "バリエーション", "価格連動設定"]}
+                  rows={tableRows}
+                  pagination={{
+                    hasNext: false,
+                    hasPrevious: false,
+                  }}
+                />
+              </div>
+            </div>
           </Card>
         </Layout.Section>
 
