@@ -511,7 +511,8 @@ export const action = async ({ request }) => {
 };
 
 function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
-  const fetcher = useFetcher();
+  const mu = useFetcher();       // product/collection の保存・解除用
+  const updater = useFetcher();  // 価格更新用
   const revalidator = useRevalidator();
   
   // 保存済み金属種別のマップ
@@ -592,21 +593,27 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 保存完了時の後処理
   useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.error) {
-      // 個別保存または一括保存が成功した場合、保存した商品を選択から除外
-      if (fetcher.data.savedProducts) {
-        const savedProductIds = fetcher.data.savedProducts.map(p => p.productId);
-        setSelectedProducts(prev => prev.filter(p => !savedProductIds.includes(p.id)));
+    if (mu.state === "idle" && mu.data) {
+      // 保存後：選択リストから外す（現状の挙動のまま）
+      if (mu.data.savedProducts) {
+        const savedIds = mu.data.savedProducts.map(p => p.productId);
+        setSelectedProducts(prev => prev.filter(p => !savedIds.includes(p.id)));
         // 注意: productMetalTypesは削除せず保持（ドロップダウン表示のため）
       }
       
-      // 商品解除が成功した場合の処理
-      if (fetcher.data.unselectedProducts) {
-        // 解除された商品は既にサーバー側で削除されているため、ページを再読み込みして最新状態を反映
-        window.location.reload();
+      // 解除後：ローカルも即時反映しつつ、loaderを再取得
+      if (mu.data.unselectedProducts) {
+        const removed = new Set(mu.data.unselectedProducts);
+        setSelectedProducts(prev => prev.filter(p => !removed.has(p.id)));
+        setProductMetalTypes(prev => {
+          const next = { ...prev };
+          mu.data.unselectedProducts.forEach(id => delete next[id]);
+          return next;
+        });
+        revalidator.revalidate();
       }
     }
-  }, [fetcher.state, fetcher.data?.savedProducts, fetcher.data?.unselectedProducts]);
+  }, [mu.state, mu.data, revalidator]);
 
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
@@ -659,8 +666,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     formData.append("productId", productId);
     formData.append("metalType", metalType);
     
-    fetcher.submit(formData, { method: "post" });
-  }, [fetcher]);
+    mu.submit(formData, { method: "post" });
+  }, [mu]);
 
   // コレクション選択トグル
   const handleSelectCollection = useCallback((collectionId, checked) => {
@@ -672,9 +679,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       const fd = new FormData();
       fd.append("action", "unselectCollection");
       fd.append("collectionId", collectionId);
-      fetcher.submit(fd, { method: "post" });
+      mu.submit(fd, { method: "post" });
     }
-  }, [fetcher]);
+  }, [mu]);
 
   // コレクションの金属種別を設定→即保存
   const handleCollectionMetalTypeChange = useCallback((collectionId, type) => {
@@ -684,8 +691,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     fd.append("action", "saveCollectionSelection");
     fd.append("collectionId", collectionId);
     fd.append("metalType", type);
-    fetcher.submit(fd, { method: "post" });
-  }, [fetcher]);
+    mu.submit(fd, { method: "post" });
+  }, [mu]);
 
   // 一括金属種別設定ハンドラー（新規選択商品のみ対象）
   const handleBulkMetalTypeChange = useCallback((metalType) => {
@@ -708,8 +715,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       formData.append("metalType", metalType);
     });
     
-    fetcher.submit(formData, { method: "post" });
-  }, [selectedProducts, selectedProductIds, fetcher]);
+    mu.submit(formData, { method: "post" });
+  }, [selectedProducts, selectedProductIds, mu]);
 
   // 選択状態を保存
   const saveSelection = useCallback(() => {
@@ -728,8 +735,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       formData.append("metalType", productMetalTypes[product.id]);
     });
     
-    fetcher.submit(formData, { method: "post" });
-  }, [selectedProducts, productMetalTypes, fetcher]);
+    mu.submit(formData, { method: "post" });
+  }, [selectedProducts, productMetalTypes, mu]);
 
   // 商品選択解除ハンドラー
   const handleUnselectProduct = useCallback((productId) => {
@@ -737,8 +744,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     formData.append("action", "unselectProducts");
     formData.append("productId", productId);
     
-    fetcher.submit(formData, { method: "post" });
-  }, [fetcher]);
+    mu.submit(formData, { method: "post" });
+  }, [mu]);
 
   // 価格プレビュー生成
   const generatePricePreview = useCallback(() => {
@@ -800,7 +807,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       variants: product.variants.edges.map(edge => edge.node)
     }));
 
-    fetcher.submit(
+    updater.submit(
       {
         action: "updatePrices",
         selectedProducts: JSON.stringify(updateData),
@@ -810,7 +817,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     );
 
     setShowPreview(false);
-  }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, fetcher]);
+  }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, updater]);
 
 
   return (
@@ -828,7 +835,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         disabled: selectionType !== 'products' || selectedProducts.length === 0 || 
           (selectedProducts.some(p => (productMetalTypes[p.id] || 'gold') === 'gold') && !goldPrice) ||
           (selectedProducts.some(p => productMetalTypes[p.id] === 'platinum') && !platinumPrice),
-        loading: fetcher.state === "submitting"
+        loading: selectionType === 'products' && updater.state === "submitting"
       }}
       secondaryActions={[
         {
@@ -1067,7 +1074,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     <Button 
                       onClick={saveSelection}
                       disabled={
-                        fetcher.state === "submitting" || 
+                        mu.state === "submitting" || 
                         selectedProducts.length === 0 ||
                         selectedProducts.some(p => !productMetalTypes[p.id])
                       }
@@ -1170,9 +1177,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 )}
                 
                 {/* 保存結果メッセージ */}
-                {fetcher.data?.message && (
+                {mu.data?.message && (
                   <Banner tone="success">
-                    {fetcher.data.message}
+                    {mu.data.message}
                   </Banner>
                 )}
               </BlockStack>
@@ -1330,7 +1337,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                         variant="tertiary"
                                         tone="critical"
                                         onClick={() => handleUnselectProduct(product.id)}
-                                        disabled={fetcher.state === "submitting"}
+                                        disabled={mu.state === "submitting"}
                                       >
                                         解除
                                       </Button>
@@ -1441,7 +1448,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           primaryAction={{
             content: "価格を更新",
             onAction: executePriceUpdate,
-            loading: fetcher.state === "submitting"
+            loading: updater.state === "submitting"
           }}
           secondaryActions={[
             {
@@ -1489,39 +1496,39 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         </Modal>
 
         {/* 更新結果表示 */}
-        {fetcher.data?.updateResults && (
+        {updater.data?.updateResults && (
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
                 <h3>価格更新結果</h3>
                 
                 {/* サマリー情報 */}
-                {fetcher.data.summary && (
+                {updater.data.summary && (
                   <Card>
                     <InlineStack gap="400">
-                      <div>合計: <strong>{fetcher.data.summary.total}</strong>件</div>
-                      <div>成功: <strong>{fetcher.data.summary.success}</strong>件</div>
-                      <div>失敗: <strong>{fetcher.data.summary.failed}</strong>件</div>
+                      <div>合計: <strong>{updater.data.summary.total}</strong>件</div>
+                      <div>成功: <strong>{updater.data.summary.success}</strong>件</div>
+                      <div>失敗: <strong>{updater.data.summary.failed}</strong>件</div>
                     </InlineStack>
                   </Card>
                 )}
 
                 {/* エラーメッセージ */}
-                {fetcher.data.error && (
+                {updater.data.error && (
                   <Banner tone="critical">
-                    {fetcher.data.error}
+                    {updater.data.error}
                   </Banner>
                 )}
 
                 {/* メッセージ */}
-                {fetcher.data.message && (
+                {updater.data.message && (
                   <Banner tone="info">
-                    {fetcher.data.message}
+                    {updater.data.message}
                   </Banner>
                 )}
 
                 {/* 詳細結果 */}
-                {fetcher.data.updateResults.map((result, index) => (
+                {updater.data.updateResults.map((result, index) => (
                   <Banner
                     key={index}
                     tone={result.success ? "success" : "critical"}
