@@ -746,6 +746,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 商品選択解除ハンドラー
   const handleUnselectProduct = useCallback((productId) => {
+    // ① 楽観的更新：プレビュー対象から即時に外す
+    setSelectedProducts(prev => prev.filter(p => p.id !== productId));
+    setProductMetalTypes(prev => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
+    // ② サーバーに解除リクエスト
     const formData = new FormData();
     formData.append("action", "unselectProducts");
     formData.append("productId", productId);
