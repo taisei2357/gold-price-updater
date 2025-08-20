@@ -257,7 +257,10 @@ export const loader = async ({ request }) => {
 
   // 重い商品・コレクション取得処理は非同期化
   const productsPromise = fetchAllProducts(admin);
-  const collectionsPromise = fetchAllCollections(admin);
+  const collectionsPromise = fetchAllCollections(admin).catch((e) => {
+    console.error('fetchAllCollections failed:', e);
+    return [];
+  });
 
   return defer({
     products: productsPromise, // Promise を渡す
