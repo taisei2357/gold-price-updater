@@ -561,6 +561,20 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     });
   }, []);
   
+  // revalidateのデバウンス
+  const revalidateTimer = useRef(null);
+  const scheduleRevalidate = useCallback(() => {
+    if (revalidateTimer.current) clearTimeout(revalidateTimer.current);
+    revalidateTimer.current = setTimeout(() => {
+      revalidator.revalidate();
+      revalidateTimer.current = null;
+    }, 500);
+  }, [revalidator]);
+
+  useEffect(() => () => {
+    if (revalidateTimer.current) clearTimeout(revalidateTimer.current);
+  }, []);
+  
   // キャッシュ管理とデータ初期化
   useEffect(() => {
     // キャッシュからの復元試行
@@ -635,10 +649,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           return next;
         });
         removeSaved(mu.data.unselectedProducts); // ローカルミラーからも削除（保険）
-        revalidator.revalidate();
+        scheduleRevalidate(); // 連続解除時は最後に1回だけ revalidate
       }
     }
-  }, [mu.state, mu.data, revalidator, addSaved, removeSaved]);
+  }, [mu.state, mu.data, addSaved, removeSaved, scheduleRevalidate]);
 
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
@@ -784,6 +798,27 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     
     mu.submit(formData, { method: "post" });
   }, [mu, removeSaved]);
+
+  // 選択中の保存済みを一括解除
+  const handleBulkUnselect = useCallback(() => {
+    const ids = selectedProducts.filter(p => savedIdSet.has(p.id)).map(p => p.id);
+    if (ids.length === 0) return;
+
+    // 楽観的更新
+    removeSaved(ids);
+    setSelectedProducts(prev => prev.filter(p => !ids.includes(p.id)));
+    setProductMetalTypes(prev => {
+      const next = {...prev}; 
+      ids.forEach(id => delete next[id]); 
+      return next;
+    });
+
+    // サーバー
+    const fd = new FormData();
+    fd.append("action", "unselectProducts");
+    ids.forEach(id => fd.append("productId", id));
+    mu.submit(fd, { method: "post" });
+  }, [selectedProducts, savedIdSet, removeSaved, mu]);
 
   // 価格プレビュー生成
   const generatePricePreview = useCallback(() => {
@@ -1108,6 +1143,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       size="large"
                     >
                       選択解除
+                    </Button>
+                    <Button 
+                      onClick={handleBulkUnselect}
+                      tone="critical"
+                      disabled={selectedProducts.filter(p => savedIdSet.has(p.id)).length === 0 || mu.state === "submitting"}
+                      size="large"
+                    >
+                      選択中の保存済み {selectedProducts.filter(p => savedIdSet.has(p.id)).length} 件を解除
                     </Button>
                     <Button 
                       onClick={saveSelection}
