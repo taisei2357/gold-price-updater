@@ -522,6 +522,12 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     return m;
   }, [savedSelectedProducts]);
   
+  // 保存済みIDのSet（isSaved判定用）
+  const savedIds = useMemo(
+    () => new Set((savedSelectedProducts || []).map(sp => sp.productId)),
+    [savedSelectedProducts]
+  );
+  
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productMetalTypes, setProductMetalTypes] = useState({}); // 商品IDと金属種別のマッピング
   const [searchValue, setSearchValue] = useState("");
@@ -1235,7 +1241,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
                       : `¥${variants[0]?.node.price || 0}`;
                     const metalType = productMetalTypes[product.id];
-                    const isSaved = selectedProductIds.includes(product.id);
+                    const isSaved = savedIds.has(product.id);
                     const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "";
 
                     return (
