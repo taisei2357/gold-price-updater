@@ -68,54 +68,106 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   return Math.ceil(finalPrice / 10) * 10;
 }
 
-// コレクション取得処理（Admin GraphQL）
+// コレクション取得（APIバージョン差に強い実装）
 async function fetchAllCollections(admin) {
-  try {
-    let all = [];
+  async function paginate(query, rootKey, pickCount) {
+    const out = [];
     let cursor = null;
     let hasNext = true;
 
     while (hasNext) {
-      const res = await admin.graphql(
-        `#graphql
-          query getCollections($first: Int!, $after: String) {
-            collections(first: $first, after: $after) {
-              edges {
-                cursor
-                node {
-                  id
-                  title
-                  handle
-                  productsCount   # ← サブフィールド不要（Int）
-                }
-              }
-              pageInfo { hasNextPage }
-            }
-          }`,
-        { variables: { first: 250, after: cursor } }
-      );
-
+      const res = await admin.graphql(query, { variables: { first: 250, after: cursor } });
       const body = await res.json();
-      if (body?.errors?.length) {
-        console.error("Collections query error:", body.errors);
-        return []; // 失敗時は空で返す（UIは落とさない）
-      }
+      if (body?.errors?.length) throw new Error(JSON.stringify(body.errors));
 
-      const edges = body?.data?.collections?.edges ?? [];
-      all.push(
-        ...edges.map(({ node }) => ({
+      const conn = body?.data?.[rootKey];
+      const edges = conn?.edges ?? [];
+      for (const { node } of edges) {
+        out.push({
           id: node.id,
           title: node.title,
           handle: node.handle,
-          productsCount: Number(node.productsCount ?? 0),
-        }))
-      );
-
-      hasNext = body?.data?.collections?.pageInfo?.hasNextPage ?? false;
+          // 取得できた場合のみ件数を設定
+          productsCount:
+            pickCount === "scalar" ? Number(node.productsCount ?? 0) :
+            pickCount === "object" ? Number(node.productsCount?.count ?? 0) :
+            undefined,
+        });
+      }
+      hasNext = conn?.pageInfo?.hasNextPage ?? false;
       cursor = edges.length ? edges[edges.length - 1].cursor : null;
     }
+    return out;
+  }
 
-    return all;
+  const qCollectionsScalar = `#graphql
+    query($first:Int!,$after:String){
+      collections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+
+  const qCollectionsNoCount = `#graphql
+    query($first:Int!,$after:String){
+      collections(first:$first, after:$after){
+        edges{cursor node{ id title handle }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+
+  const qCustomScalar = `#graphql
+    query($first:Int!,$after:String){
+      customCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qSmartScalar = `#graphql
+    query($first:Int!,$after:String){
+      smartCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+
+  const qCustomObj = `#graphql
+    query($first:Int!,$after:String){
+      customCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount{count} }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qSmartObj = `#graphql
+    query($first:Int!,$after:String){
+      smartCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount{count} }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+
+  // 1) collections + scalar productsCount
+  try { return await paginate(qCollectionsScalar, "collections", "scalar"); } catch {}
+
+  // 2) collections（件数なし）
+  try { return await paginate(qCollectionsNoCount, "collections"); } catch {}
+
+  // 3) custom/smart（scalar）
+  try {
+    const [c, s] = await Promise.all([
+      paginate(qCustomScalar, "customCollections", "scalar"),
+      paginate(qSmartScalar, "smartCollections", "scalar"),
+    ]);
+    return [...c, ...s];
+  } catch {}
+
+  // 4) custom/smart（object count）
+  try {
+    const [c, s] = await Promise.all([
+      paginate(qCustomObj, "customCollections", "object"),
+      paginate(qSmartObj, "smartCollections", "object"),
+    ]);
+    return [...c, ...s];
   } catch (e) {
     console.error("fetchAllCollections failed:", e);
     return [];
@@ -1199,7 +1251,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         
                         <IndexTable.Cell>
                           <Badge tone="info">
-                            {collection.productsCount}件の商品
+                            {collection.productsCount ?? "-"}件の商品
                           </Badge>
                         </IndexTable.Cell>
                         
