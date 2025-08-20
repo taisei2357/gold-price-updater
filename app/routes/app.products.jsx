@@ -68,6 +68,36 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   return Math.ceil(finalPrice / 10) * 10;
 }
 
+// コレクション内の商品IDを全部取得
+async function fetchProductIdsByCollection(admin, collectionId) {
+  let ids = [];
+  let cursor = null;
+  let hasNext = true;
+
+  while (hasNext) {
+    const res = await admin.graphql(
+      `#graphql
+        query ($id: ID!, $first: Int!, $after: String) {
+          collection(id: $id) {
+            products(first: $first, after: $after) {
+              edges { cursor node { id } }
+              pageInfo { hasNextPage }
+            }
+          }
+        }`,
+      { variables: { id: collectionId, first: 250, after: cursor } }
+    );
+    const body = await res.json();
+    if (body?.errors?.length) throw new Error(body.errors[0].message || "GraphQL error");
+
+    const edges = body?.data?.collection?.products?.edges ?? [];
+    ids.push(...edges.map(e => e.node.id));
+    hasNext = body?.data?.collection?.products?.pageInfo?.hasNextPage ?? false;
+    cursor = edges.length ? edges[edges.length - 1].cursor : null;
+  }
+  return ids;
+}
+
 // コレクション取得（APIバージョン差に強い実装）
 async function fetchAllCollections(admin) {
   async function paginate(query, rootKey, pickCount) {
@@ -423,6 +453,60 @@ export const action = async ({ request }) => {
     }
   }
 
+  if (action === "saveCollectionSelection") {
+    const collectionId = formData.get("collectionId");
+    const metalType = formData.get("metalType") === "platinum" ? "platinum" : "gold";
+
+    try {
+      // コレクションの商品を全部拾う
+      const productIds = await fetchProductIdsByCollection(admin, collectionId);
+
+      const saved = [];
+      for (const productId of productIds) {
+        await prisma.selectedProduct.upsert({
+          where: { shopDomain_productId: { shopDomain: session.shop, productId } },
+          update: { selected: true, metalType },
+          create: { shopDomain: session.shop, productId, selected: true, metalType },
+        });
+        saved.push({ productId, metalType });
+      }
+      
+      return json({
+        success: true,
+        message: `コレクション内 ${saved.length}件を${metalType === "platinum" ? "プラチナ" : "金"}で登録しました`,
+        savedProducts: saved,
+      });
+    } catch (error) {
+      return json({ 
+        error: `コレクション商品登録中にエラーが発生しました: ${error.message}`,
+        success: false
+      });
+    }
+  }
+
+  if (action === "unselectCollection") {
+    const collectionId = formData.get("collectionId");
+    
+    try {
+      const ids = await fetchProductIdsByCollection(admin, collectionId);
+
+      await prisma.selectedProduct.deleteMany({
+        where: { shopDomain: session.shop, productId: { in: ids } },
+      });
+
+      return json({
+        success: true,
+        message: `コレクション内 ${ids.length}件の登録を解除しました`,
+        unselectedProducts: ids,
+      });
+    } catch (error) {
+      return json({ 
+        error: `コレクション商品解除中にエラーが発生しました: ${error.message}`,
+        success: false
+      });
+    }
+  }
+
   return json({ error: "不正なアクション" });
 };
 
@@ -448,6 +532,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [pricePreview, setPricePreview] = useState([]);
   const [isUsingCache, setIsUsingCache] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  
+  // コレクション選択用のstate
+  const [selectedCollections, setSelectedCollections] = useState([]); // collectionId[]
+  const [collectionMetalTypes, setCollectionMetalTypes] = useState({}); // { [collectionId]: 'gold'|'platinum' }
   
   // キャッシュ管理とデータ初期化
   useEffect(() => {
@@ -572,6 +660,31 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     formData.append("metalType", metalType);
     
     fetcher.submit(formData, { method: "post" });
+  }, [fetcher]);
+
+  // コレクション選択トグル
+  const handleSelectCollection = useCallback((collectionId, checked) => {
+    setSelectedCollections(prev =>
+      checked ? [...new Set([...prev, collectionId])] : prev.filter(id => id !== collectionId)
+    );
+    if (!checked) {
+      // 解除時はDBからも外す
+      const fd = new FormData();
+      fd.append("action", "unselectCollection");
+      fd.append("collectionId", collectionId);
+      fetcher.submit(fd, { method: "post" });
+    }
+  }, [fetcher]);
+
+  // コレクションの金属種別を設定→即保存
+  const handleCollectionMetalTypeChange = useCallback((collectionId, type) => {
+    setCollectionMetalTypes(prev => ({ ...prev, [collectionId]: type }));
+
+    const fd = new FormData();
+    fd.append("action", "saveCollectionSelection");
+    fd.append("collectionId", collectionId);
+    fd.append("metalType", type);
+    fetcher.submit(fd, { method: "post" });
   }, [fetcher]);
 
   // 一括金属種別設定ハンドラー（新規選択商品のみ対象）
@@ -712,7 +825,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       primaryAction={{
         content: "価格調整プレビュー",
         onAction: generatePricePreview,
-        disabled: selectedProducts.length === 0 || 
+        disabled: selectionType !== 'products' || selectedProducts.length === 0 || 
           (selectedProducts.some(p => (productMetalTypes[p.id] || 'gold') === 'gold') && !goldPrice) ||
           (selectedProducts.some(p => productMetalTypes[p.id] === 'platinum') && !platinumPrice),
         loading: fetcher.state === "submitting"
@@ -1099,9 +1212,11 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     { title: 'バリエーション' },
                     { title: '連動設定' }
                   ] : [
+                    { title: '選択' },
                     { title: 'コレクション名' },
                     { title: '商品数' },
-                    { title: 'ハンドル' }
+                    { title: 'ハンドル' },
+                    { title: '連動設定' }
                   ]}
                   selectable={false}
                 >
@@ -1233,35 +1348,84 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   })
                   ) : (
                     // コレクション表示モード
-                    collections?.map((collection) => (
-                      <IndexTable.Row
-                        id={collection.id}
-                        key={collection.id}
-                      >
-                        <IndexTable.Cell>
-                          <Box minWidth="200px">
-                            <InlineStack gap="200" blockAlign="center">
-                              <span style={{ fontSize: '16px' }}>📦</span>
-                              <Text variant="bodyMd" fontWeight="medium">
-                                {collection.title}
+                    collections?.map((collection) => {
+                      const isChecked = selectedCollections.includes(collection.id);
+                      const cType = collectionMetalTypes[collection.id] || "";
+
+                      return (
+                        <IndexTable.Row
+                          id={collection.id}
+                          key={collection.id}
+                        >
+                          {/* 選択 */}
+                          <IndexTable.Cell>
+                            <Box minWidth="60px" maxWidth="60px">
+                              <Checkbox
+                                checked={isChecked}
+                                onChange={(checked) => handleSelectCollection(collection.id, checked)}
+                              />
+                            </Box>
+                          </IndexTable.Cell>
+
+                          {/* コレクション名 */}
+                          <IndexTable.Cell>
+                            <Box minWidth="200px" maxWidth="300px">
+                              <InlineStack gap="200" blockAlign="center">
+                                <span style={{ fontSize: '16px' }}>📦</span>
+                                <Text variant="bodyMd" fontWeight="medium">
+                                  {collection.title}
+                                </Text>
+                                {isChecked && cType && (
+                                  <Badge tone={cType === 'gold' ? 'warning' : 'info'} size="small">
+                                    {cType === 'gold' ? '金' : 'Pt'}
+                                  </Badge>
+                                )}
+                              </InlineStack>
+                            </Box>
+                          </IndexTable.Cell>
+                          
+                          {/* 商品数 */}
+                          <IndexTable.Cell>
+                            <Box minWidth="120px" maxWidth="160px">
+                              <Badge tone="info">
+                                {collection.productsCount ?? "-"}件の商品
+                              </Badge>
+                            </Box>
+                          </IndexTable.Cell>
+                          
+                          {/* ハンドル */}
+                          <IndexTable.Cell>
+                            <Box minWidth="150px" maxWidth="200px">
+                              <Text variant="bodySm" tone="subdued">
+                                {collection.handle}
                               </Text>
-                            </InlineStack>
-                          </Box>
-                        </IndexTable.Cell>
-                        
-                        <IndexTable.Cell>
-                          <Badge tone="info">
-                            {collection.productsCount ?? "-"}件の商品
-                          </Badge>
-                        </IndexTable.Cell>
-                        
-                        <IndexTable.Cell>
-                          <Text variant="bodySm" tone="subdued">
-                            {collection.handle}
-                          </Text>
-                        </IndexTable.Cell>
-                      </IndexTable.Row>
-                    )) || []
+                            </Box>
+                          </IndexTable.Cell>
+
+                          {/* 連動設定（金/プラチナ） */}
+                          <IndexTable.Cell>
+                            <Box minWidth="280px" maxWidth="340px">
+                              {isChecked ? (
+                                <Select
+                                  label="金属種別"
+                                  labelHidden
+                                  options={[
+                                    { label: "金属種別を選択...", value: "", disabled: true },
+                                    { label: "🥇 金価格", value: "gold" },
+                                    { label: "🥈 プラチナ価格", value: "platinum" },
+                                  ]}
+                                  value={cType}
+                                  onChange={(v) => handleCollectionMetalTypeChange(collection.id, v)}
+                                  placeholder="選択してください"
+                                />
+                              ) : (
+                                <Text variant="bodySm" tone="subdued">-</Text>
+                              )}
+                            </Box>
+                          </IndexTable.Cell>
+                        </IndexTable.Row>
+                      );
+                    }) || []
                   )}
                 </IndexTable>
               </div>
