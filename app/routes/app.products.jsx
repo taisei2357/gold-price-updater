@@ -71,68 +71,54 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
 // コレクション取得処理（Admin GraphQL）
 async function fetchAllCollections(admin) {
   try {
-    async function paginate(query, rootKey) {
-      const out = [];
-      let cursor = null;
-      let hasNextPage = true;
+    let all = [];
+    let cursor = null;
+    let hasNext = true;
 
-      while (hasNextPage) {
-        const res = await admin.graphql(query, {
-          variables: { first: 250, after: cursor },
-        });
-        const body = await res.json();
+    while (hasNext) {
+      const res = await admin.graphql(
+        `#graphql
+          query getCollections($first: Int!, $after: String) {
+            collections(first: $first, after: $after) {
+              edges {
+                cursor
+                node {
+                  id
+                  title
+                  handle
+                  productsCount   # ← サブフィールド不要（Int）
+                }
+              }
+              pageInfo { hasNextPage }
+            }
+          }`,
+        { variables: { first: 250, after: cursor } }
+      );
 
-        if (body?.errors?.length) {
-          throw new Error(body.errors[0].message || "GraphQL error");
-        }
-
-        const conn = body.data[rootKey];
-        const edges = conn?.edges || [];
-
-        for (const { node } of edges) {
-          out.push({
-            id: node.id,
-            title: node.title,
-            handle: node.handle,
-            // Admin GraphQL の productsCount は Int で返る
-            productsCount: node.productsCount ?? 0,
-          });
-        }
-        hasNextPage = conn?.pageInfo?.hasNextPage || false;
-        cursor = edges.length ? edges[edges.length - 1].cursor : null;
+      const body = await res.json();
+      if (body?.errors?.length) {
+        console.error("Collections query error:", body.errors);
+        return []; // 失敗時は空で返す（UIは落とさない）
       }
 
-      return out;
+      const edges = body?.data?.collections?.edges ?? [];
+      all.push(
+        ...edges.map(({ node }) => ({
+          id: node.id,
+          title: node.title,
+          handle: node.handle,
+          productsCount: Number(node.productsCount ?? 0),
+        }))
+      );
+
+      hasNext = body?.data?.collections?.pageInfo?.hasNextPage ?? false;
+      cursor = edges.length ? edges[edges.length - 1].cursor : null;
     }
 
-    const CUSTOM = `
-      query($first:Int!, $after:String) {
-        customCollections(first:$first, after:$after) {
-          edges { cursor node { id title handle productsCount } }
-          pageInfo { hasNextPage }
-        }
-      }
-    `;
-
-    const SMART = `
-      query($first:Int!, $after:String) {
-        smartCollections(first:$first, after:$after) {
-          edges { cursor node { id title handle productsCount } }
-          pageInfo { hasNextPage }
-        }
-      }
-    `;
-
-    const [customs, smarts] = await Promise.all([
-      paginate(CUSTOM, "customCollections"),
-      paginate(SMART, "smartCollections"),
-    ]);
-
-    // 片方しか無いストアもあるので結合して返す
-    return [...customs, ...smarts];
+    return all;
   } catch (e) {
-    console.error('fetchAllCollections failed:', e);
-    return []; // 失敗しても空配列を返す
+    console.error("fetchAllCollections failed:", e);
+    return [];
   }
 }
 
