@@ -544,6 +544,23 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [selectedCollections, setSelectedCollections] = useState([]); // collectionId[]
   const [collectionMetalTypes, setCollectionMetalTypes] = useState({}); // { [collectionId]: 'gold'|'platinum' }
   
+  // 保存済みIDのローカルミラー
+  const [savedIdSet, setSavedIdSet] = useState(
+    () => new Set((savedSelectedProducts || []).map(sp => sp.productId))
+  );
+
+  // 追加・削除ヘルパー
+  const addSaved = useCallback((ids) => {
+    setSavedIdSet(prev => new Set([...prev, ...ids]));
+  }, []);
+  const removeSaved = useCallback((ids) => {
+    setSavedIdSet(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.delete(id));
+      return next;
+    });
+  }, []);
+  
   // キャッシュ管理とデータ初期化
   useEffect(() => {
     // キャッシュからの復元試行
@@ -604,6 +621,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       if (mu.data.savedProducts) {
         const savedIds = mu.data.savedProducts.map(p => p.productId);
         setSelectedProducts(prev => prev.filter(p => !savedIds.includes(p.id)));
+        addSaved(savedIds); // ローカルミラーにも反映（保険）
         // 注意: productMetalTypesは削除せず保持（ドロップダウン表示のため）
       }
       
@@ -616,10 +634,11 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           mu.data.unselectedProducts.forEach(id => delete next[id]);
           return next;
         });
+        removeSaved(mu.data.unselectedProducts); // ローカルミラーからも削除（保険）
         revalidator.revalidate();
       }
     }
-  }, [mu.state, mu.data, revalidator]);
+  }, [mu.state, mu.data, revalidator, addSaved, removeSaved]);
 
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
@@ -665,6 +684,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   // 金属種別変更ハンドラー
   const handleMetalTypeChange = useCallback((productId, metalType) => {
     setProductMetalTypes(prev => ({ ...prev, [productId]: metalType }));
+    addSaved([productId]); // 即座に保存扱い
     
     // 金属種別設定時に即座にサーバーに保存
     const formData = new FormData();
@@ -673,7 +693,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     formData.append("metalType", metalType);
     
     mu.submit(formData, { method: "post" });
-  }, [mu]);
+  }, [mu, addSaved]);
 
   // コレクション選択トグル
   const handleSelectCollection = useCallback((collectionId, checked) => {
@@ -711,6 +731,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       newMetalTypes[product.id] = metalType;
     });
     setProductMetalTypes(prev => ({ ...prev, ...newMetalTypes }));
+    addSaved(targetProducts.map(p => p.id)); // 即座に保存扱い
     
     // 一括設定時も即座にDBに保存
     const formData = new FormData();
@@ -722,7 +743,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     });
     
     mu.submit(formData, { method: "post" });
-  }, [selectedProducts, selectedProductIds, mu]);
+  }, [selectedProducts, selectedProductIds, mu, addSaved]);
 
   // 選択状態を保存
   const saveSelection = useCallback(() => {
@@ -734,6 +755,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       return;
     }
     
+    addSaved(selectedProducts.map(p => p.id)); // 即座に保存扱い
+    
     const formData = new FormData();
     formData.append("action", "saveSelection");
     selectedProducts.forEach(product => {
@@ -742,7 +765,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     });
     
     mu.submit(formData, { method: "post" });
-  }, [selectedProducts, productMetalTypes, mu]);
+  }, [selectedProducts, productMetalTypes, mu, addSaved]);
 
   // 商品選択解除ハンドラー
   const handleUnselectProduct = useCallback((productId) => {
@@ -753,13 +776,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       delete next[productId];
       return next;
     });
+    removeSaved([productId]); // 保存扱いから即時除外
     // ② サーバーに解除リクエスト
     const formData = new FormData();
     formData.append("action", "unselectProducts");
     formData.append("productId", productId);
     
     mu.submit(formData, { method: "post" });
-  }, [mu]);
+  }, [mu, removeSaved]);
 
   // 価格プレビュー生成
   const generatePricePreview = useCallback(() => {
@@ -1249,7 +1273,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
                       : `¥${variants[0]?.node.price || 0}`;
                     const metalType = productMetalTypes[product.id];
-                    const isSaved = savedIds.has(product.id);
+                    const isSaved = savedIdSet.has(product.id);
                     const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "";
 
                     return (
