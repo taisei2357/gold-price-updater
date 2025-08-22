@@ -66,6 +66,20 @@ model ShopSetting {
   updatedAt           DateTime  @updatedAt
 }
 
+model SelectedCollection {
+  id           String    @id @default(cuid())
+  shopDomain   String
+  collectionId String
+  selected     Boolean   @default(true)
+  metalType    MetalType @default(gold)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([shopDomain, collectionId])
+  @@index([shopDomain])
+  @@index([shopDomain, metalType])
+}
+
 model PriceUpdateLog {
   id            String        @id @default(cuid())
   shopDomain    String

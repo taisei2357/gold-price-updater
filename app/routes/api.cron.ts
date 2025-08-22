@@ -434,10 +434,90 @@ async function updateShopPrices(shop: string, accessToken: string) {
   }
 }
 
+// 日本の祝日チェック（簡易版）
+function isJapaneseHoliday(date: Date): boolean {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // 0-indexedから1-indexedに変換
+  const day = date.getDate();
+  
+  // 固定祝日
+  const fixedHolidays = [
+    { month: 1, day: 1 },   // 元日
+    { month: 2, day: 11 },  // 建国記念の日
+    { month: 2, day: 23 },  // 天皇誕生日
+    { month: 4, day: 29 },  // 昭和の日
+    { month: 5, day: 3 },   // 憲法記念日
+    { month: 5, day: 4 },   // みどりの日
+    { month: 5, day: 5 },   // こどもの日
+    { month: 8, day: 11 },  // 山の日
+    { month: 11, day: 3 },  // 文化の日
+    { month: 11, day: 23 }, // 勤労感謝の日
+  ];
+  
+  for (const holiday of fixedHolidays) {
+    if (month === holiday.month && day === holiday.day) {
+      return true;
+    }
+  }
+  
+  // 移動する祝日（簡易計算）
+  // 成人の日（1月第2月曜）
+  if (month === 1) {
+    const firstMonday = Math.ceil((9 - new Date(year, 0, 1).getDay()) / 7) * 7 + 2;
+    if (day === firstMonday) return true;
+  }
+  
+  // 海の日（7月第3月曜）
+  if (month === 7) {
+    const firstMonday = Math.ceil((9 - new Date(year, 6, 1).getDay()) / 7) * 7 + 2;
+    const thirdMonday = firstMonday + 14;
+    if (day === thirdMonday) return true;
+  }
+  
+  // 敬老の日（9月第3月曜）
+  if (month === 9) {
+    const firstMonday = Math.ceil((9 - new Date(year, 8, 1).getDay()) / 7) * 7 + 2;
+    const thirdMonday = firstMonday + 14;
+    if (day === thirdMonday) return true;
+  }
+  
+  // 体育の日/スポーツの日（10月第2月曜）
+  if (month === 10) {
+    const firstMonday = Math.ceil((9 - new Date(year, 9, 1).getDay()) / 7) * 7 + 2;
+    const secondMonday = firstMonday + 7;
+    if (day === secondMonday) return true;
+  }
+  
+  return false;
+}
+
+// 営業日かどうか判定（平日かつ非祝日）
+function isBusinessDay(date: Date): boolean {
+  const dayOfWeek = date.getDay(); // 0=日曜, 6=土曜
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // 月曜〜金曜
+  const isNotHoliday = !isJapaneseHoliday(date);
+  return isWeekday && isNotHoliday;
+}
+
 // 共通の自動更新ロジック（GET/POST両方から使用）
 async function runAllShops() {
   try {
     console.log(`🕙 Cron実行開始: ${new Date().toISOString()}`);
+    
+    // 営業日チェック
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JSTに調整
+    
+    if (!isBusinessDay(jstNow)) {
+      const message = `${jstNow.toDateString()}は土日祝日のため価格更新をスキップします`;
+      console.log(message);
+      return {
+        message,
+        timestamp: new Date().toISOString(),
+        summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+        shops: []
+      };
+    }
 
     // 自動更新有効なショップとそのアクセストークンを取得
     const enabledShops = await prisma.shopSetting.findMany({

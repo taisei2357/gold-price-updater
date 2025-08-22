@@ -307,7 +307,7 @@ export const loader = async ({ request }) => {
   const forceRefresh = url.searchParams.get('refresh') === 'true';
 
   // 軽い処理は即座に実行
-  const [metalPrices, selectedProducts, shopSetting] = await Promise.all([
+  const [metalPrices, selectedProducts, selectedCollections, shopSetting] = await Promise.all([
     fetchMetalPrices(),
     prisma.selectedProduct.findMany({
       where: { 
@@ -316,12 +316,20 @@ export const loader = async ({ request }) => {
       },
       select: { productId: true, metalType: true }
     }),
+    prisma.selectedCollection.findMany({
+      where: { 
+        shopDomain: session.shop,
+        selected: true 
+      },
+      select: { collectionId: true, metalType: true }
+    }),
     prisma.shopSetting.findUnique({
       where: { shopDomain: session.shop }
     })
   ]);
 
   const selectedProductIds = selectedProducts.map(p => p.productId);
+  const selectedCollectionIds = selectedCollections.map(c => c.collectionId);
 
   // 重い商品・コレクション取得処理は非同期化
   const productsPromise = fetchAllProducts(admin);
@@ -337,6 +345,8 @@ export const loader = async ({ request }) => {
     platinumPrice: metalPrices.platinum,
     selectedProductIds: selectedProductIds,
     savedSelectedProducts: selectedProducts,
+    selectedCollectionIds: selectedCollectionIds,
+    savedSelectedCollections: selectedCollections,
     shopSetting: shopSetting,
     forceRefresh: forceRefresh,
     cacheTimestamp: Date.now()
@@ -458,7 +468,14 @@ export const action = async ({ request }) => {
     const metalType = formData.get("metalType") === "platinum" ? "platinum" : "gold";
 
     try {
-      // コレクションの商品を全部拾う
+      // コレクションの選択状態をデータベースに保存
+      await prisma.selectedCollection.upsert({
+        where: { shopDomain_collectionId: { shopDomain: session.shop, collectionId } },
+        update: { selected: true, metalType },
+        create: { shopDomain: session.shop, collectionId, selected: true, metalType },
+      });
+
+      // コレクションの商品を全部拾って保存
       const productIds = await fetchProductIdsByCollection(admin, collectionId);
 
       const saved = [];
@@ -475,6 +492,7 @@ export const action = async ({ request }) => {
         success: true,
         message: `コレクション内 ${saved.length}件を${metalType === "platinum" ? "プラチナ" : "金"}で登録しました`,
         savedProducts: saved,
+        savedCollection: { collectionId, metalType }
       });
     } catch (error) {
       return json({ 
@@ -488,6 +506,14 @@ export const action = async ({ request }) => {
     const collectionId = formData.get("collectionId");
     
     try {
+      // コレクション選択状態をデータベースから削除
+      await prisma.selectedCollection.deleteMany({
+        where: {
+          shopDomain: session.shop,
+          collectionId: collectionId
+        }
+      });
+
       const ids = await fetchProductIdsByCollection(admin, collectionId);
 
       await prisma.selectedProduct.deleteMany({
@@ -498,6 +524,7 @@ export const action = async ({ request }) => {
         success: true,
         message: `コレクション内 ${ids.length}件の登録を解除しました`,
         unselectedProducts: ids,
+        unselectedCollection: collectionId
       });
     } catch (error) {
       return json({ 
@@ -510,7 +537,7 @@ export const action = async ({ request }) => {
   return json({ error: "不正なアクション" });
 };
 
-function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
+function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, selectedCollectionIds, savedSelectedCollections, shopSetting, forceRefresh, cacheTimestamp }) {
   const mu = useFetcher();       // product/collection の保存・解除用
   const updater = useFetcher();  // 価格更新用
   const revalidator = useRevalidator();
@@ -522,10 +549,23 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     return m;
   }, [savedSelectedProducts]);
   
+  // 保存済みコレクション金属種別のマップ
+  const savedCollectionTypeMap = useMemo(() => {
+    const m = {};
+    (savedSelectedCollections || []).forEach(sc => { m[sc.collectionId] = sc.metalType; });
+    return m;
+  }, [savedSelectedCollections]);
+  
   // 保存済みIDのSet（isSaved判定用）
   const savedIds = useMemo(
     () => new Set((savedSelectedProducts || []).map(sp => sp.productId)),
     [savedSelectedProducts]
+  );
+  
+  // 保存済みコレクションIDのSet
+  const savedCollectionIds = useMemo(
+    () => new Set((savedSelectedCollections || []).map(sc => sc.collectionId)),
+    [savedSelectedCollections]
   );
   
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -540,9 +580,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [isUsingCache, setIsUsingCache] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   
-  // コレクション選択用のstate
-  const [selectedCollections, setSelectedCollections] = useState([]); // collectionId[]
-  const [collectionMetalTypes, setCollectionMetalTypes] = useState({}); // { [collectionId]: 'gold'|'platinum' }
+  // コレクション選択用のstate（初期値をDBから設定）
+  const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
+  const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {}); // { [collectionId]: 'gold'|'platinum' }
   
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
@@ -639,6 +679,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         // 注意: productMetalTypesは削除せず保持（ドロップダウン表示のため）
       }
       
+      // コレクション保存後の処理
+      if (mu.data.savedCollection) {
+        const { collectionId, metalType } = mu.data.savedCollection;
+        setSelectedCollections(prev => [...prev.filter(id => id !== collectionId), collectionId]);
+        setCollectionMetalTypes(prev => ({ ...prev, [collectionId]: metalType }));
+      }
+
       // 解除後：ローカルも即時反映しつつ、loaderを再取得
       if (mu.data.unselectedProducts) {
         const removed = new Set(mu.data.unselectedProducts);
@@ -650,6 +697,18 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         });
         removeSaved(mu.data.unselectedProducts); // ローカルミラーからも削除（保険）
         scheduleRevalidate(); // 連続解除時は最後に1回だけ revalidate
+      }
+
+      // コレクション解除後の処理
+      if (mu.data.unselectedCollection) {
+        const collectionId = mu.data.unselectedCollection;
+        setSelectedCollections(prev => prev.filter(id => id !== collectionId));
+        setCollectionMetalTypes(prev => {
+          const next = { ...prev };
+          delete next[collectionId];
+          return next;
+        });
+        scheduleRevalidate();
       }
     }
   }, [mu.state, mu.data, addSaved, removeSaved, scheduleRevalidate]);
@@ -1631,7 +1690,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
 export default function Products() {
   const data = useLoaderData();
-  const { goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp } = data;
+  const { goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, selectedCollectionIds, savedSelectedCollections, shopSetting, forceRefresh, cacheTimestamp } = data;
 
   return (
     <Suspense
@@ -1716,6 +1775,8 @@ export default function Products() {
               platinumPrice={platinumPrice}
               selectedProductIds={selectedProductIds}
               savedSelectedProducts={savedSelectedProducts}
+              selectedCollectionIds={selectedCollectionIds}
+              savedSelectedCollections={savedSelectedCollections}
               shopSetting={shopSetting}
               forceRefresh={forceRefresh}
               cacheTimestamp={cacheTimestamp}
