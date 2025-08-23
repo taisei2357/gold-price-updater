@@ -3,6 +3,7 @@ import type { LoaderFunction, ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import prisma from '../db.server';
 import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from '../models/gold.server';
+import { sendPriceUpdateNotification, type PriceUpdateEmailData } from '../utils/email.server';
 
 // CRON認証チェック（Vercel Cron対応）
 function verifyCronAuth(request: Request) {
@@ -475,13 +476,47 @@ async function updateShopPrices(shop: string, accessToken: string) {
       });
     }
 
+    // メール通知送信（設定されている場合）
+    const shopSetting = await prisma.shopSetting.findUnique({
+      where: { shopDomain: shop },
+      select: { notificationEmail: true }
+    });
+
+    if (shopSetting?.notificationEmail) {
+      try {
+        const emailData: PriceUpdateEmailData = {
+          shopDomain: shop,
+          updatedCount: updated,
+          failedCount: failed,
+          goldRatio: ratios.gold ? (ratios.gold * 100).toFixed(2) + '%' : undefined,
+          platinumRatio: ratios.platinum ? (ratios.platinum * 100).toFixed(2) + '%' : undefined,
+          timestamp: new Date().toISOString(),
+          details: details
+        };
+
+        const emailResult = await sendPriceUpdateNotification(
+          shopSetting.notificationEmail, 
+          emailData
+        );
+
+        if (emailResult.success) {
+          console.log(`📧 メール通知送信成功: ${shopSetting.notificationEmail}`);
+        } else {
+          console.error(`📧 メール通知送信失敗: ${emailResult.error}`);
+        }
+      } catch (emailError) {
+        console.error('📧 メール通知処理でエラー:', emailError);
+      }
+    }
+
     return { 
       shop, 
       success: true, 
       updated, 
       failed,
       goldRatio: ratios.gold ? (ratios.gold * 100).toFixed(2) + '%' : 'N/A',
-      platinumRatio: ratios.platinum ? (ratios.platinum * 100).toFixed(2) + '%' : 'N/A'
+      platinumRatio: ratios.platinum ? (ratios.platinum * 100).toFixed(2) + '%' : 'N/A',
+      emailSent: !!shopSetting?.notificationEmail
     };
 
   } catch (error) {
@@ -587,6 +622,7 @@ async function runAllShops(opts: { force?: boolean } = {}) {
     // 営業日チェック（force=trueの場合はスキップ）
     const now = new Date();
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JSTに調整
+    const currentHour = jstNow.getHours();
     
     if (!force && !isBusinessDay(jstNow)) {
       const message = `${jstNow.toDateString()}は土日祝日のため価格更新をスキップします`;
@@ -601,19 +637,28 @@ async function runAllShops(opts: { force?: boolean } = {}) {
 
     // 自動更新有効なショップとそのアクセストークンを取得
     const enabledShops = await prisma.shopSetting.findMany({
-      where: { autoUpdateEnabled: true },
-      select: { shopDomain: true }
+      where: { 
+        autoUpdateEnabled: true,
+        // force=trueでない場合は設定時刻もチェック
+        ...(force ? {} : { autoUpdateHour: currentHour })
+      },
+      select: { shopDomain: true, autoUpdateHour: true }
     });
 
     if (!enabledShops.length) {
-      console.log('自動更新有効なショップがありません');
+      const message = force 
+        ? '自動更新有効なショップがありません'
+        : `JST ${currentHour}:00に実行予定のショップがありません`;
+      console.log(message);
       return {
-        message: "自動更新有効なショップなし",
+        message,
         timestamp: new Date().toISOString(),
         summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
         shops: []
       };
     }
+
+    console.log(`🕐 JST ${currentHour}:00 - ${enabledShops.length}件のショップで価格更新を開始`);
 
     // 各ショップのアクセストークンを取得
     const results = [];

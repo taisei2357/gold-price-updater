@@ -88,6 +88,7 @@ export async function action({ request }) {
 export default function Settings() {
   const { setting } = useLoaderData();
   const fetcher = useFetcher();
+  const testEmailFetcher = useFetcher(); // テストメール用のfetcher
   
   // フォームの状態管理
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(setting.autoUpdateEnabled);
@@ -97,6 +98,7 @@ export default function Settings() {
   
   // 保存成功メッセージの管理
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showEmailTestMessage, setShowEmailTestMessage] = useState(false);
   
   // 保存成功時の処理
   useEffect(() => {
@@ -107,6 +109,15 @@ export default function Settings() {
       return () => clearTimeout(timer);
     }
   }, [fetcher.data]);
+
+  // テストメール結果の処理
+  useEffect(() => {
+    if (testEmailFetcher.data) {
+      setShowEmailTestMessage(true);
+      const timer = setTimeout(() => setShowEmailTestMessage(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [testEmailFetcher.data]);
 
   // 時刻オプションの生成
   const hourOptions = [...Array(24)].map((_, i) => ({
@@ -125,6 +136,14 @@ export default function Settings() {
     fetcher.submit(formData, { method: "post" });
   };
 
+  // テストメール送信
+  const handleTestEmail = () => {
+    testEmailFetcher.submit({}, { 
+      method: "post", 
+      action: "/api/test-email" 
+    });
+  };
+
   return (
     <Page
       title="アプリ設定"
@@ -139,6 +158,29 @@ export default function Settings() {
               <InlineStack gap="200" align="center">
                 <Icon source={CheckCircleIcon} tone="success" />
                 <Text>設定が正常に保存されました</Text>
+              </InlineStack>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {/* テストメール結果メッセージ */}
+        {showEmailTestMessage && (
+          <Layout.Section>
+            <Banner 
+              tone={testEmailFetcher.data?.success ? "success" : "critical"} 
+              onDismiss={() => setShowEmailTestMessage(false)}
+            >
+              <InlineStack gap="200" align="center">
+                <Icon 
+                  source={CheckCircleIcon} 
+                  tone={testEmailFetcher.data?.success ? "success" : "critical"} 
+                />
+                <Text>
+                  {testEmailFetcher.data?.success 
+                    ? `テストメールを送信しました: ${testEmailFetcher.data?.email}`
+                    : `テストメール送信失敗: ${testEmailFetcher.data?.error}`
+                  }
+                </Text>
               </InlineStack>
             </Banner>
           </Layout.Section>
@@ -229,6 +271,25 @@ export default function Settings() {
                   placeholder="you@example.com"
                   helpText="設定すると自動更新の結果がメールで通知されます"
                 />
+                
+                {notificationEmail && (
+                  <InlineStack gap="200" align="start">
+                    <Button
+                      variant="secondary"
+                      size="medium"
+                      onClick={handleTestEmail}
+                      loading={testEmailFetcher.state === "submitting"}
+                      disabled={!notificationEmail}
+                    >
+                      テストメール送信
+                    </Button>
+                    <div style={{ paddingTop: '6px' }}>
+                      <Text variant="bodySm" tone="subdued">
+                        設定したメールアドレスに通知のテストメールを送信します
+                      </Text>
+                    </div>
+                  </InlineStack>
+                )}
               </FormLayout>
             </BlockStack>
           </Card>
@@ -280,22 +341,14 @@ export default function Settings() {
                   </div>
                 </InlineStack>
                 
-                <Banner tone="info">
-                  <Text>
-                    <strong>注意:</strong> 現在のシステムは平日朝10時（JST）固定で実行されます。
-                    上記の「自動更新時刻」設定は将来の機能向けです。
-                    価格変動がない場合や取得エラー時は更新をスキップします。
-                  </Text>
-                </Banner>
-                
-                <Banner tone="warning">
+                <Banner tone="success">
                   <BlockStack gap="200">
                     <Text fontWeight="semibold">
-                      🕙 実際の実行スケジュール（現在）
+                      🕙 自動更新スケジュール
                     </Text>
                     <Text>
-                      • <strong>実行時刻:</strong> 毎平日 朝10:00（日本時間）<br/>
-                      • <strong>対象曜日:</strong> 月曜日〜金曜日<br/>
+                      • <strong>実行時刻:</strong> 設定した時刻に自動実行<br/>
+                      • <strong>対象曜日:</strong> 月曜日〜金曜日（平日のみ）<br/>
                       • <strong>祝日:</strong> 自動的にスキップ<br/>
                       • <strong>実行条件:</strong> 自動更新が有効で、対象商品が選択されている場合
                     </Text>
