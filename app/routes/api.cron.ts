@@ -2,7 +2,7 @@
 import type { LoaderFunction, ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import prisma from '../db.server';
-import { fetchGoldPriceDataTanaka } from '../models/gold.server';
+import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from '../models/gold.server';
 
 // CRON認証チェック
 function verifyCronAuth(request: Request) {
@@ -43,21 +43,25 @@ class ShopifyAdminClient {
   }
 }
 
-// 金価格変動率を取得（修正済みロジック使用）
-async function fetchGoldChangeRatio() {
+// 金・プラチナ価格変動率を取得
+async function fetchMetalPriceRatios() {
   try {
-    const goldData = await fetchGoldPriceDataTanaka();
-    if (!goldData || goldData.changeRatio === null) {
-      console.log('金価格データの取得に失敗');
-      return null;
-    }
-    
-    console.log(`金価格情報: ${goldData.retailPriceFormatted}, 前日比: ${goldData.changePercent}, 変動方向: ${goldData.changeDirection}`);
-    return goldData.changeRatio;
+    const [goldData, platinumData] = await Promise.all([
+      fetchGoldPriceDataTanaka(),
+      fetchPlatinumPriceDataTanaka()
+    ]);
+
+    const gold = goldData && goldData.changeRatio !== null ? goldData.changeRatio : null;
+    const platinum = platinumData && platinumData.changeRatio !== null ? platinumData.changeRatio : null;
+
+    console.log(`金価格情報: ${goldData?.retailPriceFormatted}, 前日比: ${goldData?.changePercent}, 変動率: ${gold ? (gold * 100).toFixed(2) + '%' : 'N/A'}`);
+    console.log(`プラチナ価格情報: ${platinumData?.retailPriceFormatted}, 前日比: ${platinumData?.changePercent}, 変動率: ${platinum ? (platinum * 100).toFixed(2) + '%' : 'N/A'}`);
+
+    return { gold, platinum };
     
   } catch (error) {
-    console.error('金価格取得エラー:', error);
-    return null;
+    console.error('金属価格取得エラー:', error);
+    return { gold: null, platinum: null };
   }
 }
 
@@ -69,19 +73,106 @@ function calcFinalPriceWithStep(current: number, ratio: number, minPct01: number
   return String(rounded);
 }
 
+// 単一商品の処理
+async function processProduct(target: { productId: string, metalType: string }, ratio: number, metalType: string, admin: any, entries: any[], details: any[], minPct01: number) {
+  try {
+    const resp = await admin.graphql(`
+      query($id: ID!) { 
+        product(id: $id) { 
+          id 
+          title
+          variants(first: 50) {
+            edges {
+              node {
+                id
+                price
+              }
+            }
+          }
+        } 
+      }
+    `, { variables: { id: target.productId }});
+    
+    // 401エラー検知と自己修復
+    if (resp.status === 401 || resp.body?.errors?.[0]?.message?.includes("Invalid API key or access token")) {
+      console.error(`🚨 401 Unauthorized detected for product: ${target.productId}`);
+      details.push({ 
+        success: false, 
+        productId: target.productId, 
+        error: "401 Unauthorized: 再認証が必要",
+        metalType
+      });
+      return;
+    }
+    
+    // 通常のGraphQLエラーチェック
+    if (!resp.ok || (resp.body?.errors && resp.body.errors.length)) {
+      const msg = resp.body?.errors?.[0]?.message ?? `HTTP ${resp.status}`;
+      console.error(`商品 ${target.productId} (${metalType}) GraphQLエラー:`, msg);
+      details.push({ 
+        success: false, 
+        productId: target.productId, 
+        error: `GraphQLエラー: ${msg}`,
+        metalType
+      });
+      return;
+    }
+    
+    const product = resp.body?.data?.product;
+    if (!product) {
+      console.error(`商品 ${target.productId} (${metalType}) データが見つかりません`);
+      details.push({ 
+        success: false, 
+        productId: target.productId, 
+        error: "商品データが見つかりません",
+        metalType
+      });
+      return;
+    }
+
+    // 各バリアントの価格計算
+    for (const edge of product.variants.edges) {
+      const variant = edge.node;
+      const current = Number(variant.price || 0);
+      if (!current) continue;
+
+      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01);
+      if (parseFloat(newPrice) !== current) {
+        entries.push({ 
+          productId: target.productId, 
+          productTitle: product.title,
+          variantId: variant.id, 
+          newPrice,
+          oldPrice: current,
+          metalType
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error(`商品 ${target.productId} (${metalType}) の処理でエラー:`, error);
+    details.push({ 
+      success: false, 
+      productId: target.productId, 
+      error: `商品処理エラー: ${(error as Error).message}`,
+      metalType
+    });
+  }
+}
+
 // 単一ショップの価格更新処理
 async function updateShopPrices(shop: string, accessToken: string) {
   const admin = new ShopifyAdminClient(shop, accessToken);
   let minPctSaved = 93; // デフォルト値
   
   try {
-    // 1) 金価格変動率取得（修正済みロジック）
-    const ratio = await fetchGoldChangeRatio();
-    if (ratio === null) {
+    // 1) 金・プラチナ価格変動率取得
+    const ratios = await fetchMetalPriceRatios();
+    if (ratios.gold === null && ratios.platinum === null) {
       return { 
         shop, 
         success: false, 
-        error: "金価格の取得に失敗", 
+        error: "金・プラチナ価格の取得に失敗", 
         updated: 0, 
         failed: 0 
       };
@@ -107,10 +198,10 @@ async function updateShopPrices(shop: string, accessToken: string) {
       };
     }
 
-    // 3) 対象商品取得
+    // 3) 対象商品取得（金属種別込み）
     const targets = await prisma.selectedProduct.findMany({
       where: { shopDomain: shop },
-      select: { productId: true },
+      select: { productId: true, metalType: true },
     });
 
     if (!targets.length) {
@@ -123,133 +214,86 @@ async function updateShopPrices(shop: string, accessToken: string) {
       };
     }
 
-    // 4) 価格更新処理
+    // 金・プラチナ別に商品をグループ分け
+    const goldTargets = targets.filter(t => t.metalType === 'gold');
+    const platinumTargets = targets.filter(t => t.metalType === 'platinum');
+
+    console.log(`${shop}: 金商品 ${goldTargets.length}件, プラチナ商品 ${platinumTargets.length}件`);
+
+    // 両方とも更新対象がない場合は早期リターン
+    if ((ratios.gold === null || goldTargets.length === 0) && 
+        (ratios.platinum === null || platinumTargets.length === 0)) {
+      return { 
+        shop, 
+        success: true, 
+        message: "有効な価格変動・対象商品なし", 
+        updated: 0, 
+        failed: 0 
+      };
+    }
+
+    // 4) 価格更新処理（金属種別ごと）
     const entries: any[] = [];
     let updated = 0, failed = 0;
     const details: any[] = [];
     
-    for (const target of targets) {
-      try {
-        const resp = await admin.graphql(`
-          query($id: ID!) { 
-            product(id: $id) { 
-              id 
-              title
-              variants(first: 50) {
-                edges {
-                  node {
-                    id
-                    price
-                  }
-                }
-              }
-            } 
-          }
-        `, { variables: { id: target.productId }});
-        
-        // 401エラー検知と自己修復
-        if (resp.status === 401 || resp.body?.errors?.[0]?.message?.includes("Invalid API key or access token")) {
-          console.error(`🚨 401 Unauthorized detected for shop: ${shop}`);
-          
-          // ログに記録
-          await prisma.priceUpdateLog.create({
-            data: {
-              shopDomain: shop,
-              executionType: 'cron',
-              goldRatio: ratio,
-              minPricePct: minPctSaved,
-              success: false,
-              errorMessage: '401 Unauthorized: 再認証が必要',
-              totalProducts: targets.length,
-              updatedCount: 0,
-              failedCount: targets.length,
-            }
-          });
-          
-          // 古いセッションを無効化（次回の/authに誘導）
-          await prisma.session.deleteMany({ where: { shop } });
-          
-          return { 
-            shop, 
-            success: false, 
-            needsReauth: true, 
-            message: "認証エラー: アプリの再インストールが必要です", 
-            updated: 0, 
-            failed: targets.length 
-          };
-        }
-        
-        // 通常のGraphQLエラーチェック
-        if (!resp.ok || (resp.body?.errors && resp.body.errors.length)) {
-          const msg = resp.body?.errors?.[0]?.message ?? `HTTP ${resp.status}`;
-          console.error(`商品 ${target.productId} GraphQLエラー:`, msg);
-          details.push({ 
-            success: false, 
-            productId: target.productId, 
-            error: `GraphQLエラー: ${msg}` 
-          });
-          failed += 1;
-          continue;
-        }
-        
-        const product = resp.body?.data?.product;
-        if (!product) {
-          console.error(`商品 ${target.productId} データが見つかりません`);
-          details.push({ 
-            success: false, 
-            productId: target.productId, 
-            error: "商品データが見つかりません" 
-          });
-          failed += 1;
-          continue;
-        }
+    // 金商品の処理
+    if (ratios.gold !== null && goldTargets.length > 0) {
+      console.log(`${shop}: 金商品価格更新開始（変動率: ${(ratios.gold * 100).toFixed(2)}%）`);
+      for (const target of goldTargets) {
+        await processProduct(target, ratios.gold, 'gold', admin, entries, details, minPct01);
+        await new Promise(r => setTimeout(r, 100)); // レート制限対策
+      }
+    }
 
-        // 各バリアントの価格計算
-        for (const edge of product.variants.edges) {
-          const variant = edge.node;
-          const current = Number(variant.price || 0);
-          if (!current) continue;
-
-          const newPrice = calcFinalPriceWithStep(current, ratio, minPct01);
-          if (parseFloat(newPrice) !== current) {
-            entries.push({ 
-              productId: target.productId, 
-              productTitle: product.title,
-              variantId: variant.id, 
-              newPrice,
-              oldPrice: current
-            });
-          }
-        }
-
-        // レート制限対策
-        await new Promise(r => setTimeout(r, 100));
-      } catch (error) {
-        console.error(`商品 ${target.productId} の処理でエラー:`, error);
-        details.push({ 
-          success: false, 
-          productId: target.productId, 
-          error: `商品処理エラー: ${(error as Error).message}` 
-        });
-        failed += 1;
+    // プラチナ商品の処理
+    if (ratios.platinum !== null && platinumTargets.length > 0) {
+      console.log(`${shop}: プラチナ商品価格更新開始（変動率: ${(ratios.platinum * 100).toFixed(2)}%）`);
+      for (const target of platinumTargets) {
+        await processProduct(target, ratios.platinum, 'platinum', admin, entries, details, minPct01);
+        await new Promise(r => setTimeout(r, 100)); // レート制限対策
       }
     }
 
     if (!entries.length) {
-      // ログ記録
-      await prisma.priceUpdateLog.create({
-        data: {
-          shopDomain: shop,
-          executionType: 'cron',
-          goldRatio: ratio,
-          minPricePct: minPctSaved,
-          totalProducts: targets.length,
-          updatedCount: 0,
-          failedCount: 0,
-          success: true,
-          errorMessage: null,
-        }
-      });
+      // ログ記録（金・プラチナ両方対応）
+      const goldRatio = ratios.gold;
+      const platinumRatio = ratios.platinum;
+      
+      // 金とプラチナのログを別々に記録
+      if (goldRatio !== null && goldTargets.length > 0) {
+        await prisma.priceUpdateLog.create({
+          data: {
+            shopDomain: shop,
+            executionType: 'cron',
+            metalType: 'gold',
+            priceRatio: goldRatio,
+            minPricePct: minPctSaved,
+            totalProducts: goldTargets.length,
+            updatedCount: 0,
+            failedCount: 0,
+            success: true,
+            errorMessage: null,
+          }
+        });
+      }
+      
+      if (platinumRatio !== null && platinumTargets.length > 0) {
+        await prisma.priceUpdateLog.create({
+          data: {
+            shopDomain: shop,
+            executionType: 'cron',
+            metalType: 'platinum',
+            priceRatio: platinumRatio,
+            minPricePct: minPctSaved,
+            totalProducts: platinumTargets.length,
+            updatedCount: 0,
+            failedCount: 0,
+            success: true,
+            errorMessage: null,
+          }
+        });
+      }
 
       return { 
         shop, 
@@ -382,39 +426,67 @@ async function updateShopPrices(shop: string, accessToken: string) {
       }
     }
 
-    // ログ記録
-    await prisma.priceUpdateLog.create({
-      data: {
-        shopDomain: shop,
-        executionType: 'cron',
-        goldRatio: ratio,
-        minPricePct: minPctSaved,
-        totalProducts: targets.length,
-        updatedCount: updated,
-        failedCount: failed,
-        success: failed === 0,
-        errorMessage: failed > 0 ? `${failed}件の更新に失敗` : null,
-        details: JSON.stringify(details)
-      }
-    });
+    // ログ記録（金・プラチナ別々に記録）
+    const goldEntries = entries.filter(e => e.metalType === 'gold');
+    const platinumEntries = entries.filter(e => e.metalType === 'platinum');
+    const goldDetails = details.filter(d => d.metalType === 'gold');
+    const platinumDetails = details.filter(d => d.metalType === 'platinum');
+
+    if (ratios.gold !== null && (goldTargets.length > 0 || goldEntries.length > 0)) {
+      await prisma.priceUpdateLog.create({
+        data: {
+          shopDomain: shop,
+          executionType: 'cron',
+          metalType: 'gold',
+          priceRatio: ratios.gold,
+          minPricePct: minPctSaved,
+          totalProducts: goldTargets.length,
+          updatedCount: goldEntries.length,
+          failedCount: goldDetails.filter(d => !d.success).length,
+          success: goldDetails.filter(d => !d.success).length === 0,
+          errorMessage: goldDetails.filter(d => !d.success).length > 0 ? `金: ${goldDetails.filter(d => !d.success).length}件の更新に失敗` : null,
+          details: JSON.stringify(goldDetails)
+        }
+      });
+    }
+
+    if (ratios.platinum !== null && (platinumTargets.length > 0 || platinumEntries.length > 0)) {
+      await prisma.priceUpdateLog.create({
+        data: {
+          shopDomain: shop,
+          executionType: 'cron',
+          metalType: 'platinum',
+          priceRatio: ratios.platinum,
+          minPricePct: minPctSaved,
+          totalProducts: platinumTargets.length,
+          updatedCount: platinumEntries.length,
+          failedCount: platinumDetails.filter(d => !d.success).length,
+          success: platinumDetails.filter(d => !d.success).length === 0,
+          errorMessage: platinumDetails.filter(d => !d.success).length > 0 ? `プラチナ: ${platinumDetails.filter(d => !d.success).length}件の更新に失敗` : null,
+          details: JSON.stringify(platinumDetails)
+        }
+      });
+    }
 
     return { 
       shop, 
       success: true, 
       updated, 
       failed,
-      ratio: (ratio * 100).toFixed(2) + '%'
+      goldRatio: ratios.gold ? (ratios.gold * 100).toFixed(2) + '%' : 'N/A',
+      platinumRatio: ratios.platinum ? (ratios.platinum * 100).toFixed(2) + '%' : 'N/A'
     };
 
   } catch (error) {
     console.error(`${shop}の処理でエラー:`, error);
     
-    // エラーログ記録
+    // エラーログ記録（デフォルトで金として記録）
     await prisma.priceUpdateLog.create({
       data: {
         shopDomain: shop,
         executionType: 'cron',
-        goldRatio: null,
+        metalType: 'gold',
+        priceRatio: null,
         minPricePct: minPctSaved,
         totalProducts: 0,
         updatedCount: 0,
