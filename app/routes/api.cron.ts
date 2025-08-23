@@ -4,14 +4,20 @@ import { json } from "@remix-run/node";
 import prisma from '../db.server';
 import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from '../models/gold.server';
 
-// CRON認証チェック
+// CRON認証チェック（Vercel Cron対応）
 function verifyCronAuth(request: Request) {
-  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
-  const got = request.headers.get('authorization');
-  if (expected && got !== expected) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
+  // Vercel Cron からの実行は x-vercel-cron ヘッダーが付く
+  const fromVercelCron = request.headers.get('x-vercel-cron') === '1';
+  if (fromVercelCron) return null; // 許可
+
+  // 手動実行や外部から叩く場合だけ Bearer チェック
+  const expected = process.env.CRON_SECRET;
+  if (!expected) return null;
+
+  const got = request.headers.get('authorization') || '';
+  if (got === `Bearer ${expected}`) return null;
+
+  return json({ error: 'Unauthorized' }, { status: 401 });
 }
 
 // Shopify Admin API GraphQLクライアント（自己修復機能付き）
@@ -81,7 +87,7 @@ async function processProduct(target: { productId: string, metalType: string }, 
         product(id: $id) { 
           id 
           title
-          variants(first: 50) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -136,7 +142,7 @@ async function processProduct(target: { productId: string, metalType: string }, 
       const current = Number(variant.price || 0);
       if (!current) continue;
 
-      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01);
+      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({ 
           productId: target.productId, 
@@ -344,7 +350,8 @@ async function updateShopPrices(shop: string, accessToken: string) {
             data: {
               shopDomain: shop,
               executionType: 'cron',
-              goldRatio: ratio,
+              metalType: 'gold',
+              priceRatio: null,
               minPricePct: minPctSaved,
               totalProducts: targets.length,
               updatedCount: updated,
@@ -572,15 +579,16 @@ function isBusinessDay(date: Date): boolean {
 }
 
 // 共通の自動更新ロジック（GET/POST両方から使用）
-async function runAllShops() {
+async function runAllShops(opts: { force?: boolean } = {}) {
+  const force = !!opts.force;
   try {
     console.log(`🕙 Cron実行開始: ${new Date().toISOString()}`);
     
-    // 営業日チェック
+    // 営業日チェック（force=trueの場合はスキップ）
     const now = new Date();
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JSTに調整
     
-    if (!isBusinessDay(jstNow)) {
+    if (!force && !isBusinessDay(jstNow)) {
       const message = `${jstNow.toDateString()}は土日祝日のため価格更新をスキップします`;
       console.log(message);
       return {
@@ -669,7 +677,8 @@ export const loader: LoaderFunction = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
   
-  const result = await runAllShops();
+  const force = new URL(request.url).searchParams.get('force') === '1';
+  const result = await runAllShops({ force });
   return json(result, { 
     headers: { "Cache-Control": "no-store" } 
   });
@@ -684,7 +693,8 @@ export const action: ActionFunction = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
   
-  const result = await runAllShops();
+  const force = new URL(request.url).searchParams.get('force') === '1';
+  const result = await runAllShops({ force });
   return json(result, { 
     headers: { "Cache-Control": "no-store" } 
   });

@@ -14,7 +14,19 @@ function calcFinalPrice(current: number, ratio: number, minPct: number): string 
   return String(roundInt(Math.max(calc, floor))); // GraphQL Decimal は文字列で
 }
 
-export async function runBulkUpdateBySpec(admin: AdminClient, shop: string) {
+// 10円単位の丸め処理付き価格計算
+function calcFinalPriceWithStep(current: number, ratio: number, minPct01: number, step = 1): string {
+  const target = Math.max(current * (1 + ratio), current * minPct01);
+  const rounded = ratio >= 0 ? Math.ceil(target / step) * step : Math.floor(target / step) * step;
+  return String(rounded);
+}
+
+export async function runBulkUpdateBySpec(admin: AdminClient, shop: string, opts = {}) {
+  const onlyIds = Array.isArray(opts.onlyProductIds) && opts.onlyProductIds.length ? opts.onlyProductIds : null;
+  const minPriceRate = typeof opts.minPriceRate === 'number' ? opts.minPriceRate : undefined;
+
+  console.log('[UPDATE] onlyIds:', onlyIds?.slice(0, 3), 'count:', onlyIds?.length);
+
   // 1) 金・プラチナ価格変動率を取得
   const [goldData, platinumData] = await Promise.all([
     fetchMetalPriceData('gold'),
@@ -23,15 +35,28 @@ export async function runBulkUpdateBySpec(admin: AdminClient, shop: string) {
 
   // 2) 下限％
   const setting = await prisma.shopSetting.findUnique({ where: { shopDomain: shop } });
-  const minPct = setting?.minPricePct ?? 93;
+  const minPct = minPriceRate ?? setting?.minPricePct ?? 93;
 
-  // 3) 対象（SelectedProduct）取得（金属種別含む）
+  // 3) 対象（SelectedProduct）取得（金属種別含む + 任意絞り込み）
   const targets = await prisma.selectedProduct.findMany({
-    where: { shopDomain: shop },
+    where: {
+      shopDomain: shop,
+      selected: true,
+      ...(onlyIds ? { productId: { in: onlyIds } } : {})
+    },
     select: { productId: true, metalType: true },
   });
+
+  console.log('[UPDATE] target count:', targets.length);
+  console.log('[UPDATE] sample ids:', targets.slice(0, 5));
+
   if (!targets.length) {
-    return { ok: true, minPct, updated: 0, failed: 0, details: [], message: "対象なし" };
+    return { 
+      ok: false, 
+      reason: onlyIds ? '選択した商品が保存されていません' : '更新対象がありません',
+      details: [], 
+      summary: { total: 0, success: 0, failed: 0 }
+    };
   }
 
   // 4) 金属種別ごとにグループ化し、価格データが利用可能かチェック
@@ -59,7 +84,7 @@ export async function runBulkUpdateBySpec(admin: AdminClient, shop: string) {
       query($id: ID!) { 
         product(id: $id) { 
           id 
-          variants(first: 50) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -81,7 +106,9 @@ export async function runBulkUpdateBySpec(admin: AdminClient, shop: string) {
       const current = Number(variant.price ?? 0);
       if (!current) continue;
 
-      const newPrice = calcFinalPrice(current, ratio, minPct);
+      // 10円単位で丸める
+      const minPct01 = minPct / 100;
+      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({ 
           productId: t.productId, 
@@ -105,7 +132,7 @@ export async function runBulkUpdateBySpec(admin: AdminClient, shop: string) {
       query($id: ID!) { 
         product(id: $id) { 
           id 
-          variants(first: 50) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -127,7 +154,9 @@ export async function runBulkUpdateBySpec(admin: AdminClient, shop: string) {
       const current = Number(variant.price ?? 0);
       if (!current) continue;
 
-      const newPrice = calcFinalPrice(current, ratio, minPct);
+      // 10円単位で丸める
+      const minPct01 = minPct / 100;
+      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({ 
           productId: t.productId, 

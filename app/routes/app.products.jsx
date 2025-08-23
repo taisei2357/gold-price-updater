@@ -35,6 +35,41 @@ import { runBulkUpdateBySpec } from "../models/price.server";
 import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
 
+// 行ごとの独立した解除ボタンコンポーネント
+function UnselectButton({ productId, onOptimistic, scheduleRevalidate }) {
+  const fx = useFetcher();
+  const busy = fx.state !== "idle";
+
+  // 成功後の最小限の後処理
+  useEffect(() => {
+    if (fx.state === "idle" && fx.data?.success) {
+      scheduleRevalidate?.();
+    }
+  }, [fx.state, fx.data, scheduleRevalidate]);
+
+  return (
+    <fx.Form method="post" replace>
+      <input type="hidden" name="action" value="unselectProducts" />
+      <input type="hidden" name="productId" value={productId} />
+      <Button
+        size="micro"
+        variant="tertiary"
+        tone="critical"
+        loading={busy}
+        disabled={busy}
+        onClick={(e) => {
+          e.preventDefault(); // 送信前に楽観更新
+          onOptimistic?.(productId);
+          const fd = new FormData(e.currentTarget.form);
+          fx.submit(fd, { method: "post" });
+        }}
+      >
+        解除
+      </Button>
+    </fx.Form>
+  );
+}
+
 // 商品フィルタリング（検索条件による）
 function filterProducts(products, searchTerm, filterType = "all") {
   let filtered = products;
@@ -440,12 +475,15 @@ export const action = async ({ request }) => {
   }
 
   if (action === "updatePrices") {
-    const selectedProducts = JSON.parse(formData.get("selectedProducts"));
+    const idsFromUI = JSON.parse(formData.get("selectedProductIds") || "[]");
     const minPriceRate = parseFloat(formData.get("minPriceRate"));
 
     try {
-      // 新しい仕様に沿った一括更新を実行
-      const result = await runBulkUpdateBySpec(admin, session.shop);
+      // runBulkUpdateBySpec に対象IDの絞り込みを渡す
+      const result = await runBulkUpdateBySpec(admin, session.shop, { 
+        onlyProductIds: idsFromUI.length > 0 ? idsFromUI : null, 
+        minPriceRate 
+      });
       
       if (!result.ok) {
         return json({ 
@@ -939,15 +977,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     if (hasGoldProducts && !goldPrice) return;
     if (hasPlatinumProducts && !platinumPrice) return;
     
-    const updateData = selectedProducts.map(product => ({
-      ...product,
-      variants: product.variants.edges.map(edge => edge.node)
-    }));
+    // 選択商品のIDリストを送信
+    const ids = selectedProducts.map(p => p.id);
 
     updater.submit(
       {
         action: "updatePrices",
-        selectedProducts: JSON.stringify(updateData),
+        selectedProductIds: JSON.stringify(ids),
         minPriceRate: minPriceRate.toString()
       },
       { method: "post" }
@@ -1398,7 +1434,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Box minWidth="420px" maxWidth="680px">
+                          <Box minWidth="480px" maxWidth="720px">
                             <InlineStack gap="200" blockAlign="center">
                               {isSelected && metalType && (
                                 <span style={{ fontSize: '16px' }}>
@@ -1490,15 +1526,20 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                       <Text variant="bodySm" tone="subdued">
                                         保存済み設定{isSelected ? "（編集可）" : ""}
                                       </Text>
-                                      <Button 
-                                        size="micro"
-                                        variant="tertiary"
-                                        tone="critical"
-                                        onClick={() => handleUnselectProduct(product.id)}
-                                        disabled={mu.state === "submitting"}
-                                      >
-                                        解除
-                                      </Button>
+                                      <UnselectButton
+                                        productId={product.id}
+                                        onOptimistic={(id) => {
+                                          // 既存の楽観更新ロジックをそのまま使う
+                                          setSelectedProducts(prev => prev.filter(p => p.id !== id));
+                                          setProductMetalTypes(prev => {
+                                            const next = { ...prev };
+                                            delete next[id];
+                                            return next;
+                                          });
+                                          removeSaved([id]);
+                                        }}
+                                        scheduleRevalidate={scheduleRevalidate}
+                                      />
                                     </InlineStack>
                                   </div>
                                 )}
