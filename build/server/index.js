@@ -9928,7 +9928,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App$2,
   links: links$2
 }, Symbol.toStringTag, { value: "Module" }));
-const action$7 = async ({ request }) => {
+const action$8 = async ({ request }) => {
   const raw = await request.text();
   const hmac = request.headers.get("x-shopify-hmac-sha256") ?? "";
   const digest = createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(raw, "utf8").digest("base64");
@@ -9940,10 +9940,10 @@ const action$7 = async ({ request }) => {
 const loader$a = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7,
+  action: action$8,
   loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
-const action$6 = async ({ request }) => {
+const action$7 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   const current = payload.current;
@@ -9961,14 +9961,14 @@ const action$6 = async ({ request }) => {
 };
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6
+  action: action$7
 }, Symbol.toStringTag, { value: "Module" }));
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7,
+  action: action$8,
   loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
-const action$5 = async ({ request }) => {
+const action$6 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop}`);
   try {
@@ -9990,12 +9990,207 @@ const action$5 = async ({ request }) => {
 };
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$5
+  action: action$6
 }, Symbol.toStringTag, { value: "Module" }));
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7,
+  action: action$8,
   loader: loader$a
+}, Symbol.toStringTag, { value: "Module" }));
+async function sendViaSendGrid(to, subject, html, text) {
+  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.SENDGRID_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: process.env.SENDGRID_FROM_EMAIL || "noreply@example.com" },
+      subject,
+      content: [
+        { type: "text/plain", value: text },
+        { type: "text/html", value: html }
+      ]
+    })
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`SendGrid API error: ${response.status} - ${error}`);
+  }
+  return { messageId: response.headers.get("x-message-id") || "sendgrid-sent" };
+}
+async function sendViaResend(to, subject, html, text) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL || "noreply@example.com",
+      to,
+      subject,
+      html,
+      text
+    })
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Resend API error: ${response.status} - ${error}`);
+  }
+  const result = await response.json();
+  return { messageId: result.id };
+}
+async function sendPriceUpdateNotification(toEmail, data) {
+  if (!toEmail) {
+    return { success: false, error: "メールアドレスが設定されていません" };
+  }
+  try {
+    const subject = `[${data.shopDomain}] 価格自動更新完了 - ${data.updatedCount}件更新`;
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2d5016;">🔄 価格自動更新が完了しました</h2>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>📊 更新結果</h3>
+          <ul>
+            <li><strong>ショップ:</strong> ${data.shopDomain}</li>
+            <li><strong>実行時刻:</strong> ${new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</li>
+            <li><strong>更新成功:</strong> ${data.updatedCount}件</li>
+            <li><strong>更新失敗:</strong> ${data.failedCount}件</li>
+          </ul>
+        </div>
+
+        ${data.goldRatio || data.platinumRatio ? `
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3>💰 価格変動情報</h3>
+          <ul>
+            ${data.goldRatio ? `<li><strong>🥇 金:</strong> ${data.goldRatio}</li>` : ""}
+            ${data.platinumRatio ? `<li><strong>🥈 プラチナ:</strong> ${data.platinumRatio}</li>` : ""}
+          </ul>
+        </div>` : ""}
+
+        ${data.failedCount > 0 ? `
+        <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #c62828;">⚠️ 注意事項</h3>
+          <p>${data.failedCount}件の商品で価格更新に失敗しました。管理画面でログを確認してください。</p>
+        </div>` : ""}
+
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>📱 次の操作:</strong></p>
+          <ul>
+            <li>更新結果の詳細は管理画面の「ログ」ページで確認できます</li>
+            <li>Shopify管理画面で実際の商品価格をご確認ください</li>
+            <li>問題がある場合は、アプリの設定を見直してください</li>
+          </ul>
+        </div>
+
+        <hr style="border: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #666; font-size: 12px;">
+          この通知は金・プラチナ価格自動更新アプリから送信されています。<br>
+          通知設定はアプリの「設定」ページから変更できます。
+        </p>
+      </div>
+    `;
+    const textContent = `
+[${data.shopDomain}] 価格自動更新が完了しました
+
+📊 更新結果:
+- ショップ: ${data.shopDomain}
+- 実行時刻: ${new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+- 更新成功: ${data.updatedCount}件
+- 更新失敗: ${data.failedCount}件
+
+${data.goldRatio ? `🥇 金: ${data.goldRatio}
+` : ""}${data.platinumRatio ? `🥈 プラチナ: ${data.platinumRatio}
+` : ""}
+${data.failedCount > 0 ? `
+⚠️ ${data.failedCount}件の商品で更新に失敗しました。管理画面でログを確認してください。
+` : ""}
+詳細な結果は管理画面の「ログ」ページでご確認ください。
+    `;
+    let result;
+    if (process.env.RESEND_API_KEY) {
+      result = await sendViaResend(toEmail, subject, htmlContent, textContent);
+    } else if (process.env.SENDGRID_API_KEY) {
+      result = await sendViaSendGrid(toEmail, subject, htmlContent, textContent);
+    } else {
+      console.log("📧 [開発モード] メール通知:");
+      console.log(`宛先: ${toEmail}`);
+      console.log(`件名: ${subject}`);
+      console.log(`本文:
+${textContent}`);
+      result = { messageId: "console-output" };
+    }
+    console.log(`📧 通知メール送信成功: ${toEmail} (MessageID: ${result.messageId})`);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error("📧 メール送信エラー:", error);
+    return {
+      success: false,
+      error: `メール送信に失敗しました: ${error.message}`
+    };
+  }
+}
+async function sendTestEmail(toEmail) {
+  if (!toEmail) {
+    return { success: false, error: "メールアドレスが設定されていません" };
+  }
+  const testData = {
+    shopDomain: "test-shop.myshopify.com",
+    updatedCount: 3,
+    failedCount: 0,
+    goldRatio: "+0.50%",
+    platinumRatio: "-0.25%",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  return await sendPriceUpdateNotification(toEmail, testData);
+}
+const action$5 = async ({ request }) => {
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405 });
+  }
+  try {
+    const { session } = await authenticate.admin(request);
+    const shop = session.shop;
+    const setting = await prisma$1.shopSetting.findUnique({
+      where: { shopDomain: shop },
+      select: { notificationEmail: true }
+    });
+    if (!(setting == null ? void 0 : setting.notificationEmail)) {
+      return json({
+        success: false,
+        error: "通知メールアドレスが設定されていません。設定画面でメールアドレスを入力してください。"
+      }, { status: 400 });
+    }
+    console.log(`🧪 テストメール送信開始: ${setting.notificationEmail}`);
+    const result = await sendTestEmail(setting.notificationEmail);
+    if (result.success) {
+      console.log(`✅ テストメール送信成功: ${setting.notificationEmail}`);
+      return json({
+        success: true,
+        message: `テストメールを ${setting.notificationEmail} に送信しました`,
+        email: setting.notificationEmail
+      });
+    } else {
+      console.error(`❌ テストメール送信失敗: ${result.error}`);
+      return json({
+        success: false,
+        error: `メール送信に失敗しました: ${result.error}`
+      }, { status: 500 });
+    }
+  } catch (error) {
+    console.error("テストメールAPI エラー:", error);
+    return json({
+      success: false,
+      error: `サーバーエラーが発生しました: ${error.message}`
+    }, { status: 500 });
+  }
+};
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
 const polarisTranslations = {
@@ -10060,7 +10255,7 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$4,
   default: Auth,
@@ -10102,6 +10297,8 @@ async function fetchMetalPriceData(metalType) {
     console.log(`${metalType} HTML取得成功、長さ:`, html.length);
     let retailPrice = null;
     let changeYen = null;
+    let buyPrice = null;
+    let buyChangeYen = null;
     const metalRowClass = getMetalRowClass(metalType);
     const metalRowMatch = html.match(new RegExp(`<tr[^>]*class="${metalRowClass}"[^>]*>.*?</tr>`, "is"));
     if (metalRowMatch) {
@@ -10110,12 +10307,22 @@ async function fetchMetalPriceData(metalType) {
       const priceMatch = metalRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
       if (priceMatch) {
         retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
-        console.log("価格抽出:", priceMatch[0], "→", retailPrice);
+        console.log("小売価格抽出:", priceMatch[0], "→", retailPrice);
+      }
+      const buyPriceMatch = metalRow.match(/<td[^>]*class="purchase_tax"[^>]*>([\d,]+)\s*円/);
+      if (buyPriceMatch) {
+        buyPrice = parseInt(buyPriceMatch[1].replace(/,/g, ""));
+        console.log("買取価格抽出:", buyPriceMatch[0], "→", buyPrice);
       }
       const changeMatch = metalRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
       if (changeMatch) {
         changeYen = parseFloat(changeMatch[1]);
-        console.log("前日比抽出:", changeMatch[0], "→", changeYen);
+        console.log("小売価格前日比抽出:", changeMatch[0], "→", changeYen);
+      }
+      const buyChangeMatch = metalRow.match(/<td[^>]*class="purchase_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+      if (buyChangeMatch) {
+        buyChangeYen = parseFloat(buyChangeMatch[1]);
+        console.log("買取価格前日比抽出:", buyChangeMatch[0], "→", buyChangeYen);
       }
     }
     if (!retailPrice) {
@@ -10133,6 +10340,8 @@ async function fetchMetalPriceData(metalType) {
     });
     const changeRatio = changeYen !== null && retailPrice !== null ? changeYen / retailPrice : null;
     const changePercent = changeRatio !== null ? `${(changeRatio * 100).toFixed(2)}%` : "0.00%";
+    const buyChangeRatio = buyChangeYen !== null && buyPrice !== null ? buyChangeYen / buyPrice : null;
+    const buyChangePercent = buyChangeRatio !== null ? `${(buyChangeRatio * 100).toFixed(2)}%` : "0.00%";
     let changeDirection = "flat";
     if (changeRatio !== null) {
       if (changeRatio > 0) changeDirection = "up";
@@ -10142,8 +10351,12 @@ async function fetchMetalPriceData(metalType) {
       metalType,
       retailPrice,
       retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : "取得失敗",
+      buyPrice,
+      buyPriceFormatted: buyPrice ? `¥${buyPrice.toLocaleString()}/g` : "取得失敗",
       changeRatio,
       changePercent: changeRatio !== null ? changeRatio >= 0 ? `+${changePercent}` : changePercent : "0.00%",
+      buyChangeRatio,
+      buyChangePercent: buyChangeRatio !== null ? buyChangeRatio >= 0 ? `+${buyChangePercent}` : buyChangePercent : "0.00%",
       changeDirection,
       lastUpdated: /* @__PURE__ */ new Date()
     };
@@ -10172,12 +10385,13 @@ async function fetchPlatinumPriceDataTanaka() {
   return await fetchMetalPriceData("platinum");
 }
 function verifyCronAuth(request) {
-  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
-  const got = request.headers.get("authorization");
-  if (expected && got !== expected) {
-    return json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
+  const fromVercelCron = request.headers.get("x-vercel-cron") === "1";
+  if (fromVercelCron) return null;
+  const expected = process.env.CRON_SECRET;
+  if (!expected) return null;
+  const got = request.headers.get("authorization") || "";
+  if (got === `Bearer ${expected}`) return null;
+  return json({ error: "Unauthorized" }, { status: 401 });
 }
 class ShopifyAdminClient {
   constructor(shop, accessToken) {
@@ -10204,36 +10418,115 @@ class ShopifyAdminClient {
     return { status: response.status, body, ok: true };
   }
 }
-async function fetchGoldChangeRatio() {
+async function fetchMetalPriceRatios() {
   try {
-    const goldData = await fetchGoldPriceDataTanaka();
-    if (!goldData || goldData.changeRatio === null) {
-      console.log("金価格データの取得に失敗");
-      return null;
-    }
-    console.log(`金価格情報: ${goldData.retailPriceFormatted}, 前日比: ${goldData.changePercent}, 変動方向: ${goldData.changeDirection}`);
-    return goldData.changeRatio;
+    const [goldData, platinumData] = await Promise.all([
+      fetchGoldPriceDataTanaka(),
+      fetchPlatinumPriceDataTanaka()
+    ]);
+    const gold = goldData && goldData.changeRatio !== null ? goldData.changeRatio : null;
+    const platinum = platinumData && platinumData.changeRatio !== null ? platinumData.changeRatio : null;
+    console.log(`金価格情報: ${goldData == null ? void 0 : goldData.retailPriceFormatted}, 前日比: ${goldData == null ? void 0 : goldData.changePercent}, 変動率: ${gold ? (gold * 100).toFixed(2) + "%" : "N/A"}`);
+    console.log(`プラチナ価格情報: ${platinumData == null ? void 0 : platinumData.retailPriceFormatted}, 前日比: ${platinumData == null ? void 0 : platinumData.changePercent}, 変動率: ${platinum ? (platinum * 100).toFixed(2) + "%" : "N/A"}`);
+    return { gold, platinum };
   } catch (error) {
-    console.error("金価格取得エラー:", error);
-    return null;
+    console.error("金属価格取得エラー:", error);
+    return { gold: null, platinum: null };
   }
 }
-function calcFinalPriceWithStep(current, ratio, minPct01, step = 1) {
+function calcFinalPriceWithStep$1(current, ratio, minPct01, step = 1) {
   const target = Math.max(current * (1 + ratio), current * minPct01);
   const rounded = ratio >= 0 ? Math.ceil(target / step) * step : Math.floor(target / step) * step;
   return String(rounded);
 }
+async function processProduct(target, ratio, metalType, admin, entries, details, minPct01) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  try {
+    const resp = await admin.graphql(`
+      query($id: ID!) { 
+        product(id: $id) { 
+          id 
+          title
+          variants(first: 250) {
+            edges {
+              node {
+                id
+                price
+              }
+            }
+          }
+        } 
+      }
+    `, { variables: { id: target.productId } });
+    if (resp.status === 401 || ((_d = (_c = (_b = (_a = resp.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
+      console.error(`🚨 401 Unauthorized detected for product: ${target.productId}`);
+      details.push({
+        success: false,
+        productId: target.productId,
+        error: "401 Unauthorized: 再認証が必要",
+        metalType
+      });
+      return;
+    }
+    if (!resp.ok || ((_e = resp.body) == null ? void 0 : _e.errors) && resp.body.errors.length) {
+      const msg = ((_h = (_g = (_f = resp.body) == null ? void 0 : _f.errors) == null ? void 0 : _g[0]) == null ? void 0 : _h.message) ?? `HTTP ${resp.status}`;
+      console.error(`商品 ${target.productId} (${metalType}) GraphQLエラー:`, msg);
+      details.push({
+        success: false,
+        productId: target.productId,
+        error: `GraphQLエラー: ${msg}`,
+        metalType
+      });
+      return;
+    }
+    const product = (_j = (_i = resp.body) == null ? void 0 : _i.data) == null ? void 0 : _j.product;
+    if (!product) {
+      console.error(`商品 ${target.productId} (${metalType}) データが見つかりません`);
+      details.push({
+        success: false,
+        productId: target.productId,
+        error: "商品データが見つかりません",
+        metalType
+      });
+      return;
+    }
+    for (const edge of product.variants.edges) {
+      const variant = edge.node;
+      const current = Number(variant.price || 0);
+      if (!current) continue;
+      const newPrice = calcFinalPriceWithStep$1(current, ratio, minPct01, 10);
+      if (parseFloat(newPrice) !== current) {
+        entries.push({
+          productId: target.productId,
+          productTitle: product.title,
+          variantId: variant.id,
+          newPrice,
+          oldPrice: current,
+          metalType
+        });
+      }
+    }
+  } catch (error) {
+    console.error(`商品 ${target.productId} (${metalType}) の処理でエラー:`, error);
+    details.push({
+      success: false,
+      productId: target.productId,
+      error: `商品処理エラー: ${error.message}`,
+      metalType
+    });
+  }
+}
 async function updateShopPrices(shop, accessToken) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const admin = new ShopifyAdminClient(shop, accessToken);
   let minPctSaved = 93;
   try {
-    const ratio = await fetchGoldChangeRatio();
-    if (ratio === null) {
+    const ratios = await fetchMetalPriceRatios();
+    if (ratios.gold === null && ratios.platinum === null) {
       return {
         shop,
         success: false,
-        error: "金価格の取得に失敗",
+        error: "金・プラチナ価格の取得に失敗",
         updated: 0,
         failed: 0
       };
@@ -10255,7 +10548,7 @@ async function updateShopPrices(shop, accessToken) {
     }
     const targets = await prisma$1.selectedProduct.findMany({
       where: { shopDomain: shop },
-      select: { productId: true }
+      select: { productId: true, metalType: true }
     });
     if (!targets.length) {
       return {
@@ -10266,114 +10559,70 @@ async function updateShopPrices(shop, accessToken) {
         failed: 0
       };
     }
+    const goldTargets = targets.filter((t) => t.metalType === "gold");
+    const platinumTargets = targets.filter((t) => t.metalType === "platinum");
+    console.log(`${shop}: 金商品 ${goldTargets.length}件, プラチナ商品 ${platinumTargets.length}件`);
+    if ((ratios.gold === null || goldTargets.length === 0) && (ratios.platinum === null || platinumTargets.length === 0)) {
+      return {
+        shop,
+        success: true,
+        message: "有効な価格変動・対象商品なし",
+        updated: 0,
+        failed: 0
+      };
+    }
     const entries = [];
     let updated = 0, failed = 0;
     const details = [];
-    for (const target of targets) {
-      try {
-        const resp = await admin.graphql(`
-          query($id: ID!) { 
-            product(id: $id) { 
-              id 
-              title
-              variants(first: 50) {
-                edges {
-                  node {
-                    id
-                    price
-                  }
-                }
-              }
-            } 
-          }
-        `, { variables: { id: target.productId } });
-        if (resp.status === 401 || ((_d = (_c = (_b = (_a = resp.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
-          console.error(`🚨 401 Unauthorized detected for shop: ${shop}`);
-          await prisma$1.priceUpdateLog.create({
-            data: {
-              shopDomain: shop,
-              executionType: "cron",
-              goldRatio: ratio,
-              minPricePct: minPctSaved,
-              success: false,
-              errorMessage: "401 Unauthorized: 再認証が必要",
-              totalProducts: targets.length,
-              updatedCount: 0,
-              failedCount: targets.length
-            }
-          });
-          await prisma$1.session.deleteMany({ where: { shop } });
-          return {
-            shop,
-            success: false,
-            needsReauth: true,
-            message: "認証エラー: アプリの再インストールが必要です",
-            updated: 0,
-            failed: targets.length
-          };
-        }
-        if (!resp.ok || ((_e = resp.body) == null ? void 0 : _e.errors) && resp.body.errors.length) {
-          const msg = ((_h = (_g = (_f = resp.body) == null ? void 0 : _f.errors) == null ? void 0 : _g[0]) == null ? void 0 : _h.message) ?? `HTTP ${resp.status}`;
-          console.error(`商品 ${target.productId} GraphQLエラー:`, msg);
-          details.push({
-            success: false,
-            productId: target.productId,
-            error: `GraphQLエラー: ${msg}`
-          });
-          failed += 1;
-          continue;
-        }
-        const product = (_j = (_i = resp.body) == null ? void 0 : _i.data) == null ? void 0 : _j.product;
-        if (!product) {
-          console.error(`商品 ${target.productId} データが見つかりません`);
-          details.push({
-            success: false,
-            productId: target.productId,
-            error: "商品データが見つかりません"
-          });
-          failed += 1;
-          continue;
-        }
-        for (const edge of product.variants.edges) {
-          const variant = edge.node;
-          const current = Number(variant.price || 0);
-          if (!current) continue;
-          const newPrice = calcFinalPriceWithStep(current, ratio, minPct01);
-          if (parseFloat(newPrice) !== current) {
-            entries.push({
-              productId: target.productId,
-              productTitle: product.title,
-              variantId: variant.id,
-              newPrice,
-              oldPrice: current
-            });
-          }
-        }
+    if (ratios.gold !== null && goldTargets.length > 0) {
+      console.log(`${shop}: 金商品価格更新開始（変動率: ${(ratios.gold * 100).toFixed(2)}%）`);
+      for (const target of goldTargets) {
+        await processProduct(target, ratios.gold, "gold", admin, entries, details, minPct01);
         await new Promise((r) => setTimeout(r, 100));
-      } catch (error) {
-        console.error(`商品 ${target.productId} の処理でエラー:`, error);
-        details.push({
-          success: false,
-          productId: target.productId,
-          error: `商品処理エラー: ${error.message}`
-        });
-        failed += 1;
+      }
+    }
+    if (ratios.platinum !== null && platinumTargets.length > 0) {
+      console.log(`${shop}: プラチナ商品価格更新開始（変動率: ${(ratios.platinum * 100).toFixed(2)}%）`);
+      for (const target of platinumTargets) {
+        await processProduct(target, ratios.platinum, "platinum", admin, entries, details, minPct01);
+        await new Promise((r) => setTimeout(r, 100));
       }
     }
     if (!entries.length) {
-      await prisma$1.priceUpdateLog.create({
-        data: {
-          shopDomain: shop,
-          executionType: "cron",
-          goldRatio: ratio,
-          minPricePct: minPctSaved,
-          totalProducts: targets.length,
-          updatedCount: 0,
-          failedCount: 0,
-          success: true,
-          errorMessage: null
-        }
-      });
+      const goldRatio = ratios.gold;
+      const platinumRatio = ratios.platinum;
+      if (goldRatio !== null && goldTargets.length > 0) {
+        await prisma$1.priceUpdateLog.create({
+          data: {
+            shopDomain: shop,
+            executionType: "cron",
+            metalType: "gold",
+            priceRatio: goldRatio,
+            minPricePct: minPctSaved,
+            totalProducts: goldTargets.length,
+            updatedCount: 0,
+            failedCount: 0,
+            success: true,
+            errorMessage: null
+          }
+        });
+      }
+      if (platinumRatio !== null && platinumTargets.length > 0) {
+        await prisma$1.priceUpdateLog.create({
+          data: {
+            shopDomain: shop,
+            executionType: "cron",
+            metalType: "platinum",
+            priceRatio: platinumRatio,
+            minPricePct: minPctSaved,
+            totalProducts: platinumTargets.length,
+            updatedCount: 0,
+            failedCount: 0,
+            success: true,
+            errorMessage: null
+          }
+        });
+      }
       return {
         shop,
         success: true,
@@ -10406,14 +10655,15 @@ async function updateShopPrices(shop, accessToken) {
             variants: variants.map((v) => ({ id: v.id, price: v.price }))
           }
         });
-        if (res.status === 401 || ((_n = (_m = (_l = (_k = res.body) == null ? void 0 : _k.errors) == null ? void 0 : _l[0]) == null ? void 0 : _m.message) == null ? void 0 : _n.includes("Invalid API key or access token"))) {
+        if (res.status === 401 || ((_d = (_c = (_b = (_a = res.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
           console.error(`🚨 401 Unauthorized detected during price update for shop: ${shop}`);
           await prisma$1.session.deleteMany({ where: { shop } });
           await prisma$1.priceUpdateLog.create({
             data: {
               shopDomain: shop,
               executionType: "cron",
-              goldRatio: ratio,
+              metalType: "gold",
+              priceRatio: null,
               minPricePct: minPctSaved,
               totalProducts: targets.length,
               updatedCount: updated,
@@ -10431,8 +10681,8 @@ async function updateShopPrices(shop, accessToken) {
             failed: entries.length - updated
           };
         }
-        if (!res.ok || ((_o = res.body) == null ? void 0 : _o.errors) && res.body.errors.length) {
-          const msg = ((_r = (_q = (_p = res.body) == null ? void 0 : _p.errors) == null ? void 0 : _q[0]) == null ? void 0 : _r.message) ?? `HTTP ${res.status}`;
+        if (!res.ok || ((_e = res.body) == null ? void 0 : _e.errors) && res.body.errors.length) {
+          const msg = ((_h = (_g = (_f = res.body) == null ? void 0 : _f.errors) == null ? void 0 : _g[0]) == null ? void 0 : _h.message) ?? `HTTP ${res.status}`;
           console.error(`商品 ${productId} 更新GraphQLエラー:`, msg);
           for (const variant of variants) {
             details.push({
@@ -10446,7 +10696,7 @@ async function updateShopPrices(shop, accessToken) {
           failed += variants.length;
           continue;
         }
-        const errs = ((_u = (_t = (_s = res.body) == null ? void 0 : _s.data) == null ? void 0 : _t.productVariantsBulkUpdate) == null ? void 0 : _u.userErrors) || [];
+        const errs = ((_k = (_j = (_i = res.body) == null ? void 0 : _i.data) == null ? void 0 : _j.productVariantsBulkUpdate) == null ? void 0 : _k.userErrors) || [];
         if (errs.length) {
           failed += variants.length;
           for (const variant of variants) {
@@ -10454,11 +10704,11 @@ async function updateShopPrices(shop, accessToken) {
               success: false,
               productId,
               variantId: variant.id,
-              error: ((_v = errs[0]) == null ? void 0 : _v.message) || "不明なエラー"
+              error: ((_l = errs[0]) == null ? void 0 : _l.message) || "不明なエラー"
             });
           }
         } else {
-          const updatedVariants = ((_y = (_x = (_w = res.body) == null ? void 0 : _w.data) == null ? void 0 : _x.productVariantsBulkUpdate) == null ? void 0 : _y.productVariants) || [];
+          const updatedVariants = ((_o = (_n = (_m = res.body) == null ? void 0 : _m.data) == null ? void 0 : _n.productVariantsBulkUpdate) == null ? void 0 : _o.productVariants) || [];
           updated += updatedVariants.length;
           for (const variant of variants) {
             const uv = updatedVariants.find((u) => u.id === variant.id);
@@ -10486,26 +10736,80 @@ async function updateShopPrices(shop, accessToken) {
         failed += variants.length;
       }
     }
-    await prisma$1.priceUpdateLog.create({
-      data: {
-        shopDomain: shop,
-        executionType: "cron",
-        goldRatio: ratio,
-        minPricePct: minPctSaved,
-        totalProducts: targets.length,
-        updatedCount: updated,
-        failedCount: failed,
-        success: failed === 0,
-        errorMessage: failed > 0 ? `${failed}件の更新に失敗` : null,
-        details: JSON.stringify(details)
-      }
+    const goldEntries = entries.filter((e) => e.metalType === "gold");
+    const platinumEntries = entries.filter((e) => e.metalType === "platinum");
+    const goldDetails = details.filter((d) => d.metalType === "gold");
+    const platinumDetails = details.filter((d) => d.metalType === "platinum");
+    if (ratios.gold !== null && (goldTargets.length > 0 || goldEntries.length > 0)) {
+      await prisma$1.priceUpdateLog.create({
+        data: {
+          shopDomain: shop,
+          executionType: "cron",
+          metalType: "gold",
+          priceRatio: ratios.gold,
+          minPricePct: minPctSaved,
+          totalProducts: goldTargets.length,
+          updatedCount: goldEntries.length,
+          failedCount: goldDetails.filter((d) => !d.success).length,
+          success: goldDetails.filter((d) => !d.success).length === 0,
+          errorMessage: goldDetails.filter((d) => !d.success).length > 0 ? `金: ${goldDetails.filter((d) => !d.success).length}件の更新に失敗` : null,
+          details: JSON.stringify(goldDetails)
+        }
+      });
+    }
+    if (ratios.platinum !== null && (platinumTargets.length > 0 || platinumEntries.length > 0)) {
+      await prisma$1.priceUpdateLog.create({
+        data: {
+          shopDomain: shop,
+          executionType: "cron",
+          metalType: "platinum",
+          priceRatio: ratios.platinum,
+          minPricePct: minPctSaved,
+          totalProducts: platinumTargets.length,
+          updatedCount: platinumEntries.length,
+          failedCount: platinumDetails.filter((d) => !d.success).length,
+          success: platinumDetails.filter((d) => !d.success).length === 0,
+          errorMessage: platinumDetails.filter((d) => !d.success).length > 0 ? `プラチナ: ${platinumDetails.filter((d) => !d.success).length}件の更新に失敗` : null,
+          details: JSON.stringify(platinumDetails)
+        }
+      });
+    }
+    const shopSetting = await prisma$1.shopSetting.findUnique({
+      where: { shopDomain: shop },
+      select: { notificationEmail: true }
     });
+    if (shopSetting == null ? void 0 : shopSetting.notificationEmail) {
+      try {
+        const emailData = {
+          shopDomain: shop,
+          updatedCount: updated,
+          failedCount: failed,
+          goldRatio: ratios.gold ? (ratios.gold * 100).toFixed(2) + "%" : void 0,
+          platinumRatio: ratios.platinum ? (ratios.platinum * 100).toFixed(2) + "%" : void 0,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          details
+        };
+        const emailResult = await sendPriceUpdateNotification(
+          shopSetting.notificationEmail,
+          emailData
+        );
+        if (emailResult.success) {
+          console.log(`📧 メール通知送信成功: ${shopSetting.notificationEmail}`);
+        } else {
+          console.error(`📧 メール通知送信失敗: ${emailResult.error}`);
+        }
+      } catch (emailError) {
+        console.error("📧 メール通知処理でエラー:", emailError);
+      }
+    }
     return {
       shop,
       success: true,
       updated,
       failed,
-      ratio: (ratio * 100).toFixed(2) + "%"
+      goldRatio: ratios.gold ? (ratios.gold * 100).toFixed(2) + "%" : "N/A",
+      platinumRatio: ratios.platinum ? (ratios.platinum * 100).toFixed(2) + "%" : "N/A",
+      emailSent: !!(shopSetting == null ? void 0 : shopSetting.notificationEmail)
     };
   } catch (error) {
     console.error(`${shop}の処理でエラー:`, error);
@@ -10513,7 +10817,8 @@ async function updateShopPrices(shop, accessToken) {
       data: {
         shopDomain: shop,
         executionType: "cron",
-        goldRatio: null,
+        metalType: "gold",
+        priceRatio: null,
         minPricePct: minPctSaved,
         totalProducts: 0,
         updatedCount: 0,
@@ -10531,22 +10836,100 @@ async function updateShopPrices(shop, accessToken) {
     };
   }
 }
-async function runAllShops() {
+function isJapaneseHoliday(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const fixedHolidays = [
+    { month: 1, day: 1 },
+    // 元日
+    { month: 2, day: 11 },
+    // 建国記念の日
+    { month: 2, day: 23 },
+    // 天皇誕生日
+    { month: 4, day: 29 },
+    // 昭和の日
+    { month: 5, day: 3 },
+    // 憲法記念日
+    { month: 5, day: 4 },
+    // みどりの日
+    { month: 5, day: 5 },
+    // こどもの日
+    { month: 8, day: 11 },
+    // 山の日
+    { month: 11, day: 3 },
+    // 文化の日
+    { month: 11, day: 23 }
+    // 勤労感謝の日
+  ];
+  for (const holiday of fixedHolidays) {
+    if (month === holiday.month && day === holiday.day) {
+      return true;
+    }
+  }
+  if (month === 1) {
+    const firstMonday = Math.ceil((9 - new Date(year, 0, 1).getDay()) / 7) * 7 + 2;
+    if (day === firstMonday) return true;
+  }
+  if (month === 7) {
+    const firstMonday = Math.ceil((9 - new Date(year, 6, 1).getDay()) / 7) * 7 + 2;
+    const thirdMonday = firstMonday + 14;
+    if (day === thirdMonday) return true;
+  }
+  if (month === 9) {
+    const firstMonday = Math.ceil((9 - new Date(year, 8, 1).getDay()) / 7) * 7 + 2;
+    const thirdMonday = firstMonday + 14;
+    if (day === thirdMonday) return true;
+  }
+  if (month === 10) {
+    const firstMonday = Math.ceil((9 - new Date(year, 9, 1).getDay()) / 7) * 7 + 2;
+    const secondMonday = firstMonday + 7;
+    if (day === secondMonday) return true;
+  }
+  return false;
+}
+function isBusinessDay(date) {
+  const dayOfWeek = date.getDay();
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const isNotHoliday = !isJapaneseHoliday(date);
+  return isWeekday && isNotHoliday;
+}
+async function runAllShops(opts = {}) {
+  const force = !!opts.force;
   try {
     console.log(`🕙 Cron実行開始: ${(/* @__PURE__ */ new Date()).toISOString()}`);
-    const enabledShops = await prisma$1.shopSetting.findMany({
-      where: { autoUpdateEnabled: true },
-      select: { shopDomain: true }
-    });
-    if (!enabledShops.length) {
-      console.log("自動更新有効なショップがありません");
+    const now = /* @__PURE__ */ new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1e3);
+    const currentHour = jstNow.getHours();
+    if (!force && !isBusinessDay(jstNow)) {
+      const message = `${jstNow.toDateString()}は土日祝日のため価格更新をスキップします`;
+      console.log(message);
       return {
-        message: "自動更新有効なショップなし",
+        message,
         timestamp: (/* @__PURE__ */ new Date()).toISOString(),
         summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
         shops: []
       };
     }
+    const enabledShops = await prisma$1.shopSetting.findMany({
+      where: {
+        autoUpdateEnabled: true,
+        // force=trueでない場合は設定時刻もチェック
+        ...force ? {} : { autoUpdateHour: currentHour }
+      },
+      select: { shopDomain: true, autoUpdateHour: true }
+    });
+    if (!enabledShops.length) {
+      const message = force ? "自動更新有効なショップがありません" : `JST ${currentHour}:00に実行予定のショップがありません`;
+      console.log(message);
+      return {
+        message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+        shops: []
+      };
+    }
+    console.log(`🕐 JST ${currentHour}:00 - ${enabledShops.length}件のショップで価格更新を開始`);
     const results = [];
     for (const shop of enabledShops) {
       const session = await prisma$1.session.findFirst({
@@ -10597,7 +10980,8 @@ async function runAllShops() {
 const loader$8 = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
-  const result = await runAllShops();
+  const force = new URL(request.url).searchParams.get("force") === "1";
+  const result = await runAllShops({ force });
   return json(result, {
     headers: { "Cache-Control": "no-store" }
   });
@@ -10608,12 +10992,13 @@ const action$3 = async ({ request }) => {
   }
   const deny = verifyCronAuth(request);
   if (deny) return deny;
-  const result = await runAllShops();
+  const force = new URL(request.url).searchParams.get("force") === "1";
+  const result = await runAllShops({ force });
   return json(result, {
     headers: { "Cache-Control": "no-store" }
   });
 };
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$3,
   loader: loader$8
@@ -10798,7 +11183,7 @@ const action$2 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -10810,7 +11195,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -10819,7 +11204,7 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -10847,7 +11232,7 @@ function ErrorBoundary() {
 const headers = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
@@ -10907,7 +11292,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -10982,28 +11367,39 @@ let ClientCache = _ClientCache;
 const CACHE_KEYS = {
   PRODUCTS: "shopify_products_cache"
 };
-function roundInt(n) {
-  return Math.round(n);
+function calcFinalPriceWithStep(current, ratio, minPct01, step = 1) {
+  const target = Math.max(current * (1 + ratio), current * minPct01);
+  const rounded = ratio >= 0 ? Math.ceil(target / step) * step : Math.floor(target / step) * step;
+  return String(rounded);
 }
-function calcFinalPrice(current, ratio, minPct) {
-  const calc = current * (1 + ratio);
-  const floor = current * (minPct / 100);
-  return String(roundInt(Math.max(calc, floor)));
-}
-async function runBulkUpdateBySpec(admin, shop) {
+async function runBulkUpdateBySpec(admin, shop, opts = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
+  const onlyIds = Array.isArray(opts.onlyProductIds) && opts.onlyProductIds.length ? opts.onlyProductIds : null;
+  const minPriceRate = typeof opts.minPriceRate === "number" ? opts.minPriceRate : void 0;
+  console.log("[UPDATE] onlyIds:", onlyIds == null ? void 0 : onlyIds.slice(0, 3), "count:", onlyIds == null ? void 0 : onlyIds.length);
   const [goldData, platinumData] = await Promise.all([
     fetchMetalPriceData("gold"),
     fetchMetalPriceData("platinum")
   ]);
   const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop } });
-  const minPct = (setting == null ? void 0 : setting.minPricePct) ?? 93;
+  const minPct = minPriceRate ?? (setting == null ? void 0 : setting.minPricePct) ?? 93;
   const targets = await prisma$1.selectedProduct.findMany({
-    where: { shopDomain: shop },
+    where: {
+      shopDomain: shop,
+      selected: true,
+      ...onlyIds ? { productId: { in: onlyIds } } : {}
+    },
     select: { productId: true, metalType: true }
   });
+  console.log("[UPDATE] target count:", targets.length);
+  console.log("[UPDATE] sample ids:", targets.slice(0, 5));
   if (!targets.length) {
-    return { ok: true, minPct, updated: 0, failed: 0, details: [], message: "対象なし" };
+    return {
+      ok: false,
+      reason: onlyIds ? "選択した商品が保存されていません" : "更新対象がありません",
+      details: [],
+      summary: { total: 0, success: 0, failed: 0 }
+    };
   }
   const goldTargets = targets.filter((t) => t.metalType === "gold");
   const platinumTargets = targets.filter((t) => t.metalType === "platinum");
@@ -11020,7 +11416,7 @@ async function runBulkUpdateBySpec(admin, shop) {
       query($id: ID!) { 
         product(id: $id) { 
           id 
-          variants(first: 50) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -11038,7 +11434,8 @@ async function runBulkUpdateBySpec(admin, shop) {
       const variant = edge.node;
       const current = Number(variant.price ?? 0);
       if (!current) continue;
-      const newPrice = calcFinalPrice(current, ratio, minPct);
+      const minPct01 = minPct / 100;
+      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({
           productId: t.productId,
@@ -11057,7 +11454,7 @@ async function runBulkUpdateBySpec(admin, shop) {
       query($id: ID!) { 
         product(id: $id) { 
           id 
-          variants(first: 50) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -11075,7 +11472,8 @@ async function runBulkUpdateBySpec(admin, shop) {
       const variant = edge.node;
       const current = Number(variant.price ?? 0);
       if (!current) continue;
-      const newPrice = calcFinalPrice(current, ratio, minPct);
+      const minPct01 = minPct / 100;
+      const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({
           productId: t.productId,
@@ -11196,6 +11594,37 @@ async function runBulkUpdateBySpec(admin, shop) {
     message: `${goldTargets.length}件の金商品、${platinumTargets.length}件のプラチナ商品を処理完了`
   };
 }
+function UnselectButton({ productId, onOptimistic, scheduleRevalidate }) {
+  const fx = useFetcher();
+  const busy = fx.state !== "idle";
+  useEffect(() => {
+    var _a;
+    if (fx.state === "idle" && ((_a = fx.data) == null ? void 0 : _a.success)) {
+      scheduleRevalidate == null ? void 0 : scheduleRevalidate();
+    }
+  }, [fx.state, fx.data, scheduleRevalidate]);
+  return /* @__PURE__ */ jsxs(fx.Form, { method: "post", replace: true, children: [
+    /* @__PURE__ */ jsx("input", { type: "hidden", name: "action", value: "unselectProducts" }),
+    /* @__PURE__ */ jsx("input", { type: "hidden", name: "productId", value: productId }),
+    /* @__PURE__ */ jsx(
+      Button,
+      {
+        size: "micro",
+        variant: "tertiary",
+        tone: "critical",
+        loading: busy,
+        disabled: busy,
+        onClick: (e) => {
+          e.preventDefault();
+          onOptimistic == null ? void 0 : onOptimistic(productId);
+          const fd = new FormData(e.currentTarget.form);
+          fx.submit(fd, { method: "post" });
+        },
+        children: "解除"
+      }
+    )
+  ] });
+}
 function filterProducts(products, searchTerm, filterType = "all") {
   let filtered = products;
   if (filterType === "k18") {
@@ -11215,6 +11644,131 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   const minPrice = currentPrice * minPriceRate;
   const finalPrice = Math.max(newPrice, minPrice);
   return Math.ceil(finalPrice / 10) * 10;
+}
+async function fetchProductIdsByCollection(admin, collectionId) {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  const ids = [];
+  let after = null;
+  let hasNext = true;
+  while (hasNext) {
+    const res = await admin.graphql(
+      `#graphql
+       query($id: ID!, $first: Int!, $after: String) {
+         collection(id: $id) {
+           products(first: $first, after: $after) {
+             edges {
+               cursor
+               node { id }
+             }
+             pageInfo { hasNextPage }
+           }
+         }
+       }`,
+      { variables: { id: collectionId, first: 250, after } }
+    );
+    const body = await res.json();
+    if ((_a = body == null ? void 0 : body.errors) == null ? void 0 : _a.length) throw new Error(body.errors[0].message || "GraphQL error");
+    const edges = ((_d = (_c = (_b = body == null ? void 0 : body.data) == null ? void 0 : _b.collection) == null ? void 0 : _c.products) == null ? void 0 : _d.edges) ?? [];
+    ids.push(...edges.map((e) => e.node.id));
+    hasNext = ((_h = (_g = (_f = (_e = body == null ? void 0 : body.data) == null ? void 0 : _e.collection) == null ? void 0 : _f.products) == null ? void 0 : _g.pageInfo) == null ? void 0 : _h.hasNextPage) ?? false;
+    after = edges.length ? edges[edges.length - 1].cursor : null;
+  }
+  return Array.from(new Set(ids));
+}
+async function fetchAllCollections(admin) {
+  async function paginate(query, rootKey, pickCount) {
+    var _a, _b, _c, _d;
+    const out = [];
+    let cursor = null;
+    let hasNext = true;
+    while (hasNext) {
+      const res = await admin.graphql(query, { variables: { first: 250, after: cursor } });
+      const body = await res.json();
+      if ((_a = body == null ? void 0 : body.errors) == null ? void 0 : _a.length) throw new Error(JSON.stringify(body.errors));
+      const conn = (_b = body == null ? void 0 : body.data) == null ? void 0 : _b[rootKey];
+      const edges = (conn == null ? void 0 : conn.edges) ?? [];
+      for (const { node } of edges) {
+        out.push({
+          id: node.id,
+          title: node.title,
+          handle: node.handle,
+          // 取得できた場合のみ件数を設定
+          productsCount: pickCount === "scalar" ? Number(node.productsCount ?? 0) : pickCount === "object" ? Number(((_c = node.productsCount) == null ? void 0 : _c.count) ?? 0) : void 0
+        });
+      }
+      hasNext = ((_d = conn == null ? void 0 : conn.pageInfo) == null ? void 0 : _d.hasNextPage) ?? false;
+      cursor = edges.length ? edges[edges.length - 1].cursor : null;
+    }
+    return out;
+  }
+  const qCollectionsScalar = `#graphql
+    query($first:Int!,$after:String){
+      collections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qCollectionsNoCount = `#graphql
+    query($first:Int!,$after:String){
+      collections(first:$first, after:$after){
+        edges{cursor node{ id title handle }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qCustomScalar = `#graphql
+    query($first:Int!,$after:String){
+      customCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qSmartScalar = `#graphql
+    query($first:Int!,$after:String){
+      smartCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qCustomObj = `#graphql
+    query($first:Int!,$after:String){
+      customCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount{count} }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  const qSmartObj = `#graphql
+    query($first:Int!,$after:String){
+      smartCollections(first:$first, after:$after){
+        edges{cursor node{ id title handle productsCount{count} }}
+        pageInfo{hasNextPage}
+      }
+    }`;
+  try {
+    return await paginate(qCollectionsScalar, "collections", "scalar");
+  } catch {
+  }
+  try {
+    return await paginate(qCollectionsNoCount, "collections");
+  } catch {
+  }
+  try {
+    const [c, s] = await Promise.all([
+      paginate(qCustomScalar, "customCollections", "scalar"),
+      paginate(qSmartScalar, "smartCollections", "scalar")
+    ]);
+    return [...c, ...s];
+  } catch {
+  }
+  try {
+    const [c, s] = await Promise.all([
+      paginate(qCustomObj, "customCollections", "object"),
+      paginate(qSmartObj, "smartCollections", "object")
+    ]);
+    return [...c, ...s];
+  } catch (e) {
+    console.error("fetchAllCollections failed:", e);
+    return [];
+  }
 }
 async function fetchAllProducts(admin) {
   let allProducts = [];
@@ -11278,6 +11832,9 @@ async function fetchMetalPrices() {
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
+        buyPrice: goldData.buyPrice,
+        buyPriceFormatted: goldData.buyPriceFormatted,
+        buyChangePercent: goldData.buyChangePercent,
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
@@ -11287,6 +11844,9 @@ async function fetchMetalPrices() {
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,
+        buyPrice: platinumData.buyPrice,
+        buyPriceFormatted: platinumData.buyPriceFormatted,
+        buyChangePercent: platinumData.buyChangePercent,
         changeDirection: platinumData.changeDirection,
         lastUpdated: platinumData.lastUpdated
       } : null
@@ -11300,7 +11860,7 @@ const loader$3 = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const url = new URL(request.url);
   const forceRefresh = url.searchParams.get("refresh") === "true";
-  const [metalPrices, selectedProducts, shopSetting] = await Promise.all([
+  const [metalPrices, selectedProducts, selectedCollections, shopSetting] = await Promise.all([
     fetchMetalPrices(),
     prisma$1.selectedProduct.findMany({
       where: {
@@ -11309,19 +11869,35 @@ const loader$3 = async ({ request }) => {
       },
       select: { productId: true, metalType: true }
     }),
+    prisma$1.selectedCollection.findMany({
+      where: {
+        shopDomain: session.shop,
+        selected: true
+      },
+      select: { collectionId: true, metalType: true }
+    }),
     prisma$1.shopSetting.findUnique({
       where: { shopDomain: session.shop }
     })
   ]);
   const selectedProductIds = selectedProducts.map((p) => p.productId);
+  const selectedCollectionIds = selectedCollections.map((c) => c.collectionId);
   const productsPromise = fetchAllProducts(admin);
+  const collectionsPromise = fetchAllCollections(admin).catch((e) => {
+    console.error("fetchAllCollections failed:", e);
+    return [];
+  });
   return defer({
     products: productsPromise,
+    // Promise を渡す
+    collections: collectionsPromise,
     // Promise を渡す
     goldPrice: metalPrices.gold,
     platinumPrice: metalPrices.platinum,
     selectedProductIds,
     savedSelectedProducts: selectedProducts,
+    selectedCollectionIds,
+    savedSelectedCollections: selectedCollections,
     shopSetting,
     forceRefresh,
     cacheTimestamp: Date.now()
@@ -11333,29 +11909,74 @@ const action$1 = async ({ request }) => {
   const action2 = formData.get("action");
   if (action2 === "saveSelection") {
     const ids = formData.getAll("productId").map(String);
-    const metalTypes = formData.getAll("metalType");
-    const uniqueIds = Array.from(new Set(ids));
-    await prisma$1.selectedProduct.deleteMany({
-      where: { shopDomain: session.shop }
-    });
-    if (uniqueIds.length > 0) {
-      await prisma$1.selectedProduct.createMany({
-        data: uniqueIds.map((productId, index) => ({
-          shopDomain: session.shop,
-          productId,
-          selected: true,
-          metalType: metalTypes[index] === "platinum" ? "platinum" : "gold"
-          // デフォルトは金
-        }))
+    const types = formData.getAll("metalType").map((v) => v === "platinum" ? "platinum" : "gold");
+    const pairs = Array.from(
+      new Map(ids.map((id, i) => [id, types[i]])).entries()
+    );
+    const saved = [];
+    for (const [productId, metalType] of pairs) {
+      await prisma$1.selectedProduct.upsert({
+        where: { shopDomain_productId: { shopDomain: session.shop, productId } },
+        update: { metalType, selected: true },
+        create: { shopDomain: session.shop, productId, selected: true, metalType }
       });
+      saved.push({ productId, metalType });
     }
-    return json({ success: true, message: `${uniqueIds.length}件の商品を選択しました` });
+    return json({
+      success: true,
+      message: `${saved.length}件を保存しました`,
+      savedProducts: saved
+    });
+  }
+  if (action2 === "saveSingleProduct") {
+    const productId = formData.get("productId");
+    const metalType = formData.get("metalType");
+    await prisma$1.selectedProduct.upsert({
+      where: {
+        shopDomain_productId: {
+          shopDomain: session.shop,
+          productId
+        }
+      },
+      update: {
+        metalType: metalType === "platinum" ? "platinum" : "gold",
+        selected: true
+      },
+      create: {
+        shopDomain: session.shop,
+        productId,
+        selected: true,
+        metalType: metalType === "platinum" ? "platinum" : "gold"
+      }
+    });
+    return json({
+      success: true,
+      message: `商品の金属種別を${metalType === "platinum" ? "プラチナ" : "金"}に設定しました`,
+      savedProducts: [{ productId, metalType }]
+    });
+  }
+  if (action2 === "unselectProducts") {
+    const productIds = formData.getAll("productId").map(String);
+    await prisma$1.selectedProduct.deleteMany({
+      where: {
+        shopDomain: session.shop,
+        productId: { in: productIds }
+      }
+    });
+    return json({
+      success: true,
+      message: `${productIds.length}件の商品選択を解除しました`,
+      unselectedProducts: productIds
+    });
   }
   if (action2 === "updatePrices") {
-    JSON.parse(formData.get("selectedProducts"));
-    parseFloat(formData.get("minPriceRate"));
+    const idsFromUI = JSON.parse(formData.get("selectedProductIds") || "[]");
+    const minPriceRate = parseFloat(formData.get("minPriceRate"));
     try {
-      const result = await runBulkUpdateBySpec(admin, session.shop);
+      const result = await runBulkUpdateBySpec(admin, session.shop, {
+        onlyProductIds: idsFromUI.length > 0 ? idsFromUI : null,
+        minPriceRate
+      });
       if (!result.ok) {
         return json({
           error: result.reason,
@@ -11376,21 +11997,127 @@ const action$1 = async ({ request }) => {
       });
     }
   }
+  if (action2 === "saveCollectionSelection") {
+    const collectionId = formData.get("collectionId");
+    const metalType = formData.get("metalType") === "platinum" ? "platinum" : "gold";
+    try {
+      await prisma$1.selectedCollection.upsert({
+        where: { shopDomain_collectionId: { shopDomain: session.shop, collectionId } },
+        update: { selected: true, metalType },
+        create: { shopDomain: session.shop, collectionId, selected: true, metalType }
+      });
+      const productIds = await fetchProductIdsByCollection(admin, collectionId);
+      const saved = [];
+      for (const productId of productIds) {
+        await prisma$1.selectedProduct.upsert({
+          where: { shopDomain_productId: { shopDomain: session.shop, productId } },
+          update: { selected: true, metalType },
+          create: { shopDomain: session.shop, productId, selected: true, metalType }
+        });
+        saved.push({ productId, metalType });
+      }
+      return json({
+        success: true,
+        message: `コレクション内 ${saved.length}件を${metalType === "platinum" ? "プラチナ" : "金"}で登録しました`,
+        savedProducts: saved,
+        savedCollection: { collectionId, metalType }
+      });
+    } catch (error) {
+      return json({
+        error: `コレクション商品登録中にエラーが発生しました: ${error.message}`,
+        success: false
+      });
+    }
+  }
+  if (action2 === "unselectCollection") {
+    const collectionId = formData.get("collectionId");
+    try {
+      await prisma$1.selectedCollection.deleteMany({
+        where: { shopDomain: session.shop, collectionId }
+      });
+      const ids = await fetchProductIdsByCollection(admin, collectionId);
+      await prisma$1.selectedProduct.deleteMany({
+        where: { shopDomain: session.shop, productId: { in: ids } }
+      });
+      return json({
+        success: true,
+        message: `コレクション内 ${ids.length}件の登録を解除しました`,
+        unselectedProducts: ids,
+        unselectedCollection: collectionId
+      });
+    } catch (error) {
+      return json({
+        error: `コレクション商品解除中にエラーが発生しました: ${error.message}`,
+        success: false
+      });
+    }
+  }
   return json({ error: "不正なアクション" });
 };
-function ProductsContent({ products, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp }) {
+function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, selectedCollectionIds, savedSelectedCollections, shopSetting, forceRefresh, cacheTimestamp }) {
   var _a, _b;
-  const fetcher = useFetcher();
+  const mu = useFetcher();
+  const updater = useFetcher();
   const revalidator = useRevalidator();
+  const savedTypeMap = useMemo(() => {
+    const m = {};
+    (savedSelectedProducts || []).forEach((sp) => {
+      m[sp.productId] = sp.metalType;
+    });
+    return m;
+  }, [savedSelectedProducts]);
+  const savedCollectionTypeMap = useMemo(() => {
+    const m = {};
+    (savedSelectedCollections || []).forEach((sc) => {
+      m[sc.collectionId] = sc.metalType;
+    });
+    return m;
+  }, [savedSelectedCollections]);
+  useMemo(
+    () => new Set((savedSelectedProducts || []).map((sp) => sp.productId)),
+    [savedSelectedProducts]
+  );
+  useMemo(
+    () => new Set((savedSelectedCollections || []).map((sc) => sc.collectionId)),
+    [savedSelectedCollections]
+  );
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productMetalTypes, setProductMetalTypes] = useState({});
   const [searchValue, setSearchValue] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [selectionType, setSelectionType] = useState("products");
+  const [selectedCollectionId, setSelectedCollectionId] = useState("all");
   const [minPriceRate, setMinPriceRate] = useState((shopSetting == null ? void 0 : shopSetting.minPricePct) || 93);
   const [showPreview, setShowPreview] = useState(false);
   const [pricePreview, setPricePreview] = useState([]);
   const [isUsingCache, setIsUsingCache] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []);
+  const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {});
+  const [savedIdSet, setSavedIdSet] = useState(
+    () => new Set((savedSelectedProducts || []).map((sp) => sp.productId))
+  );
+  const addSaved = useCallback((ids) => {
+    setSavedIdSet((prev) => /* @__PURE__ */ new Set([...prev, ...ids]));
+  }, []);
+  const removeSaved = useCallback((ids) => {
+    setSavedIdSet((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+  }, []);
+  const revalidateTimer = useRef(null);
+  const scheduleRevalidate = useCallback(() => {
+    if (revalidateTimer.current) clearTimeout(revalidateTimer.current);
+    revalidateTimer.current = setTimeout(() => {
+      revalidator.revalidate();
+      revalidateTimer.current = null;
+    }, 500);
+  }, [revalidator]);
+  useEffect(() => () => {
+    if (revalidateTimer.current) clearTimeout(revalidateTimer.current);
+  }, []);
   useEffect(() => {
     if (!forceRefresh) {
       const cachedProducts = ClientCache.get(CACHE_KEYS.PRODUCTS);
@@ -11431,6 +12158,41 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
       }
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
+  useEffect(() => {
+    if (mu.state === "idle" && mu.data) {
+      if (mu.data.savedProducts) {
+        const savedIds2 = mu.data.savedProducts.map((p) => p.productId);
+        setSelectedProducts((prev) => prev.filter((p) => !savedIds2.includes(p.id)));
+        addSaved(savedIds2);
+      }
+      if (mu.data.savedCollection) {
+        const { collectionId, metalType } = mu.data.savedCollection;
+        setSelectedCollections((prev) => [...prev.filter((id) => id !== collectionId), collectionId]);
+        setCollectionMetalTypes((prev) => ({ ...prev, [collectionId]: metalType }));
+      }
+      if (mu.data.unselectedProducts) {
+        const removed = new Set(mu.data.unselectedProducts);
+        setSelectedProducts((prev) => prev.filter((p) => !removed.has(p.id)));
+        setProductMetalTypes((prev) => {
+          const next = { ...prev };
+          mu.data.unselectedProducts.forEach((id) => delete next[id]);
+          return next;
+        });
+        removeSaved(mu.data.unselectedProducts);
+        scheduleRevalidate();
+      }
+      if (mu.data.unselectedCollection) {
+        const collectionId = mu.data.unselectedCollection;
+        setSelectedCollections((prev) => prev.filter((id) => id !== collectionId));
+        setCollectionMetalTypes((prev) => {
+          const next = { ...prev };
+          delete next[collectionId];
+          return next;
+        });
+        scheduleRevalidate();
+      }
+    }
+  }, [mu.state, mu.data, addSaved, removeSaved, scheduleRevalidate]);
   const handleRefresh = useCallback(() => {
     ClientCache.clear(CACHE_KEYS.PRODUCTS);
     setIsUsingCache(false);
@@ -11460,16 +12222,49 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
   }, [filteredProducts]);
   const handleMetalTypeChange = useCallback((productId, metalType) => {
     setProductMetalTypes((prev) => ({ ...prev, [productId]: metalType }));
-  }, []);
+    addSaved([productId]);
+    const formData = new FormData();
+    formData.append("action", "saveSingleProduct");
+    formData.append("productId", productId);
+    formData.append("metalType", metalType);
+    mu.submit(formData, { method: "post" });
+  }, [mu, addSaved]);
+  const handleSelectCollection = useCallback((collectionId, checked) => {
+    setSelectedCollections(
+      (prev) => checked ? [.../* @__PURE__ */ new Set([...prev, collectionId])] : prev.filter((id) => id !== collectionId)
+    );
+    if (!checked) {
+      const fd = new FormData();
+      fd.append("action", "unselectCollection");
+      fd.append("collectionId", collectionId);
+      mu.submit(fd, { method: "post" });
+    }
+  }, [mu]);
+  const handleCollectionMetalTypeChange = useCallback((collectionId, type) => {
+    setCollectionMetalTypes((prev) => ({ ...prev, [collectionId]: type }));
+    const fd = new FormData();
+    fd.append("action", "saveCollectionSelection");
+    fd.append("collectionId", collectionId);
+    fd.append("metalType", type);
+    mu.submit(fd, { method: "post" });
+  }, [mu]);
   const handleBulkMetalTypeChange = useCallback((metalType) => {
+    const targetProducts = selectedProducts.filter((product) => !selectedProductIds.includes(product.id));
+    if (targetProducts.length === 0) return;
     const newMetalTypes = {};
-    selectedProducts.forEach((product) => {
-      if (!selectedProductIds.includes(product.id)) {
-        newMetalTypes[product.id] = metalType;
-      }
+    targetProducts.forEach((product) => {
+      newMetalTypes[product.id] = metalType;
     });
     setProductMetalTypes((prev) => ({ ...prev, ...newMetalTypes }));
-  }, [selectedProducts, selectedProductIds]);
+    addSaved(targetProducts.map((p) => p.id));
+    const formData = new FormData();
+    formData.append("action", "saveSelection");
+    targetProducts.forEach((product) => {
+      formData.append("productId", product.id);
+      formData.append("metalType", metalType);
+    });
+    mu.submit(formData, { method: "post" });
+  }, [selectedProducts, selectedProductIds, mu, addSaved]);
   const saveSelection = useCallback(() => {
     const unsetProducts = selectedProducts.filter((product) => !productMetalTypes[product.id]);
     if (unsetProducts.length > 0) {
@@ -11477,14 +12272,43 @@ function ProductsContent({ products, goldPrice, platinumPrice, selectedProductId
 ${unsetProducts.map((p) => p.title).join("\n")}`);
       return;
     }
+    addSaved(selectedProducts.map((p) => p.id));
     const formData = new FormData();
     formData.append("action", "saveSelection");
     selectedProducts.forEach((product) => {
       formData.append("productId", product.id);
       formData.append("metalType", productMetalTypes[product.id]);
     });
-    fetcher.submit(formData, { method: "post" });
-  }, [selectedProducts, productMetalTypes, fetcher]);
+    mu.submit(formData, { method: "post" });
+  }, [selectedProducts, productMetalTypes, mu, addSaved]);
+  useCallback((productId) => {
+    setSelectedProducts((prev) => prev.filter((p) => p.id !== productId));
+    setProductMetalTypes((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
+    removeSaved([productId]);
+    const formData = new FormData();
+    formData.append("action", "unselectProducts");
+    formData.append("productId", productId);
+    mu.submit(formData, { method: "post" });
+  }, [mu, removeSaved]);
+  const handleBulkUnselect = useCallback(() => {
+    const ids = selectedProducts.filter((p) => savedIdSet.has(p.id)).map((p) => p.id);
+    if (ids.length === 0) return;
+    removeSaved(ids);
+    setSelectedProducts((prev) => prev.filter((p) => !ids.includes(p.id)));
+    setProductMetalTypes((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => delete next[id]);
+      return next;
+    });
+    const fd = new FormData();
+    fd.append("action", "unselectProducts");
+    ids.forEach((id) => fd.append("productId", id));
+    mu.submit(fd, { method: "post" });
+  }, [selectedProducts, savedIdSet, removeSaved, mu]);
   const generatePricePreview = useCallback(() => {
     if (selectedProducts.length === 0) return;
     const preview = selectedProducts.map((product) => {
@@ -11529,30 +12353,28 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
     const hasPlatinumProducts = selectedProducts.some((p) => productMetalTypes[p.id] === "platinum");
     if (hasGoldProducts && !goldPrice) return;
     if (hasPlatinumProducts && !platinumPrice) return;
-    const updateData = selectedProducts.map((product) => ({
-      ...product,
-      variants: product.variants.edges.map((edge) => edge.node)
-    }));
-    fetcher.submit(
+    const ids = selectedProducts.map((p) => p.id);
+    updater.submit(
       {
         action: "updatePrices",
-        selectedProducts: JSON.stringify(updateData),
+        selectedProductIds: JSON.stringify(ids),
         minPriceRate: minPriceRate.toString()
       },
       { method: "post" }
     );
     setShowPreview(false);
-  }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, fetcher]);
+  }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, updater]);
   return /* @__PURE__ */ jsx(
     Page,
     {
+      fullWidth: true,
       title: "商品価格自動調整",
-      subtitle: `${filteredProducts.length}件の商品（全${products.length}件）`,
+      subtitle: selectionType === "products" ? `${filteredProducts.length}件の商品（全${products.length}件）` : `${(collections == null ? void 0 : collections.length) ?? 0}件のコレクション`,
       primaryAction: {
         content: "価格調整プレビュー",
         onAction: generatePricePreview,
-        disabled: selectedProducts.length === 0 || selectedProducts.some((p) => (productMetalTypes[p.id] || "gold") === "gold") && !goldPrice || selectedProducts.some((p) => productMetalTypes[p.id] === "platinum") && !platinumPrice,
-        loading: fetcher.state === "submitting"
+        disabled: selectionType !== "products" || selectedProducts.length === 0 || selectedProducts.some((p) => (productMetalTypes[p.id] || "gold") === "gold") && !goldPrice || selectedProducts.some((p) => productMetalTypes[p.id] === "platinum") && !platinumPrice,
+        loading: selectionType === "products" && updater.state === "submitting"
       },
       secondaryActions: [
         {
@@ -11574,23 +12396,35 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   ] }),
                   /* @__PURE__ */ jsx(Badge, { tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info", children: goldPrice.changeDirection === "up" ? "上昇" : goldPrice.changeDirection === "down" ? "下落" : "変動なし" })
                 ] }),
-                /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "400", wrap: true, children: [
                   /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0 }, children: "店頭小売価格（税込）" }),
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭小売価格（税込）" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.retailPriceFormatted })
                   ] }),
                   /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0 }, children: "前日比" }),
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "小売価格前日比" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.change })
                   ] }),
                   /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0 }, children: "価格調整率" }),
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭買取価格（税込）" }),
+                    /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.buyPriceFormatted || "取得失敗" })
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "買取価格前日比" }),
+                    /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.buyChangePercent || "0.00%" })
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "価格調整率" }),
                     /* @__PURE__ */ jsxs("h4", { style: { color: "white", margin: "4px 0" }, children: [
                       goldPrice.percentage,
                       "%"
                     ] })
                   ] })
                 ] }),
+                /* @__PURE__ */ jsx("div", { style: { marginTop: "12px" }, children: /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "11px" }, children: [
+                  "出典: ",
+                  /* @__PURE__ */ jsx("a", { href: "https://gold.tanaka.co.jp/commodity/souba/", target: "_blank", rel: "noopener noreferrer", style: { color: "white", textDecoration: "underline" }, children: "田中貴金属工業株式会社" })
+                ] }) }),
                 /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: [
                   "最終更新: ",
                   new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
@@ -11607,23 +12441,35 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   ] }),
                   /* @__PURE__ */ jsx(Badge, { tone: platinumPrice.changeDirection === "up" ? "critical" : platinumPrice.changeDirection === "down" ? "success" : "info", children: platinumPrice.changeDirection === "up" ? "上昇" : platinumPrice.changeDirection === "down" ? "下落" : "変動なし" })
                 ] }),
-                /* @__PURE__ */ jsxs(InlineStack, { gap: "600", children: [
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "400", wrap: true, children: [
                   /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0 }, children: "店頭小売価格（税込）" }),
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭小売価格（税込）" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.retailPriceFormatted })
                   ] }),
                   /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0 }, children: "前日比" }),
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "小売価格前日比" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.change })
                   ] }),
                   /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0 }, children: "価格調整率" }),
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭買取価格（税込）" }),
+                    /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.buyPriceFormatted || "取得失敗" })
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "買取価格前日比" }),
+                    /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.buyChangePercent || "0.00%" })
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "価格調整率" }),
                     /* @__PURE__ */ jsxs("h4", { style: { color: "white", margin: "4px 0" }, children: [
                       platinumPrice.percentage,
                       "%"
                     ] })
                   ] })
                 ] }),
+                /* @__PURE__ */ jsx("div", { style: { marginTop: "12px" }, children: /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "11px" }, children: [
+                  "出典: ",
+                  /* @__PURE__ */ jsx("a", { href: "https://gold.tanaka.co.jp/commodity/souba/d-platinum.php", target: "_blank", rel: "noopener noreferrer", style: { color: "white", textDecoration: "underline" }, children: "田中貴金属工業株式会社" })
+                ] }) }),
                 /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: [
                   "最終更新: ",
                   new Date(platinumPrice.lastUpdated).toLocaleString("ja-JP")
@@ -11654,29 +12500,44 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             isUsingCache && /* @__PURE__ */ jsx(Badge, { tone: "info", size: "small", children: "キャッシュ" })
           ] }) }),
           /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
-            /* @__PURE__ */ jsx("div", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
-              TextField,
-              {
-                label: "商品検索",
-                value: searchValue,
-                onChange: setSearchValue,
-                placeholder: "商品名またはハンドルで検索...",
-                clearButton: true,
-                onClearButtonClick: () => setSearchValue("")
-              }
-            ) }),
-            /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
+            /* @__PURE__ */ jsx("div", { style: { minWidth: "180px" }, children: /* @__PURE__ */ jsx(
               Select,
               {
-                label: "商品フィルター",
+                label: "表示する内容",
                 options: [
-                  { label: "すべての商品", value: "all" },
-                  { label: "K18商品のみ", value: "k18" }
+                  { label: "全ての商品", value: "products" },
+                  { label: "全てのコレクション", value: "collections" }
                 ],
-                value: filterType,
-                onChange: setFilterType
+                value: selectionType,
+                onChange: setSelectionType
               }
-            ) })
+            ) }),
+            selectionType === "products" && /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx("div", { style: { flex: 1 }, children: /* @__PURE__ */ jsx(
+                TextField,
+                {
+                  label: "商品検索",
+                  value: searchValue,
+                  onChange: setSearchValue,
+                  placeholder: "商品名またはハンドルで検索...",
+                  clearButton: true,
+                  onClearButtonClick: () => setSearchValue("")
+                }
+              ) }),
+              /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
+                Select,
+                {
+                  label: "商品フィルター",
+                  options: [
+                    { label: "すべての商品", value: "all" },
+                    { label: "K18商品のみ", value: "k18" }
+                  ],
+                  value: filterType,
+                  onChange: setFilterType
+                }
+              ) })
+            ] }),
+            selectionType === "collections" && /* @__PURE__ */ jsx("div", { style: { minWidth: "200px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "コレクションを選択して商品を表示" }) })
           ] }),
           /* @__PURE__ */ jsx(
             TextField,
@@ -11711,11 +12572,25 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   children: "選択解除"
                 }
               ),
+              /* @__PURE__ */ jsxs(
+                Button,
+                {
+                  onClick: handleBulkUnselect,
+                  tone: "critical",
+                  disabled: selectedProducts.filter((p) => savedIdSet.has(p.id)).length === 0 || mu.state === "submitting",
+                  size: "large",
+                  children: [
+                    "選択中の保存済み ",
+                    selectedProducts.filter((p) => savedIdSet.has(p.id)).length,
+                    " 件を解除"
+                  ]
+                }
+              ),
               /* @__PURE__ */ jsx(
                 Button,
                 {
                   onClick: saveSelection,
-                  disabled: fetcher.state === "submitting" || selectedProducts.length === 0 || selectedProducts.some((p) => !productMetalTypes[p.id]),
+                  disabled: mu.state === "submitting" || selectedProducts.length === 0 || selectedProducts.some((p) => !productMetalTypes[p.id]),
                   variant: "primary",
                   size: "large",
                   children: "選択を保存"
@@ -11735,7 +12610,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                     onClick: () => handleBulkMetalTypeChange("gold"),
                     disabled: selectedProducts.filter((p) => !selectedProductIds.includes(p.id)).length === 0,
                     tone: "warning",
-                    children: "🥇 すべて金価格に設定"
+                    children: "🥇 選択した全ての商品を金価格に設定"
                   }
                 ),
                 /* @__PURE__ */ jsx(
@@ -11744,7 +12619,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                     onClick: () => handleBulkMetalTypeChange("platinum"),
                     disabled: selectedProducts.filter((p) => !selectedProductIds.includes(p.id)).length === 0,
                     tone: "info",
-                    children: "🥈 すべてプラチナ価格に設定"
+                    children: "🥈 選択した全ての商品をプラチナ価格に設定"
                   }
                 )
               ] }),
@@ -11801,89 +12676,201 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             ] }),
             " の商品が自動更新対象として保存されています"
           ] }),
-          ((_a = fetcher.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: fetcher.data.message })
+          ((_a = mu.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: mu.data.message })
         ] }) }) }),
-        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx("div", { style: {
-          width: "100%",
-          overflowX: "auto"
-        }, children: /* @__PURE__ */ jsx("div", { style: { minWidth: "1280px" }, children: /* @__PURE__ */ jsx(
-          IndexTable,
-          {
-            resourceName: { singular: "商品", plural: "商品" },
-            itemCount: filteredProducts.length,
-            selectedItemsCount: selectedProducts.length > 0 ? "All" : 0,
-            onSelectionChange: (selectionType) => {
-              if (selectionType === "all") {
-                handleSelectAll(true);
-              } else if (selectionType === "none") {
-                handleSelectAll(false);
-              }
-            },
-            headings: [
-              { title: "選択" },
-              { title: "商品名" },
-              { title: "ステータス" },
-              { title: "価格" },
-              { title: "バリエーション" },
-              { title: "価格連動設定" }
-            ],
-            selectable: false,
-            children: filteredProducts.map((product, index) => {
-              var _a2;
-              const isSelected = selectedProducts.some((p) => p.id === product.id);
-              const variants = product.variants.edges;
-              const priceRange = variants.length > 1 ? `¥${Math.min(...variants.map((v) => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map((v) => parseFloat(v.node.price)))}` : `¥${((_a2 = variants[0]) == null ? void 0 : _a2.node.price) || 0}`;
-              const metalType = productMetalTypes[product.id];
-              const isSaved = selectedProductIds.includes(product.id);
-              return /* @__PURE__ */ jsxs(
-                IndexTable.Row,
-                {
-                  id: product.id,
-                  children: [
-                    /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(
-                      Checkbox$1,
-                      {
-                        checked: isSelected,
-                        onChange: (checked) => handleSelectProduct(product.id, checked)
-                      }
-                    ) }),
-                    /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "300px", maxWidth: "400px", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
-                      isSelected && metalType && /* @__PURE__ */ jsx("span", { style: { fontSize: "16px" }, children: metalType === "gold" ? "🥇" : "🥈" }),
-                      /* @__PURE__ */ jsx(Text, { as: "span", truncate: true, children: product.title }),
-                      isSelected && metalType && /* @__PURE__ */ jsx(Badge, { tone: metalType === "gold" ? "warning" : "info", size: "small", children: metalType === "gold" ? "金" : "Pt" }),
-                      isSelected && !metalType && !isSaved && /* @__PURE__ */ jsx(Badge, { tone: "critical", size: "small", children: "未設定" }),
-                      isSaved && /* @__PURE__ */ jsx(Badge, { tone: "success", size: "small", children: "保存済" })
-                    ] }) }) }),
-                    /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Badge, { status: product.status === "ACTIVE" ? "success" : "critical", children: product.status }) }),
-                    /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: priceRange }) }),
-                    /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: variants.length }) }),
-                    /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "240px", width: "100%", children: isSelected ? /* @__PURE__ */ jsxs("div", { children: [
-                      /* @__PURE__ */ jsx(
-                        Select,
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(Card, { children: [
+          selectionType === "collections" && ((collections == null ? void 0 : collections.length) ?? 0) === 0 && /* @__PURE__ */ jsx(Banner, { tone: "info", children: "コレクションが見つかりません。" }),
+          /* @__PURE__ */ jsx("div", { style: {
+            width: "100%",
+            overflowX: "auto",
+            overflowAnchor: "none"
+          }, children: /* @__PURE__ */ jsx("div", { style: { minWidth: 1680 }, children: /* @__PURE__ */ jsx(
+            IndexTable,
+            {
+              resourceName: {
+                singular: selectionType === "products" ? "商品" : "コレクション",
+                plural: selectionType === "products" ? "商品" : "コレクション"
+              },
+              itemCount: selectionType === "products" ? filteredProducts.length : (collections == null ? void 0 : collections.length) || 0,
+              selectedItemsCount: selectedProducts.length,
+              onSelectionChange: (selectionType2) => {
+                if (selectionType2 === "all") {
+                  handleSelectAll(true);
+                } else if (selectionType2 === "none") {
+                  handleSelectAll(false);
+                }
+              },
+              headings: selectionType === "products" ? [
+                { title: "選択" },
+                { title: "商品名" },
+                { title: "ステータス" },
+                { title: "価格" },
+                { title: "バリエーション" },
+                { title: "連動設定" }
+              ] : [
+                { title: "選択" },
+                { title: "コレクション名" },
+                { title: "商品数" },
+                { title: "ハンドル" },
+                { title: "連動設定" }
+              ],
+              selectable: false,
+              children: selectionType === "products" ? filteredProducts.map((product, index) => {
+                var _a2;
+                const isSelected = selectedProducts.some((p) => p.id === product.id);
+                const variants = product.variants.edges;
+                const priceRange = variants.length > 1 ? `¥${Math.min(...variants.map((v) => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map((v) => parseFloat(v.node.price)))}` : `¥${((_a2 = variants[0]) == null ? void 0 : _a2.node.price) || 0}`;
+                const metalType = productMetalTypes[product.id];
+                const isSaved = savedIdSet.has(product.id);
+                const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "";
+                return /* @__PURE__ */ jsxs(
+                  IndexTable.Row,
+                  {
+                    id: product.id,
+                    children: [
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "60px", maxWidth: "60px", children: /* @__PURE__ */ jsx(
+                        Checkbox$1,
                         {
-                          label: "金属種別",
-                          labelHidden: true,
-                          options: [
-                            { label: "金属種別を選択...", value: "", disabled: true },
-                            { label: "🥇 金価格", value: "gold" },
-                            { label: "🥈 プラチナ価格", value: "platinum" }
-                          ],
-                          value: metalType || "",
-                          onChange: (value) => handleMetalTypeChange(product.id, value),
-                          placeholder: "選択してください",
-                          disabled: isSaved
+                          checked: isSelected,
+                          onChange: (checked) => handleSelectProduct(product.id, checked)
                         }
-                      ),
-                      !metalType && !isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "critical", children: "※選択が必要です" }) }),
-                      isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "保存済み設定" }) })
-                    ] }) : /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "-" }) }) })
-                  ]
-                },
-                product.id
-              );
-            })
-          }
-        ) }) }) }) }),
+                      ) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "480px", maxWidth: "720px", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+                        isSelected && metalType && /* @__PURE__ */ jsx("span", { style: { fontSize: "16px" }, children: metalType === "gold" ? "🥇" : "🥈" }),
+                        /* @__PURE__ */ jsx(Tooltip, { content: product.title, dismissOnMouseOut: true, children: /* @__PURE__ */ jsx(
+                          Text,
+                          {
+                            as: "span",
+                            variant: "bodySm",
+                            style: {
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              whiteSpace: "normal",
+                              wordBreak: "break-word"
+                            },
+                            children: product.title
+                          }
+                        ) }),
+                        isSelected && metalType && /* @__PURE__ */ jsx(Badge, { tone: metalType === "gold" ? "warning" : "info", size: "small", children: metalType === "gold" ? "金" : "Pt" }),
+                        isSelected && !metalType && !isSaved && /* @__PURE__ */ jsx(Badge, { tone: "critical", size: "small", children: "未設定" }),
+                        isSaved && /* @__PURE__ */ jsx(Badge, { tone: "success", size: "small", children: "保存済" })
+                      ] }) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "100px", maxWidth: "120px", children: /* @__PURE__ */ jsx(Badge, { status: product.status === "ACTIVE" ? "success" : "critical", children: product.status }) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "140px", maxWidth: "200px", children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: priceRange }) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "100px", maxWidth: "140px", children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: variants.length }) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "360px", maxWidth: "420px", children: isSelected || isSaved ? /* @__PURE__ */ jsxs("div", { children: [
+                        /* @__PURE__ */ jsx(
+                          Select,
+                          {
+                            label: "金属種別",
+                            labelHidden: true,
+                            options: [
+                              { label: "金属種別を選択...", value: "", disabled: true },
+                              { label: "🥇 金価格", value: "gold" },
+                              { label: "🥈 プラチナ価格", value: "platinum" }
+                            ],
+                            value: displayType,
+                            onChange: (value) => handleMetalTypeChange(product.id, value),
+                            placeholder: "選択してください",
+                            disabled: isSaved && !isSelected
+                          }
+                        ),
+                        !displayType && isSelected && !isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "critical", children: "※選択が必要です" }) }),
+                        isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
+                          /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
+                            "保存済み設定",
+                            isSelected ? "（編集可）" : ""
+                          ] }),
+                          /* @__PURE__ */ jsx(
+                            UnselectButton,
+                            {
+                              productId: product.id,
+                              onOptimistic: (id) => {
+                                setSelectedProducts((prev) => prev.filter((p) => p.id !== id));
+                                setProductMetalTypes((prev) => {
+                                  const next = { ...prev };
+                                  delete next[id];
+                                  return next;
+                                });
+                                removeSaved([id]);
+                              },
+                              scheduleRevalidate
+                            }
+                          )
+                        ] }) })
+                      ] }) : /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "-" }) }) })
+                    ]
+                  },
+                  product.id
+                );
+              }) : (
+                // コレクション表示モード
+                (collections == null ? void 0 : collections.map((collection) => {
+                  const isChecked = selectedCollections.includes(collection.id);
+                  const cType = collectionMetalTypes[collection.id] || "";
+                  return /* @__PURE__ */ jsxs(
+                    IndexTable.Row,
+                    {
+                      id: collection.id,
+                      children: [
+                        /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "60px", maxWidth: "60px", children: /* @__PURE__ */ jsx(
+                          Checkbox$1,
+                          {
+                            checked: isChecked,
+                            onChange: (checked) => handleSelectCollection(collection.id, checked)
+                          }
+                        ) }) }),
+                        /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "320px", maxWidth: "480px", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+                          /* @__PURE__ */ jsx("span", { style: { fontSize: "16px" }, children: "📦" }),
+                          /* @__PURE__ */ jsx(Tooltip, { content: collection.title, dismissOnMouseOut: true, children: /* @__PURE__ */ jsx(
+                            Text,
+                            {
+                              variant: "bodyMd",
+                              fontWeight: "medium",
+                              style: {
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                whiteSpace: "normal",
+                                wordBreak: "break-word"
+                              },
+                              children: collection.title
+                            }
+                          ) }),
+                          isChecked && cType && /* @__PURE__ */ jsx(Badge, { tone: cType === "gold" ? "warning" : "info", size: "small", children: cType === "gold" ? "金" : "Pt" })
+                        ] }) }) }),
+                        /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "120px", maxWidth: "160px", children: /* @__PURE__ */ jsxs(Badge, { tone: "info", children: [
+                          collection.productsCount ?? "-",
+                          "件の商品"
+                        ] }) }) }),
+                        /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "150px", maxWidth: "200px", children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: collection.handle }) }) }),
+                        /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "280px", maxWidth: "340px", children: isChecked ? /* @__PURE__ */ jsx(
+                          Select,
+                          {
+                            label: "金属種別",
+                            labelHidden: true,
+                            options: [
+                              { label: "金属種別を選択...", value: "", disabled: true },
+                              { label: "🥇 金価格", value: "gold" },
+                              { label: "🥈 プラチナ価格", value: "platinum" }
+                            ],
+                            value: cType,
+                            onChange: (v) => handleCollectionMetalTypeChange(collection.id, v),
+                            placeholder: "選択してください"
+                          }
+                        ) : /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "-" }) }) })
+                      ]
+                    },
+                    collection.id
+                  );
+                })) || []
+              )
+            }
+          ) }) })
+        ] }) }),
         /* @__PURE__ */ jsx(
           Modal,
           {
@@ -11893,7 +12880,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             primaryAction: {
               content: "価格を更新",
               onAction: executePriceUpdate,
-              loading: fetcher.state === "submitting"
+              loading: updater.state === "submitting"
             },
             secondaryActions: [
               {
@@ -11926,28 +12913,28 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             ] }) }, product.id)) }) })
           }
         ),
-        ((_b = fetcher.data) == null ? void 0 : _b.updateResults) && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+        ((_b = updater.data) == null ? void 0 : _b.updateResults) && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
           /* @__PURE__ */ jsx("h3", { children: "価格更新結果" }),
-          fetcher.data.summary && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
+          updater.data.summary && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(InlineStack, { gap: "400", children: [
             /* @__PURE__ */ jsxs("div", { children: [
               "合計: ",
-              /* @__PURE__ */ jsx("strong", { children: fetcher.data.summary.total }),
+              /* @__PURE__ */ jsx("strong", { children: updater.data.summary.total }),
               "件"
             ] }),
             /* @__PURE__ */ jsxs("div", { children: [
               "成功: ",
-              /* @__PURE__ */ jsx("strong", { children: fetcher.data.summary.success }),
+              /* @__PURE__ */ jsx("strong", { children: updater.data.summary.success }),
               "件"
             ] }),
             /* @__PURE__ */ jsxs("div", { children: [
               "失敗: ",
-              /* @__PURE__ */ jsx("strong", { children: fetcher.data.summary.failed }),
+              /* @__PURE__ */ jsx("strong", { children: updater.data.summary.failed }),
               "件"
             ] })
           ] }) }),
-          fetcher.data.error && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: fetcher.data.error }),
-          fetcher.data.message && /* @__PURE__ */ jsx(Banner, { tone: "info", children: fetcher.data.message }),
-          fetcher.data.updateResults.map((result, index) => {
+          updater.data.error && /* @__PURE__ */ jsx(Banner, { tone: "critical", children: updater.data.error }),
+          updater.data.message && /* @__PURE__ */ jsx(Banner, { tone: "info", children: updater.data.message }),
+          updater.data.updateResults.map((result, index) => {
             var _a2, _b2;
             return /* @__PURE__ */ jsx(
               Banner,
@@ -11965,13 +12952,14 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
 }
 function Products() {
   const data = useLoaderData();
-  const { goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, shopSetting, forceRefresh, cacheTimestamp } = data;
+  const { goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, selectedCollectionIds, savedSelectedCollections, shopSetting, forceRefresh, cacheTimestamp } = data;
   return /* @__PURE__ */ jsx(
     Suspense,
     {
       fallback: /* @__PURE__ */ jsx(
         Page,
         {
+          fullWidth: true,
           title: "商品価格自動調整",
           subtitle: "読み込み中...",
           secondaryActions: [
@@ -12021,23 +13009,30 @@ function Products() {
           ] })
         }
       ),
-      children: /* @__PURE__ */ jsx(Await, { resolve: data.products, children: (products) => /* @__PURE__ */ jsx(
-        ProductsContent,
-        {
-          products,
-          goldPrice,
-          platinumPrice,
-          selectedProductIds,
-          savedSelectedProducts,
-          shopSetting,
-          forceRefresh,
-          cacheTimestamp
-        }
-      ) })
+      children: /* @__PURE__ */ jsx(Await, { resolve: Promise.allSettled([data.products, data.collections]), children: ([p, c]) => {
+        const products = p.status === "fulfilled" ? p.value : [];
+        const collections = c.status === "fulfilled" ? c.value : [];
+        return /* @__PURE__ */ jsx(
+          ProductsContent,
+          {
+            products,
+            collections,
+            goldPrice,
+            platinumPrice,
+            selectedProductIds,
+            savedSelectedProducts,
+            selectedCollectionIds,
+            savedSelectedCollections,
+            shopSetting,
+            forceRefresh,
+            cacheTimestamp
+          }
+        );
+      } })
     }
   );
 }
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
@@ -12094,21 +13089,31 @@ async function action({ request }) {
   });
 }
 function Settings() {
+  var _a, _b, _c, _d, _e;
   const { setting } = useLoaderData();
   const fetcher = useFetcher();
+  const testEmailFetcher = useFetcher();
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(setting.autoUpdateEnabled);
   const [minPricePct, setMinPricePct] = useState(setting.minPricePct.toString());
   const [autoUpdateHour, setAutoUpdateHour] = useState(setting.autoUpdateHour.toString());
   const [notificationEmail, setNotificationEmail] = useState(setting.notificationEmail || "");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showEmailTestMessage, setShowEmailTestMessage] = useState(false);
   useEffect(() => {
-    var _a;
-    if ((_a = fetcher.data) == null ? void 0 : _a.success) {
+    var _a2;
+    if ((_a2 = fetcher.data) == null ? void 0 : _a2.success) {
       setShowSuccessMessage(true);
       const timer = setTimeout(() => setShowSuccessMessage(false), 3e3);
       return () => clearTimeout(timer);
     }
   }, [fetcher.data]);
+  useEffect(() => {
+    if (testEmailFetcher.data) {
+      setShowEmailTestMessage(true);
+      const timer = setTimeout(() => setShowEmailTestMessage(false), 5e3);
+      return () => clearTimeout(timer);
+    }
+  }, [testEmailFetcher.data]);
   const hourOptions = [...Array(24)].map((_, i) => ({
     label: `${String(i).padStart(2, "0")}:00`,
     value: i.toString()
@@ -12121,6 +13126,12 @@ function Settings() {
     formData.append("notificationEmail", notificationEmail);
     fetcher.submit(formData, { method: "post" });
   };
+  const handleTestEmail = () => {
+    testEmailFetcher.submit({}, {
+      method: "post",
+      action: "/api/test-email"
+    });
+  };
   return /* @__PURE__ */ jsx(
     Page,
     {
@@ -12132,6 +13143,23 @@ function Settings() {
           /* @__PURE__ */ jsx(Icon, { source: CheckCircleIcon, tone: "success" }),
           /* @__PURE__ */ jsx(Text, { children: "設定が正常に保存されました" })
         ] }) }) }),
+        showEmailTestMessage && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(
+          Banner,
+          {
+            tone: ((_a = testEmailFetcher.data) == null ? void 0 : _a.success) ? "success" : "critical",
+            onDismiss: () => setShowEmailTestMessage(false),
+            children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", align: "center", children: [
+              /* @__PURE__ */ jsx(
+                Icon,
+                {
+                  source: CheckCircleIcon,
+                  tone: ((_b = testEmailFetcher.data) == null ? void 0 : _b.success) ? "success" : "critical"
+                }
+              ),
+              /* @__PURE__ */ jsx(Text, { children: ((_c = testEmailFetcher.data) == null ? void 0 : _c.success) ? `テストメールを送信しました: ${(_d = testEmailFetcher.data) == null ? void 0 : _d.email}` : `テストメール送信失敗: ${(_e = testEmailFetcher.data) == null ? void 0 : _e.error}` })
+            ] })
+          }
+        ) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
             /* @__PURE__ */ jsx(Icon, { source: SettingsIcon, tone: "base" }),
@@ -12188,17 +13216,33 @@ function Settings() {
             ] })
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
-          /* @__PURE__ */ jsx(FormLayout, { children: /* @__PURE__ */ jsx(
-            TextField,
-            {
-              label: "通知メールアドレス（任意）",
-              type: "email",
-              value: notificationEmail,
-              onChange: setNotificationEmail,
-              placeholder: "you@example.com",
-              helpText: "設定すると自動更新の結果がメールで通知されます"
-            }
-          ) })
+          /* @__PURE__ */ jsxs(FormLayout, { children: [
+            /* @__PURE__ */ jsx(
+              TextField,
+              {
+                label: "通知メールアドレス（任意）",
+                type: "email",
+                value: notificationEmail,
+                onChange: setNotificationEmail,
+                placeholder: "you@example.com",
+                helpText: "設定すると自動更新の結果がメールで通知されます"
+              }
+            ),
+            notificationEmail && /* @__PURE__ */ jsxs(InlineStack, { gap: "200", align: "start", children: [
+              /* @__PURE__ */ jsx(
+                Button,
+                {
+                  variant: "secondary",
+                  size: "medium",
+                  onClick: handleTestEmail,
+                  loading: testEmailFetcher.state === "submitting",
+                  disabled: !notificationEmail,
+                  children: "テストメール送信"
+                }
+              ),
+              /* @__PURE__ */ jsx("div", { style: { paddingTop: "6px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "設定したメールアドレスに通知のテストメールを送信します" }) })
+            ] })
+          ] })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "500", children: [
           /* @__PURE__ */ jsxs(InlineStack, { gap: "300", align: "start", children: [
@@ -12227,20 +13271,16 @@ function Settings() {
                 /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "自動的にスキップ" })
               ] })
             ] }),
-            /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsxs(Text, { children: [
-              /* @__PURE__ */ jsx("strong", { children: "注意:" }),
-              " 現在のシステムは平日朝10時（JST）固定で実行されます。 上記の「自動更新時刻」設定は将来の機能向けです。 価格変動がない場合や取得エラー時は更新をスキップします。"
-            ] }) }),
-            /* @__PURE__ */ jsx(Banner, { tone: "warning", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-              /* @__PURE__ */ jsx(Text, { fontWeight: "semibold", children: "🕙 実際の実行スケジュール（現在）" }),
+            /* @__PURE__ */ jsx(Banner, { tone: "success", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+              /* @__PURE__ */ jsx(Text, { fontWeight: "semibold", children: "🕙 自動更新スケジュール" }),
               /* @__PURE__ */ jsxs(Text, { children: [
                 "• ",
                 /* @__PURE__ */ jsx("strong", { children: "実行時刻:" }),
-                " 毎平日 朝10:00（日本時間）",
+                " 設定した時刻に自動実行",
                 /* @__PURE__ */ jsx("br", {}),
                 "• ",
                 /* @__PURE__ */ jsx("strong", { children: "対象曜日:" }),
-                " 月曜日〜金曜日",
+                " 月曜日〜金曜日（平日のみ）",
                 /* @__PURE__ */ jsx("br", {}),
                 "• ",
                 /* @__PURE__ */ jsx("strong", { children: "祝日:" }),
@@ -12267,7 +13307,7 @@ function Settings() {
     }
   );
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -12485,7 +13525,7 @@ function Dashboard() {
     }
   );
 }
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -12698,12 +13738,12 @@ function Logs() {
     }
   );
 }
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BtOBeyvE.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-DS1yuizv.js", "/assets/context-C9td0CMk.js", "/assets/Sticky-DAC3dAc4.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-2L_yKA9i.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/Select-DS1yuizv.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-DSpbBV0Y.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-CKzhJC4c.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-DS1yuizv.js", "/assets/context-C9td0CMk.js", "/assets/Sticky-DAC3dAc4.js"], "css": [] } }, "url": "/assets/manifest-ef304319.js", "version": "ef304319" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-VSCakobc.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-DS1yuizv.js", "/assets/context-C9td0CMk.js", "/assets/Sticky-DAC3dAc4.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-YAV9eIzI.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/Select-DS1yuizv.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-DSpbBV0Y.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-CKzhJC4c.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-DS1yuizv.js", "/assets/context-C9td0CMk.js", "/assets/Sticky-DAC3dAc4.js"], "css": [] } }, "url": "/assets/manifest-9f6d5596.js", "version": "9f6d5596" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -12760,13 +13800,21 @@ const routes = {
     caseSensitive: void 0,
     module: route5
   },
+  "routes/api.test-email": {
+    id: "routes/api.test-email",
+    parentId: "root",
+    path: "api/test-email",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route6
+  },
   "routes/auth.login": {
     id: "routes/auth.login",
     parentId: "root",
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
+    module: route7
   },
   "routes/api.cron": {
     id: "routes/api.cron",
@@ -12774,7 +13822,7 @@ const routes = {
     path: "api/cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route8
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -12782,7 +13830,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route9
   },
   "routes/_index": {
     id: "routes/_index",
@@ -12790,7 +13838,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route9
+    module: route10
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -12798,7 +13846,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route10
+    module: route11
   },
   "routes/app": {
     id: "routes/app",
@@ -12806,7 +13854,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route12
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -12814,7 +13862,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route13
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -12822,7 +13870,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route14
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -12830,7 +13878,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route15
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -12838,7 +13886,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route15
+    module: route16
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -12846,7 +13894,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route16
+    module: route17
   }
 };
 export {
