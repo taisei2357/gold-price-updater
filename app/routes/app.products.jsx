@@ -22,6 +22,7 @@ import {
   Icon,
   Box,
   Text,
+  Tooltip,
 } from "@shopify/polaris";
 import {
   ProductIcon,
@@ -68,34 +69,40 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   return Math.ceil(finalPrice / 10) * 10;
 }
 
-// コレクション内の商品IDを全部取得
+// コレクション内の商品IDを全部取得（完全ページネーション対応）
 async function fetchProductIdsByCollection(admin, collectionId) {
-  let ids = [];
-  let cursor = null;
+  const ids = [];
+  let after = null;
   let hasNext = true;
 
   while (hasNext) {
     const res = await admin.graphql(
       `#graphql
-        query ($id: ID!, $first: Int!, $after: String) {
-          collection(id: $id) {
-            products(first: $first, after: $after) {
-              edges { cursor node { id } }
-              pageInfo { hasNextPage }
-            }
-          }
-        }`,
-      { variables: { id: collectionId, first: 250, after: cursor } }
+       query($id: ID!, $first: Int!, $after: String) {
+         collection(id: $id) {
+           products(first: $first, after: $after) {
+             edges {
+               cursor
+               node { id }
+             }
+             pageInfo { hasNextPage }
+           }
+         }
+       }`,
+      { variables: { id: collectionId, first: 250, after } }
     );
+
     const body = await res.json();
     if (body?.errors?.length) throw new Error(body.errors[0].message || "GraphQL error");
 
     const edges = body?.data?.collection?.products?.edges ?? [];
     ids.push(...edges.map(e => e.node.id));
     hasNext = body?.data?.collection?.products?.pageInfo?.hasNextPage ?? false;
-    cursor = edges.length ? edges[edges.length - 1].cursor : null;
+    after = edges.length ? edges[edges.length - 1].cursor : null;
   }
-  return ids;
+
+  // 念のため重複排除
+  return Array.from(new Set(ids));
 }
 
 // コレクション取得（APIバージョン差に強い実装）
@@ -468,14 +475,14 @@ export const action = async ({ request }) => {
     const metalType = formData.get("metalType") === "platinum" ? "platinum" : "gold";
 
     try {
-      // コレクションの選択状態をデータベースに保存
+      // 1) コレクション自体の選択を永続化
       await prisma.selectedCollection.upsert({
         where: { shopDomain_collectionId: { shopDomain: session.shop, collectionId } },
         update: { selected: true, metalType },
         create: { shopDomain: session.shop, collectionId, selected: true, metalType },
       });
 
-      // コレクションの商品を全部拾って保存
+      // 2) コレクション配下の全商品を取得して upsert（完全ページネーション対応）
       const productIds = await fetchProductIdsByCollection(admin, collectionId);
 
       const saved = [];
@@ -506,14 +513,12 @@ export const action = async ({ request }) => {
     const collectionId = formData.get("collectionId");
     
     try {
-      // コレクション選択状態をデータベースから削除
+      // 1) コレクションの選択解除
       await prisma.selectedCollection.deleteMany({
-        where: {
-          shopDomain: session.shop,
-          collectionId: collectionId
-        }
+        where: { shopDomain: session.shop, collectionId },
       });
 
+      // 2) コレクション配下の全商品を SelectedProduct から削除（完全ページネーション対応）
       const ids = await fetchProductIdsByCollection(admin, collectionId);
 
       await prisma.selectedProduct.deleteMany({
@@ -1393,16 +1398,29 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </IndexTable.Cell>
                         
                         <IndexTable.Cell>
-                          <Box minWidth="280px" maxWidth="380px">
+                          <Box minWidth="420px" maxWidth="680px">
                             <InlineStack gap="200" blockAlign="center">
                               {isSelected && metalType && (
                                 <span style={{ fontSize: '16px' }}>
                                   {metalType === 'gold' ? '🥇' : '🥈'}
                                 </span>
                               )}
-                              <Text as="span" truncate>
-                                {product.title}
-                              </Text>
+                              <Tooltip content={product.title} dismissOnMouseOut>
+                                <Text
+                                  as="span"
+                                  variant="bodySm"
+                                  style={{
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                    whiteSpace: "normal",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {product.title}
+                                </Text>
+                              </Tooltip>
                               {isSelected && metalType && (
                                 <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
                                   {metalType === 'gold' ? '金' : 'Pt'}
@@ -1516,12 +1534,25 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
                           {/* コレクション名 */}
                           <IndexTable.Cell>
-                            <Box minWidth="200px" maxWidth="300px">
+                            <Box minWidth="320px" maxWidth="480px">
                               <InlineStack gap="200" blockAlign="center">
                                 <span style={{ fontSize: '16px' }}>📦</span>
-                                <Text variant="bodyMd" fontWeight="medium">
-                                  {collection.title}
-                                </Text>
+                                <Tooltip content={collection.title} dismissOnMouseOut>
+                                  <Text
+                                    variant="bodyMd"
+                                    fontWeight="medium"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                      whiteSpace: "normal",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {collection.title}
+                                  </Text>
+                                </Tooltip>
                                 {isChecked && cType && (
                                   <Badge tone={cType === 'gold' ? 'warning' : 'info'} size="small">
                                     {cType === 'gold' ? '金' : 'Pt'}
