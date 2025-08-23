@@ -1,8 +1,8 @@
-name: Hourly Price Update Scheduler
+name: Daily Price Update Scheduler (JST 10:00)
 on:
   schedule:
-    - cron: "0 * * * *"   # 毎時実行（UTC）
-  workflow_dispatch: {}     # 手動実行も可能
+    - cron: "0 1 * * 1-5"   # JST 10:00 = UTC 1:00, 平日のみ
+  workflow_dispatch: {}       # 手動実行も可能
 jobs:
   price-update:
     runs-on: ubuntu-latest

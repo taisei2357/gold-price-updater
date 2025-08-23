@@ -38,8 +38,7 @@ export async function loader({ request }) {
     create: { 
       shopDomain: shop, 
       minPricePct: 93, 
-      autoUpdateEnabled: false,
-      autoUpdateHour: 10
+      autoUpdateEnabled: false
     },
   });
 
@@ -53,7 +52,6 @@ export async function action({ request }) {
   const form = await request.formData();
   const autoUpdateEnabled = form.get("autoUpdateEnabled") === "true";
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
-  const autoUpdateHour = Math.max(0, Math.min(23, Number(form.get("autoUpdateHour") || 10)));
   const notificationEmail = String(form.get("notificationEmail") || "");
 
   await prisma.shopSetting.upsert({
@@ -61,14 +59,12 @@ export async function action({ request }) {
     update: { 
       autoUpdateEnabled, 
       minPricePct, 
-      autoUpdateHour,
       notificationEmail: notificationEmail || null 
     },
     create: {
       shopDomain: shop,
       autoUpdateEnabled,
       minPricePct,
-      autoUpdateHour,
       notificationEmail: notificationEmail || null
     }
   });
@@ -79,7 +75,6 @@ export async function action({ request }) {
     setting: {
       autoUpdateEnabled,
       minPricePct,
-      autoUpdateHour,
       notificationEmail: notificationEmail || null
     }
   });
@@ -93,7 +88,6 @@ export default function Settings() {
   // フォームの状態管理
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(setting.autoUpdateEnabled);
   const [minPricePct, setMinPricePct] = useState(setting.minPricePct.toString());
-  const [autoUpdateHour, setAutoUpdateHour] = useState(setting.autoUpdateHour.toString());
   const [notificationEmail, setNotificationEmail] = useState(setting.notificationEmail || "");
   
   // 保存成功メッセージの管理
@@ -119,18 +113,11 @@ export default function Settings() {
     }
   }, [testEmailFetcher.data]);
 
-  // 時刻オプションの生成
-  const hourOptions = [...Array(24)].map((_, i) => ({
-    label: `${String(i).padStart(2, '0')}:00`,
-    value: i.toString(),
-  }));
-
   // フォーム送信
   const handleSubmit = () => {
     const formData = new FormData();
     formData.append("autoUpdateEnabled", autoUpdateEnabled.toString());
     formData.append("minPricePct", minPricePct);
-    formData.append("autoUpdateHour", autoUpdateHour);
     formData.append("notificationEmail", notificationEmail);
     
     fetcher.submit(formData, { method: "post" });
@@ -205,26 +192,18 @@ export default function Settings() {
               <Divider />
               
               <FormLayout>
-                <Checkbox
-                  label="自動更新を有効化"
-                  helpText="有効にすると設定時刻に自動で価格調整が実行されます"
-                  checked={autoUpdateEnabled}
-                  onChange={setAutoUpdateEnabled}
-                />
-                
                 <InlineStack gap="400" align="start">
-                  <div style={{ minWidth: '200px' }}>
-                    <Select
-                      label="自動更新時刻（JST）"
-                      options={hourOptions}
-                      value={autoUpdateHour}
-                      onChange={setAutoUpdateHour}
-                      disabled={!autoUpdateEnabled}
+                  <div>
+                    <Checkbox
+                      label="自動更新を有効化"
+                      helpText="有効にすると毎日JST 10:00に自動で価格調整が実行されます"
+                      checked={autoUpdateEnabled}
+                      onChange={setAutoUpdateEnabled}
                     />
                   </div>
                   <div style={{ paddingTop: '24px' }}>
                     <Badge tone={autoUpdateEnabled ? 'info' : 'warning'}>
-                      {autoUpdateEnabled ? '有効' : '無効'}
+                      {autoUpdateEnabled ? 'JST 10:00実行' : '無効'}
                     </Badge>
                   </div>
                 </InlineStack>
@@ -328,7 +307,7 @@ export default function Settings() {
                       実行時刻
                     </Text>
                     <Text variant="bodySm" tone="subdued">
-                      {String(setting.autoUpdateHour || 10).padStart(2, '0')}:00（日本時間）
+                      10:00（日本時間）固定
                     </Text>
                   </div>
                   <div>
@@ -347,7 +326,7 @@ export default function Settings() {
                       🕙 自動更新スケジュール
                     </Text>
                     <Text>
-                      • <strong>実行時刻:</strong> 設定した時刻に自動実行<br/>
+                      • <strong>実行時刻:</strong> JST 10:00（固定）<br/>
                       • <strong>対象曜日:</strong> 月曜日〜金曜日（平日のみ）<br/>
                       • <strong>祝日:</strong> 自動的にスキップ<br/>
                       • <strong>実行条件:</strong> 自動更新が有効で、対象商品が選択されている場合
