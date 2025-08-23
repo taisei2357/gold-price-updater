@@ -667,7 +667,10 @@ async function runAllShops(opts: { force?: boolean } = {}) {
     const results = [];
     for (const shop of enabledShops) {
       const session = await prisma.session.findFirst({
-        where: { shop: shop.shopDomain },
+        where: { 
+          shop: shop.shopDomain,
+          isOnline: false  // オフライントークンのみ（背景処理用）
+        },
         orderBy: { expires: 'desc' }
       });
 

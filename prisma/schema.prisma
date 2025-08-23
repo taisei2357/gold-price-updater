@@ -58,7 +58,6 @@ model ShopSetting {
   shopDomain          String    @unique
   minPricePct         Int       @default(93)
   autoUpdateEnabled   Boolean   @default(false)
-  autoUpdateHour      Int       @default(10)
   notificationEmail   String?
   consecutiveFailures Int       @default(0)
   lastFailureAt       DateTime?
