@@ -1,13 +1,18 @@
-name: Trigger Vercel Deploy
+name: Hourly Price Update Scheduler
 on:
-  push:
-    branches: [main]
-  workflow_dispatch: {}
+  schedule:
+    - cron: "0 * * * *"   # 毎時実行（UTC）
+  workflow_dispatch: {}     # 手動実行も可能
 jobs:
-  deploy:
+  price-update:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Vercel Deploy Hook
-        run: curl -X POST "$VERCEL_DEPLOY_HOOK_URL"
+      - name: Call Price Update API
+        run: |
+          curl -fsS -X POST "$CRON_ENDPOINT" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json"
         env:
-          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          CRON_ENDPOINT: ${{ secrets.CRON_ENDPOINT }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
