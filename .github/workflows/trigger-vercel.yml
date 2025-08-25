@@ -9,7 +9,8 @@ jobs:
     steps:
       - name: Call Price Update API
         run: |
-          curl -fsS -X POST "$CRON_ENDPOINT" \
+          echo "🔍 Testing with force=1 for immediate verification"
+          curl -i -X POST "$CRON_ENDPOINT?force=1" \
             -H "Authorization: Bearer $CRON_SECRET" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json"
