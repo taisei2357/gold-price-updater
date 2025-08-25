@@ -2,17 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum ExecutionType {
-  cron
-  manual
-  webhook
-}
-
-enum MetalType {
-  gold
-  platinum
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -34,22 +23,18 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
-
-  @@index([shop])
-  @@index([state])
 }
 
 model SelectedProduct {
-  id         String    @id @default(cuid())
+  id         String     @id @default(cuid())
   shopDomain String
   productId  String
-  selected   Boolean   @default(true)
-  metalType  MetalType @default(gold) // 金属種別（デフォルト：金）
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  selected   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  metalType  MetalType? @default(gold)
 
   @@unique([shopDomain, productId])
-  @@index([shopDomain])
   @@index([shopDomain, metalType])
 }
 
@@ -58,6 +43,7 @@ model ShopSetting {
   shopDomain          String    @unique
   minPricePct         Int       @default(93)
   autoUpdateEnabled   Boolean   @default(false)
+  autoUpdateHour      Int       @default(10)
   notificationEmail   String?
   consecutiveFailures Int       @default(0)
   lastFailureAt       DateTime?
@@ -83,8 +69,7 @@ model PriceUpdateLog {
   id            String        @id @default(cuid())
   shopDomain    String
   executionType ExecutionType
-  metalType     MetalType     @default(gold) // 更新対象の金属種別
-  priceRatio    Float?        // 金価格またはプラチナ価格の変動率
+  priceRatio    Float?
   minPricePct   Int
   totalProducts Int           @default(0)
   updatedCount  Int           @default(0)
@@ -92,8 +77,19 @@ model PriceUpdateLog {
   success       Boolean
   errorMessage  String?
   executedAt    DateTime      @default(now())
-  details       String?       @db.Text
+  details       String?
+  metalType     MetalType?    @default(gold)
 
-  @@index([shopDomain, executedAt])
   @@index([shopDomain, metalType, executedAt])
+}
+
+enum ExecutionType {
+  cron
+  manual
+  webhook
+}
+
+enum MetalType {
+  gold
+  platinum
 }

@@ -22,6 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     
+    env:
+      CRON_ENDPOINT: ${{ secrets.CRON_ENDPOINT }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    
     steps:
       - name: 📅 実行時刻をJSTで表示
         run: |
@@ -32,10 +37,15 @@ jobs:
         run: |
           echo "🚀 価格更新APIを呼び出し中..."
           
+          FORCE_PARAM=""
+          if [ "${{ inputs.force_execution }}" = "true" ]; then
+            FORCE_PARAM="?force=1"
+          fi
+          
           response=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
             -H "Content-Type: application/json" \
-            "${{ secrets.APP_URL }}/api/cron")
+            "$CRON_ENDPOINT$FORCE_PARAM")
           
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n -1)
@@ -53,7 +63,7 @@ jobs:
           fi
 
       - name: 📊 実行結果をSlackに通知（オプション）
-        if: always() && secrets.SLACK_WEBHOOK_URL
+        if: always() && env.SLACK_WEBHOOK_URL != ''
         run: |
           if [ "${{ job.status }}" == "success" ]; then
             emoji="✅"
@@ -76,4 +86,4 @@ jobs:
                 ]
               }]
             }" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+            "$SLACK_WEBHOOK_URL"
