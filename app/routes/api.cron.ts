@@ -64,7 +64,16 @@ async function fetchMetalPriceRatios() {
     console.log(`金価格情報: ${goldData?.retailPriceFormatted}, 前日比: ${goldData?.changePercent}, 変動率: ${gold ? (gold * 100).toFixed(2) + '%' : 'N/A'}`);
     console.log(`プラチナ価格情報: ${platinumData?.retailPriceFormatted}, 前日比: ${platinumData?.changePercent}, 変動率: ${platinum ? (platinum * 100).toFixed(2) + '%' : 'N/A'}`);
 
-    return { gold, platinum };
+    // 相場変動なしチェック：金・プラチナ両方とも変動率が0の場合
+    const goldNoChange = gold === 0;
+    const platinumNoChange = platinum === 0;
+    
+    if (goldNoChange && platinumNoChange) {
+      console.log('📊 金・プラチナとも相場変動なし（祝日等）- 価格更新をスキップ');
+      return { gold: null, platinum: null, noChange: true };
+    }
+
+    return { gold, platinum, noChange: false };
     
   } catch (error) {
     console.error('金属価格取得エラー:', error);
@@ -83,6 +92,11 @@ function calcFinalPriceWithStep(current: number, ratio: number, minPct01: number
 // 単一商品の処理
 async function processProduct(target: { productId: string, metalType: string }, ratio: number, metalType: string, admin: any, entries: any[], details: any[], minPct01: number) {
   try {
+    // productId を GID 形式に正規化
+    const productGid = target.productId.startsWith('gid://')
+      ? target.productId
+      : `gid://shopify/Product/${target.productId}`;
+    
     const resp = await admin.graphql(`
       query($id: ID!) { 
         product(id: $id) { 
@@ -98,14 +112,14 @@ async function processProduct(target: { productId: string, metalType: string }, 
           }
         } 
       }
-    `, { variables: { id: target.productId }});
+    `, { variables: { id: productGid }});
     
     // 401エラー検知と自己修復
     if (resp.status === 401 || resp.body?.errors?.[0]?.message?.includes("Invalid API key or access token")) {
-      console.error(`🚨 401 Unauthorized detected for product: ${target.productId}`);
+      console.error(`🚨 401 Unauthorized detected for product: ${productGid}`);
       details.push({ 
         success: false, 
-        productId: target.productId, 
+        productId: productGid, 
         error: "401 Unauthorized: 再認証が必要",
         metalType
       });
@@ -115,10 +129,10 @@ async function processProduct(target: { productId: string, metalType: string }, 
     // 通常のGraphQLエラーチェック
     if (!resp.ok || (resp.body?.errors && resp.body.errors.length)) {
       const msg = resp.body?.errors?.[0]?.message ?? `HTTP ${resp.status}`;
-      console.error(`商品 ${target.productId} (${metalType}) GraphQLエラー:`, msg);
+      console.error(`商品 ${productGid} (${metalType}) GraphQLエラー:`, msg);
       details.push({ 
         success: false, 
-        productId: target.productId, 
+        productId: productGid, 
         error: `GraphQLエラー: ${msg}`,
         metalType
       });
@@ -127,10 +141,10 @@ async function processProduct(target: { productId: string, metalType: string }, 
     
     const product = resp.body?.data?.product;
     if (!product) {
-      console.error(`商品 ${target.productId} (${metalType}) データが見つかりません`);
+      console.error(`商品 ${productGid} (${metalType}) データが見つかりません`);
       details.push({ 
         success: false, 
-        productId: target.productId, 
+        productId: productGid, 
         error: "商品データが見つかりません",
         metalType
       });
@@ -146,7 +160,7 @@ async function processProduct(target: { productId: string, metalType: string }, 
       const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({ 
-          productId: target.productId, 
+          productId: productGid, // GID形式を使用 
           productTitle: product.title,
           variantId: variant.id, 
           newPrice,
@@ -157,10 +171,10 @@ async function processProduct(target: { productId: string, metalType: string }, 
     }
 
   } catch (error) {
-    console.error(`商品 ${target.productId} (${metalType}) の処理でエラー:`, error);
+    console.error(`商品 ${productGid} (${metalType}) の処理でエラー:`, error);
     details.push({ 
       success: false, 
-      productId: target.productId, 
+      productId: productGid, 
       error: `商品処理エラー: ${(error as Error).message}`,
       metalType
     });
@@ -175,6 +189,18 @@ async function updateShopPrices(shop: string, accessToken: string) {
   try {
     // 1) 金・プラチナ価格変動率取得
     const ratios = await fetchMetalPriceRatios();
+    
+    // 相場変動なしの場合はスキップ
+    if (ratios.noChange) {
+      return { 
+        shop, 
+        success: true, 
+        message: "相場変動なしのためスキップ",
+        updated: 0, 
+        failed: 0 
+      };
+    }
+    
     if (ratios.gold === null && ratios.platinum === null) {
       return { 
         shop, 
@@ -221,9 +247,10 @@ async function updateShopPrices(shop: string, accessToken: string) {
       };
     }
 
-    // 金・プラチナ別に商品をグループ分け
-    const goldTargets = targets.filter(t => t.metalType === 'gold');
-    const platinumTargets = targets.filter(t => t.metalType === 'platinum');
+    // 金・プラチナ別に商品をグループ分け（metalType の正規化付き）
+    const normalize = (s?: string) => (s ?? '').trim().toLowerCase();
+    const goldTargets = targets.filter(t => normalize(t.metalType) === 'gold');
+    const platinumTargets = targets.filter(t => normalize(t.metalType) === 'platinum');
 
     console.log(`${shop}: 金商品 ${goldTargets.length}件, プラチナ商品 ${platinumTargets.length}件`);
 
@@ -434,11 +461,17 @@ async function updateShopPrices(shop: string, accessToken: string) {
       }
     }
 
-    // ログ記録（金・プラチナ別々に記録）
+    // ログ記録（金・プラチナ別々に記録、実更新数で集計）
     const goldEntries = entries.filter(e => e.metalType === 'gold');
     const platinumEntries = entries.filter(e => e.metalType === 'platinum');
     const goldDetails = details.filter(d => d.metalType === 'gold');
     const platinumDetails = details.filter(d => d.metalType === 'platinum');
+
+    // 実更新数を集計（success=trueのみ）
+    const goldUpdated = goldDetails.filter(d => d.success).length;
+    const goldFailed = goldDetails.filter(d => !d.success).length;
+    const platinumUpdated = platinumDetails.filter(d => d.success).length;
+    const platinumFailed = platinumDetails.filter(d => !d.success).length;
 
     if (ratios.gold !== null && (goldTargets.length > 0 || goldEntries.length > 0)) {
       await prisma.priceUpdateLog.create({
@@ -449,10 +482,10 @@ async function updateShopPrices(shop: string, accessToken: string) {
           priceRatio: ratios.gold,
           minPricePct: minPctSaved,
           totalProducts: goldTargets.length,
-          updatedCount: goldEntries.length,
-          failedCount: goldDetails.filter(d => !d.success).length,
-          success: goldDetails.filter(d => !d.success).length === 0,
-          errorMessage: goldDetails.filter(d => !d.success).length > 0 ? `金: ${goldDetails.filter(d => !d.success).length}件の更新に失敗` : null,
+          updatedCount: goldUpdated,      // 実更新数
+          failedCount: goldFailed,        // 実失敗数
+          success: goldFailed === 0,
+          errorMessage: goldFailed > 0 ? `金: ${goldFailed}件の更新に失敗` : null,
           details: JSON.stringify(goldDetails)
         }
       });
@@ -467,10 +500,10 @@ async function updateShopPrices(shop: string, accessToken: string) {
           priceRatio: ratios.platinum,
           minPricePct: minPctSaved,
           totalProducts: platinumTargets.length,
-          updatedCount: platinumEntries.length,
-          failedCount: platinumDetails.filter(d => !d.success).length,
-          success: platinumDetails.filter(d => !d.success).length === 0,
-          errorMessage: platinumDetails.filter(d => !d.success).length > 0 ? `プラチナ: ${platinumDetails.filter(d => !d.success).length}件の更新に失敗` : null,
+          updatedCount: platinumUpdated,  // 実更新数
+          failedCount: platinumFailed,    // 実失敗数
+          success: platinumFailed === 0,
+          errorMessage: platinumFailed > 0 ? `プラチナ: ${platinumFailed}件の更新に失敗` : null,
           details: JSON.stringify(platinumDetails)
         }
       });
@@ -548,70 +581,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
   }
 }
 
-// 日本の祝日チェック（簡易版）
-function isJapaneseHoliday(date: Date): boolean {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // 0-indexedから1-indexedに変換
-  const day = date.getDate();
-  
-  // 固定祝日
-  const fixedHolidays = [
-    { month: 1, day: 1 },   // 元日
-    { month: 2, day: 11 },  // 建国記念の日
-    { month: 2, day: 23 },  // 天皇誕生日
-    { month: 4, day: 29 },  // 昭和の日
-    { month: 5, day: 3 },   // 憲法記念日
-    { month: 5, day: 4 },   // みどりの日
-    { month: 5, day: 5 },   // こどもの日
-    { month: 8, day: 11 },  // 山の日
-    { month: 11, day: 3 },  // 文化の日
-    { month: 11, day: 23 }, // 勤労感謝の日
-  ];
-  
-  for (const holiday of fixedHolidays) {
-    if (month === holiday.month && day === holiday.day) {
-      return true;
-    }
-  }
-  
-  // 移動する祝日（簡易計算）
-  // 成人の日（1月第2月曜）
-  if (month === 1) {
-    const firstMonday = Math.ceil((9 - new Date(year, 0, 1).getDay()) / 7) * 7 + 2;
-    if (day === firstMonday) return true;
-  }
-  
-  // 海の日（7月第3月曜）
-  if (month === 7) {
-    const firstMonday = Math.ceil((9 - new Date(year, 6, 1).getDay()) / 7) * 7 + 2;
-    const thirdMonday = firstMonday + 14;
-    if (day === thirdMonday) return true;
-  }
-  
-  // 敬老の日（9月第3月曜）
-  if (month === 9) {
-    const firstMonday = Math.ceil((9 - new Date(year, 8, 1).getDay()) / 7) * 7 + 2;
-    const thirdMonday = firstMonday + 14;
-    if (day === thirdMonday) return true;
-  }
-  
-  // 体育の日/スポーツの日（10月第2月曜）
-  if (month === 10) {
-    const firstMonday = Math.ceil((9 - new Date(year, 9, 1).getDay()) / 7) * 7 + 2;
-    const secondMonday = firstMonday + 7;
-    if (day === secondMonday) return true;
-  }
-  
-  return false;
-}
-
-// 営業日かどうか判定（平日かつ非祝日）
-function isBusinessDay(date: Date): boolean {
-  const dayOfWeek = date.getDay(); // 0=日曜, 6=土曜
-  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // 月曜〜金曜
-  const isNotHoliday = !isJapaneseHoliday(date);
-  return isWeekday && isNotHoliday;
-}
+// 祝日判定機能は削除（相場変動チェックで代替）
 
 // 共通の自動更新ロジック（GET/POST両方から使用）
 async function runAllShops(opts: { force?: boolean } = {}) {
@@ -624,8 +594,10 @@ async function runAllShops(opts: { force?: boolean } = {}) {
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JSTに調整
     const currentHour = jstNow.getHours();
     
-    if (!force && !isBusinessDay(jstNow)) {
-      const message = `${jstNow.toDateString()}は土日祝日のため価格更新をスキップします`;
+    // 土日のみスキップ（祝日は相場変動チェックで対応）
+    const dayOfWeek = jstNow.getDay(); // 0=日曜, 6=土曜
+    if (!force && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      const message = `${jstNow.toDateString()}は土日のため価格更新をスキップします`;
       console.log(message);
       return {
         message,
