@@ -100,8 +100,10 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   // 下限制限適用
   const finalPrice = Math.max(newPrice, minPrice);
   
-  // 10円単位で切り上げ
-  return Math.ceil(finalPrice / 10) * 10;
+  // 10円単位で丸め（上げ方向は切り上げ、下げ方向は切り捨て）
+  return (adjustmentRatio >= 0)
+    ? Math.ceil(finalPrice / 10) * 10
+    : Math.floor(finalPrice / 10) * 10;
 }
 
 // コレクション内の商品IDを全部取得（完全ページネーション対応）
@@ -1746,8 +1748,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     tone={result.success ? "success" : "critical"}
                   >
                     {result.success 
-                      ? `${result.product} - ${result.variant}: ¥${result.oldPrice?.toLocaleString()} → ¥${result.newPrice?.toLocaleString()}`
-                      : `${result.product} - ${result.variant}: ${result.error}`
+                      ? `Variant ${result.variantId}: ¥${result.oldPrice?.toLocaleString()} → ¥${result.newPrice?.toLocaleString()}`
+                      : `Product ${result.productId} / Variant ${result.variantId}: ${result.error}`
                     }
                   </Banner>
                 ))}

@@ -88,9 +88,16 @@ export default function Logs() {
       </Text>
     </div>,
     
-    <Badge key={`type-${log.id}`} tone={log.executionType === 'auto' ? 'info' : 'warning'}>
-      {log.executionType === 'auto' ? '自動実行' : '手動実行'}
-    </Badge>,
+    (() => {
+      const type = log.executionType;
+      const label = type === 'cron' ? '自動実行' : type === 'manual' ? '手動実行' : 'Webhook';
+      const tone = type === 'cron' ? 'info' : type === 'manual' ? 'warning' : 'base';
+      return (
+        <Badge key={`type-${log.id}`} tone={tone}>
+          {label}
+        </Badge>
+      );
+    })(),
     
     <InlineStack key={`status-${log.id}`} gap="200" blockAlign="center">
       <Icon 
@@ -103,12 +110,12 @@ export default function Logs() {
     </InlineStack>,
     
     <div key={`ratio-${log.id}`}>
-      {log.goldRatio !== null && log.goldRatio !== undefined ? (
+      {log.priceRatio !== null && log.priceRatio !== undefined ? (
         <InlineStack gap="100" blockAlign="center">
-          <Text variant="bodyMd" tone={log.goldRatio >= 0 ? 'critical' : 'success'}>
-            {log.goldRatio >= 0 ? '📈' : '📉'}
+          <Text variant="bodyMd" tone={log.priceRatio >= 0 ? 'critical' : 'success'}>
+            {log.priceRatio >= 0 ? '📈' : '📉'}
           </Text>
-          <Text>{(log.goldRatio * 100).toFixed(2)}%</Text>
+          <Text>{(log.priceRatio * 100).toFixed(2)}%</Text>
         </InlineStack>
       ) : (
         <Text tone="subdued">-</Text>
@@ -218,7 +225,7 @@ export default function Logs() {
                   label="実行タイプ"
                   options={[
                     { label: 'すべて', value: 'all' },
-                    { label: '自動実行', value: 'auto' },
+                    { label: '自動実行', value: 'cron' },
                     { label: '手動実行', value: 'manual' }
                   ]}
                   value={typeFilter}
@@ -257,7 +264,7 @@ export default function Logs() {
                 '実行日時',
                 '種類',
                 '結果',
-                '金価格変動率',
+                '価格変動率',
                 '価格下限',
                 '対象商品',
                 '成功/失敗',
@@ -291,7 +298,7 @@ export default function Logs() {
                 </BlockStack>
                 
                 <BlockStack gap="200">
-                  <Text variant="bodyMd" fontWeight="semibold">金価格変動率</Text>
+                  <Text variant="bodyMd" fontWeight="semibold">価格変動率</Text>
                   <Text variant="bodySm" tone="subdued">• 田中貴金属から取得した前日比</Text>
                   <Text variant="bodySm" tone="subdued">• この変動率で商品価格を調整</Text>
                 </BlockStack>
