@@ -32,6 +32,7 @@ import {
 import { ClientCache, CACHE_KEYS } from "../utils/cache";
 import { authenticate } from "../shopify.server";
 import { runBulkUpdateBySpec } from "../models/price.server";
+import { sendPriceUpdateNotification } from "../utils/email.server";
 import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
 
@@ -493,6 +494,35 @@ export const action = async ({ request }) => {
           disabled: result.disabled,
           updateResults: []
         });
+      }
+
+      // 手動更新成功後のメール通知（設定されている場合、かつ更新件数がある場合）
+      try {
+        const setting = await prisma.shopSetting.findUnique({ 
+          where: { shopDomain: session.shop },
+          select: { notificationEmail: true }
+        });
+
+        const updatedCount = result.summary?.success ?? result.updated ?? 0;
+        const failedCount = result.summary?.failed ?? result.failed ?? 0;
+
+        if (setting?.notificationEmail && updatedCount > 0) {
+          const emailData = {
+            shopDomain: session.shop,
+            updatedCount,
+            failedCount,
+            goldRatio: typeof result.goldRatio === 'number' ? `${(result.goldRatio * 100).toFixed(2)}%` : undefined,
+            platinumRatio: typeof result.platinumRatio === 'number' ? `${(result.platinumRatio * 100).toFixed(2)}%` : undefined,
+            timestamp: new Date().toISOString(),
+            details: result.details
+          };
+          const emailRes = await sendPriceUpdateNotification(setting.notificationEmail, emailData);
+          if (!emailRes.success) {
+            console.error('📧 手動更新メール送信失敗:', emailRes.error);
+          }
+        }
+      } catch (mailErr) {
+        console.error('📧 手動更新メール通知エラー:', mailErr);
       }
 
       return json({ 
