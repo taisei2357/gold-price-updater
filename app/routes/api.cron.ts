@@ -231,11 +231,16 @@ async function updateShopPrices(shop: string, accessToken: string) {
       };
     }
 
-    // 3) 対象商品取得（金属種別込み）
+    // 3) 対象商品取得（金属種別込み）- 明示的に selected: true のみ
     const targets = await prisma.selectedProduct.findMany({
-      where: { shopDomain: shop },
+      where: { 
+        shopDomain: shop,
+        selected: true,
+      },
       select: { productId: true, metalType: true },
     });
+
+    console.log(`${shop}: 対象商品数（selected=true）: ${targets.length}`);
 
     if (!targets.length) {
       return { 
