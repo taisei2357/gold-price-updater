@@ -56,6 +56,9 @@ export const loader = async ({ request }) => {
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
+        buyPrice: goldData.buyPrice,
+        buyPriceFormatted: goldData.buyPriceFormatted,
+        buyChangePercent: goldData.buyChangePercent,
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
@@ -65,6 +68,9 @@ export const loader = async ({ request }) => {
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,
+        buyPrice: platinumData.buyPrice,
+        buyPriceFormatted: platinumData.buyPriceFormatted,
+        buyChangePercent: platinumData.buyChangePercent,
         changeDirection: platinumData.changeDirection,
         lastUpdated: platinumData.lastUpdated
       } : null,
@@ -121,11 +127,19 @@ export default function Dashboard() {
                           tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
                           size="large"
                         >
-                          {goldPrice.change}
+                          小売 前日比: {goldPrice.change}
                         </Badge>
-                        <Text variant="bodyLg" tone="text-inverse">
-                          前日比 • 調整率: {goldPrice.percentage}%
-                        </Text>
+                        <Badge tone="base" size="large">
+                          調整率: {goldPrice.percentage}%
+                        </Badge>
+                      </InlineStack>
+                      <InlineStack gap="300" blockAlign="center">
+                        <Badge tone="base" size="medium">
+                          買取: {goldPrice.buyPriceFormatted || '取得失敗'}
+                        </Badge>
+                        <Badge tone="info" size="medium">
+                          買取 前日比: {goldPrice.buyChangePercent || '0.00%'}
+                        </Badge>
                       </InlineStack>
                     </>
                   ) : (
@@ -171,11 +185,19 @@ export default function Dashboard() {
                           tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}
                           size="large"
                         >
-                          {platinumPrice.change}
+                          小売 前日比: {platinumPrice.change}
                         </Badge>
-                        <Text variant="bodyLg" tone="text-inverse">
-                          前日比 • 調整率: {platinumPrice.percentage}%
-                        </Text>
+                        <Badge tone="base" size="large">
+                          調整率: {platinumPrice.percentage}%
+                        </Badge>
+                      </InlineStack>
+                      <InlineStack gap="300" blockAlign="center">
+                        <Badge tone="base" size="medium">
+                          買取: {platinumPrice.buyPriceFormatted || '取得失敗'}
+                        </Badge>
+                        <Badge tone="info" size="medium">
+                          買取 前日比: {platinumPrice.buyChangePercent || '0.00%'}
+                        </Badge>
                       </InlineStack>
                     </>
                   ) : (

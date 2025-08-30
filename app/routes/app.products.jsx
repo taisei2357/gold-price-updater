@@ -1827,20 +1827,28 @@ export default function Products() {
                       </Badge>
                     </InlineStack>
                     
-                    <InlineStack gap="600">
-                      <div>
-                        <p>店頭小売価格（税込）</p>
-                        <h4>{goldPrice.retailPriceFormatted}</h4>
-                      </div>
-                      <div>
-                        <p>前日比</p>
-                        <h4>{goldPrice.change}</h4>
-                      </div>
-                    </InlineStack>
-                    
+                  <InlineStack gap="600">
                     <div>
-                      <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
+                      <p>店頭小売価格（税込）</p>
+                      <h4>{goldPrice.retailPriceFormatted}</h4>
                     </div>
+                    <div>
+                      <p>小売価格前日比</p>
+                      <h4>{goldPrice.change}</h4>
+                    </div>
+                    <div>
+                      <p>店頭買取価格（税込）</p>
+                      <h4>{goldPrice.buyPriceFormatted || '取得失敗'}</h4>
+                    </div>
+                    <div>
+                      <p>買取価格前日比</p>
+                      <h4>{goldPrice.buyChangePercent || '0.00%'}</h4>
+                    </div>
+                  </InlineStack>
+                  
+                  <div>
+                    <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
+                  </div>
                     
                     <p>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                   </BlockStack>
