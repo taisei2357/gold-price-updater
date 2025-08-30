@@ -30,7 +30,8 @@ const TTL_MS = 10 * 60 * 1000; // 10分キャッシュ
 function getMetalUrl(metalType: MetalType): string {
   switch (metalType) {
     case 'gold':
-      return 'https://gold.tanaka.co.jp/commodity/souba/';
+      // 純金（K24）の詳細ページを優先
+      return 'https://gold.tanaka.co.jp/commodity/souba/d-gold.php';
     case 'platinum':
       return 'https://gold.tanaka.co.jp/commodity/souba/d-platinum.php';
     default:
@@ -67,45 +68,57 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
 
     console.log(`${metalType} HTML取得成功、長さ:`, html.length);
 
-    // 正確なHTML構造に基づく価格抽出
-    let retailPrice: number | null = null;
-    let changeYen: number | null = null;
-    let buyPrice: number | null = null;
-    let buyChangeYen: number | null = null;
+  // 正確なHTML構造に基づく価格抽出
+  let retailPrice: number | null = null;
+  let changeYen: number | null = null;
+  let buyPrice: number | null = null;
+  let buyChangeYen: number | null = null;
+  
+    // まず d-gold.php / d-platinum.php の <th>ラベル構造から抽出を試みる
+    const extractNumberByLabel = (h: string, label: RegExp): number | null => {
+      // 例: <th>店頭小売価格（税込）</th><td>13,456 円</td>
+      const re = new RegExp(`<th[^>]*>\s*${label.source}[^<]*<\/th>\s*<td[^>]*>([\\d,]+)\s*円`, 'is');
+      const m = h.match(re);
+      if (!m) return null;
+      return parseInt(m[1].replace(/,/g, ''));
+    };
+    const extractChangeByLabel = (h: string, label: RegExp): number | null => {
+      // 例: <th>小売価格 前日比</th><td>+12 円</td>
+      const re = new RegExp(`<th[^>]*>\s*${label.source}[^<]*前日比[^<]*<\/th>\s*<td[^>]*>([+\-]?\\d+(?:\\.\\d+)?)\s*円`, 'is');
+      const m = h.match(re);
+      if (!m) return null;
+      return parseFloat(m[1]);
+    };
 
-    // 金属のテーブル行を取得（metalTypeに応じたclass）
-    const metalRowClass = getMetalRowClass(metalType);
-    const metalRowMatch = html.match(new RegExp(`<tr[^>]*class="${metalRowClass}"[^>]*>.*?</tr>`, 'is'));
-    if (metalRowMatch) {
-      const metalRow = metalRowMatch[0];
-      console.log(`${metalType}行取得成功`);
-      
-      // 小売価格抽出: class="retail_tax"のセル
-      const priceMatch = metalRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
-      if (priceMatch) {
-        retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
-        console.log('小売価格抽出:', priceMatch[0], '→', retailPrice);
-      }
-      
-      // 買取価格抽出: class="purchase_tax"のセル
-      const buyPriceMatch = metalRow.match(/<td[^>]*class="purchase_tax"[^>]*>([\d,]+)\s*円/);
-      if (buyPriceMatch) {
-        buyPrice = parseInt(buyPriceMatch[1].replace(/,/g, ''));
-        console.log('買取価格抽出:', buyPriceMatch[0], '→', buyPrice);
-      }
-      
-      // 小売価格前日比抽出: class="retail_ratio"のセル
-      const changeMatch = metalRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
-      if (changeMatch) {
-        changeYen = parseFloat(changeMatch[1]);
-        console.log('小売価格前日比抽出:', changeMatch[0], '→', changeYen);
-      }
-      
-      // 買取価格前日比抽出: class="purchase_ratio"のセル
-      const buyChangeMatch = metalRow.match(/<td[^>]*class="purchase_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
-      if (buyChangeMatch) {
-        buyChangeYen = parseFloat(buyChangeMatch[1]);
-        console.log('買取価格前日比抽出:', buyChangeMatch[0], '→', buyChangeYen);
+    // ラベルベース抽出（見出しに「店頭小売価格」「店頭買取価格」が含まれる想定）
+    retailPrice = extractNumberByLabel(html, /店頭小売価格/);
+    buyPrice = extractNumberByLabel(html, /店頭買取価格/);
+    changeYen = extractChangeByLabel(html, /小売価格|店頭小売価格/);
+    buyChangeYen = extractChangeByLabel(html, /買取価格|店頭買取価格/);
+
+    // ラベル抽出で不足がある場合は、旧 souba/ のクラス構造にフォールバック
+    if (retailPrice === null || buyPrice === null || changeYen === null || buyChangeYen === null) {
+      const metalRowClass = getMetalRowClass(metalType);
+      const metalRowMatch = html.match(new RegExp(`<tr[^>]*class=\"${metalRowClass}\"[^>]*>.*?<\/tr>`, 'is'));
+      if (metalRowMatch) {
+        const metalRow = metalRowMatch[0];
+        console.log(`${metalType} 行（フォールバック）取得成功`);
+        if (retailPrice === null) {
+          const priceMatch = metalRow.match(/<td[^>]*class=\"retail_tax\"[^>]*>([\d,]+)\s*円/);
+          if (priceMatch) retailPrice = parseInt(priceMatch[1].replace(/,/g, ''));
+        }
+        if (buyPrice === null) {
+          const buyPriceMatch = metalRow.match(/<td[^>]*class=\"purchase_tax\"[^>]*>([\d,]+)\s*円/);
+          if (buyPriceMatch) buyPrice = parseInt(buyPriceMatch[1].replace(/,/g, ''));
+        }
+        if (changeYen === null) {
+          const changeMatch = metalRow.match(/<td[^>]*class=\"retail_ratio\"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+          if (changeMatch) changeYen = parseFloat(changeMatch[1]);
+        }
+        if (buyChangeYen === null) {
+          const buyChangeMatch = metalRow.match(/<td[^>]*class=\"purchase_ratio\"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+          if (buyChangeMatch) buyChangeYen = parseFloat(buyChangeMatch[1]);
+        }
       }
     }
 
