@@ -74,27 +74,51 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
   let buyPrice: number | null = null;
   let buyChangeYen: number | null = null;
   
-    // まず d-gold.php / d-platinum.php の <th>ラベル構造から抽出を試みる
+    // まず d-gold.php / d-platinum.php の 行ベース抽出（<th>金/プラチナ</th> の行）
+    try {
+      const metalRowLabel = metalType === 'gold' ? '金' : 'プラチナ';
+      const rowMatch = html.match(new RegExp(`<tr[^>]*>\s*<th[^>]*>\s*${metalRowLabel}\s*<\\/th>[\\s\\S]*?<\\/tr>`, 'i'));
+      if (rowMatch) {
+        const rowHtml = rowMatch[0];
+        const tds = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1]);
+        if (tds.length >= 4) {
+          const numFrom = (s: string): number | null => {
+            const m = s.match(/([\d,]+)\s*円/);
+            return m ? parseInt(m[1].replace(/,/g, '')) : null;
+          };
+          const yenChangeFrom = (s: string): number | null => {
+            const m = s.match(/([+\-]?\d+(?:\.\d+)?)\s*円/);
+            return m ? parseFloat(m[1]) : null;
+          };
+          retailPrice = numFrom(tds[0]);
+          changeYen = yenChangeFrom(tds[1]);
+          buyPrice = numFrom(tds[2]);
+          buyChangeYen = yenChangeFrom(tds[3]);
+        }
+      }
+    } catch {}
+
+    // 次に <th>ラベル構造から抽出を試みる（ヘッダ直下型、タグを跨いでも許容）
     const extractNumberByLabel = (h: string, label: RegExp): number | null => {
-      // 例: <th>店頭小売価格（税込）</th><td>13,456 円</td>
-      const re = new RegExp(`<th[^>]*>\s*${label.source}[^<]*<\/th>\s*<td[^>]*>([\\d,]+)\s*円`, 'is');
+      // 例: <th>店頭小売価格（税込）</th><td>13,456 円</td>（途中にタグが入ってもOK）
+      const re = new RegExp(`<th[^>]*>[\\s\\S]*?${label.source}[\\s\\S]*?<\\/th>\s*<td[^>]*>([\\d,]+)\s*円`, 'is');
       const m = h.match(re);
       if (!m) return null;
       return parseInt(m[1].replace(/,/g, ''));
     };
     const extractChangeByLabel = (h: string, label: RegExp): number | null => {
-      // 例: <th>小売価格 前日比</th><td>+12 円</td>
-      const re = new RegExp(`<th[^>]*>\s*${label.source}[^<]*前日比[^<]*<\/th>\s*<td[^>]*>([+\-]?\\d+(?:\\.\\d+)?)\s*円`, 'is');
+      // 例: <th>小売価格 前日比</th><td>+12 円</td>（途中にタグが入ってもOK）
+      const re = new RegExp(`<th[^>]*>[\\s\\S]*?${label.source}[\\s\\S]*?前日比[\\s\\S]*?<\/th>\s*<td[^>]*>([+\-]?\\d+(?:\\.\\d+)?)\s*円`, 'is');
       const m = h.match(re);
       if (!m) return null;
       return parseFloat(m[1]);
     };
 
     // ラベルベース抽出（見出しに「店頭小売価格」「店頭買取価格」が含まれる想定）
-    retailPrice = extractNumberByLabel(html, /店頭小売価格/);
-    buyPrice = extractNumberByLabel(html, /店頭買取価格/);
-    changeYen = extractChangeByLabel(html, /小売価格|店頭小売価格/);
-    buyChangeYen = extractChangeByLabel(html, /買取価格|店頭買取価格/);
+    if (retailPrice === null) retailPrice = extractNumberByLabel(html, /店頭小売価格/);
+    if (buyPrice === null) buyPrice = extractNumberByLabel(html, /店頭買取価格/);
+    if (changeYen === null) changeYen = extractChangeByLabel(html, /小売価格|店頭小売価格/);
+    if (buyChangeYen === null) buyChangeYen = extractChangeByLabel(html, /買取価格|店頭買取価格/);
 
     // ラベル抽出で不足がある場合は、旧 souba/ のクラス構造にフォールバック
     if (retailPrice === null || buyPrice === null || changeYen === null || buyChangeYen === null) {
