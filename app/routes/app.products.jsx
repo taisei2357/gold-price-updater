@@ -313,11 +313,12 @@ async function fetchMetalPrices() {
       fetchGoldPriceDataTanaka(),
       fetchPlatinumPriceDataTanaka()
     ]);
-    
+    const toPct = (r) => (typeof r === 'number' && Number.isFinite(r)) ? (r * 100).toFixed(2) : '0.00';
+
     return {
-      gold: goldData && goldData.changeRatio !== null ? {
-        ratio: goldData.changeRatio,
-        percentage: (goldData.changeRatio * 100).toFixed(2),
+      gold: goldData ? {
+        ratio: (typeof goldData.changeRatio === 'number' && Number.isFinite(goldData.changeRatio)) ? goldData.changeRatio : null,
+        percentage: toPct(goldData.changeRatio),
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
@@ -327,9 +328,9 @@ async function fetchMetalPrices() {
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
-      platinum: platinumData && platinumData.changeRatio !== null ? {
-        ratio: platinumData.changeRatio,
-        percentage: (platinumData.changeRatio * 100).toFixed(2),
+      platinum: platinumData ? {
+        ratio: (typeof platinumData.changeRatio === 'number' && Number.isFinite(platinumData.changeRatio)) ? platinumData.changeRatio : null,
+        percentage: toPct(platinumData.changeRatio),
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,

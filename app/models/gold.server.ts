@@ -141,18 +141,24 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
     });
     
     // 小売価格変動率を計算（前日比円 / 店頭小売価格）
-    const changeRatio = (changeYen !== null && retailPrice !== null) 
-      ? changeYen / retailPrice 
+    let changeRatio = (changeYen !== null && retailPrice !== null)
+      ? changeYen / retailPrice
       : null;
+    if (typeof changeRatio === 'number' && !Number.isFinite(changeRatio)) {
+      changeRatio = null;
+    }
     
     const changePercent = changeRatio !== null 
       ? `${(changeRatio * 100).toFixed(2)}%` 
       : '0.00%';
     
     // 買取価格変動率を計算（前日比円 / 買取価格）
-    const buyChangeRatio = (buyChangeYen !== null && buyPrice !== null) 
-      ? buyChangeYen / buyPrice 
+    let buyChangeRatio = (buyChangeYen !== null && buyPrice !== null)
+      ? buyChangeYen / buyPrice
       : null;
+    if (typeof buyChangeRatio === 'number' && !Number.isFinite(buyChangeRatio)) {
+      buyChangeRatio = null;
+    }
     
     const buyChangePercent = buyChangeRatio !== null 
       ? `${(buyChangeRatio * 100).toFixed(2)}%` 

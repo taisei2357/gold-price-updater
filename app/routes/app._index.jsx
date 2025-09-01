@@ -51,8 +51,8 @@ export const loader = async ({ request }) => {
 
     return json({
       goldPrice: goldData ? {
-        ratio: goldData.changeRatio,
-        percentage: (goldData.changeRatio * 100).toFixed(2),
+        ratio: (typeof goldData.changeRatio === 'number' && Number.isFinite(goldData.changeRatio)) ? goldData.changeRatio : null,
+        percentage: (typeof goldData.changeRatio === 'number' && Number.isFinite(goldData.changeRatio)) ? (goldData.changeRatio * 100).toFixed(2) : '0.00',
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
@@ -63,8 +63,8 @@ export const loader = async ({ request }) => {
         lastUpdated: goldData.lastUpdated
       } : null,
       platinumPrice: platinumData ? {
-        ratio: platinumData.changeRatio,
-        percentage: (platinumData.changeRatio * 100).toFixed(2),
+        ratio: (typeof platinumData.changeRatio === 'number' && Number.isFinite(platinumData.changeRatio)) ? platinumData.changeRatio : null,
+        percentage: (typeof platinumData.changeRatio === 'number' && Number.isFinite(platinumData.changeRatio)) ? (platinumData.changeRatio * 100).toFixed(2) : '0.00',
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,
