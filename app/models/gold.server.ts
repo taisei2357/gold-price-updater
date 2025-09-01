@@ -69,7 +69,7 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
     console.log(`${metalType} HTML取得成功、長さ:`, html.length);
 
     // HTMLテキスト抽出ユーティリティ（タグ除去 + 空白正規化）
-    const textify = (s: string) => s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+    const textify = (s: string | undefined) => (s || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 
   // 正確なHTML構造に基づく価格抽出
   let retailPrice: number | null = null;
@@ -77,14 +77,14 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
   let buyPrice: number | null = null;
   let buyChangeYen: number | null = null;
   
-    // まず d-gold.php / d-platinum.php の 行ベース抽出（<th>金/プラチナ</th> の行）
+    // まず d-gold.php / d-platinum.php の 行ベース抽出（<td class="metal_name">金/プラチナ</td> の行）
     try {
       const metalRowLabel = metalType === 'gold' ? '金' : 'プラチナ';
-      const rowMatch = html.match(new RegExp(`<tr[^>]*>\s*<th[^>]*>\s*${metalRowLabel}\s*<\\/th>[\\s\\S]*?<\\/tr>`, 'i'));
+      const rowMatch = html.match(new RegExp(`<tr[^>]*>\s*<td[^>]*class="metal_name"[^>]*>\s*${metalRowLabel}\s*<\\/td>[\\s\\S]*?<\\/tr>`, 'i'));
       if (rowMatch) {
         const rowHtml = rowMatch[0];
         const tds = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => textify(m[1]));
-        if (tds.length >= 4) {
+        if (tds.length >= 5) { // 5つのtd: metal_name, retail_tax, retail_ratio, purchase_tax, purchase_ratio
           const numFrom = (s: string): number | null => {
             const m = s.match(/([\d,]+)\s*円/);
             return m ? parseInt(m[1].replace(/,/g, '')) : null;
@@ -93,10 +93,10 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
             const m = s.match(/([+\-]?\d+(?:\.\d+)?)\s*円/);
             return m ? parseFloat(m[1]) : null;
           };
-          retailPrice = numFrom(tds[0]);
-          changeYen = yenChangeFrom(tds[1]);
-          buyPrice = numFrom(tds[2]);
-          buyChangeYen = yenChangeFrom(tds[3]);
+          retailPrice = numFrom(tds[1]); // retail_tax
+          changeYen = yenChangeFrom(tds[2]); // retail_ratio  
+          buyPrice = numFrom(tds[3]); // purchase_tax
+          buyChangeYen = yenChangeFrom(tds[4]); // purchase_ratio
         }
       }
     } catch {}
