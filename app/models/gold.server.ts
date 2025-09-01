@@ -68,6 +68,9 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
 
     console.log(`${metalType} HTML取得成功、長さ:`, html.length);
 
+    // HTMLテキスト抽出ユーティリティ（タグ除去 + 空白正規化）
+    const textify = (s: string) => s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+
   // 正確なHTML構造に基づく価格抽出
   let retailPrice: number | null = null;
   let changeYen: number | null = null;
@@ -80,7 +83,7 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
       const rowMatch = html.match(new RegExp(`<tr[^>]*>\s*<th[^>]*>\s*${metalRowLabel}\s*<\\/th>[\\s\\S]*?<\\/tr>`, 'i'));
       if (rowMatch) {
         const rowHtml = rowMatch[0];
-        const tds = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1]);
+        const tds = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => textify(m[1]));
         if (tds.length >= 4) {
           const numFrom = (s: string): number | null => {
             const m = s.match(/([\d,]+)\s*円/);
@@ -99,19 +102,22 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
     } catch {}
 
     // 次に <th>ラベル構造から抽出を試みる（ヘッダ直下型、タグを跨いでも許容）
-    const extractNumberByLabel = (h: string, label: RegExp): number | null => {
-      // 例: <th>店頭小売価格（税込）</th><td>13,456 円</td>（途中にタグが入ってもOK）
-      const re = new RegExp(`<th[^>]*>[\\s\\S]*?${label.source}[\\s\\S]*?<\\/th>\s*<td[^>]*>([\\d,]+)\s*円`, 'is');
+    const extractTextByLabel = (h: string, label: RegExp): string | null => {
+      const re = new RegExp(`<th[^>]*>[\\s\\S]*?${label.source}[\\s\\S]*?<\\/th>\\s*<td[^>]*>([\\s\\S]*?)<\\/td>`, 'is');
       const m = h.match(re);
-      if (!m) return null;
-      return parseInt(m[1].replace(/,/g, ''));
+      return m ? textify(m[1]) : null;
+    };
+    const extractNumberByLabel = (h: string, label: RegExp): number | null => {
+      const t = extractTextByLabel(h, label);
+      if (!t) return null;
+      const m = t.match(/([\\d,]+)\\s*円/);
+      return m ? parseInt(m[1].replace(/,/g, '')) : null;
     };
     const extractChangeByLabel = (h: string, label: RegExp): number | null => {
-      // 例: <th>小売価格 前日比</th><td>+12 円</td>（途中にタグが入ってもOK）
-      const re = new RegExp(`<th[^>]*>[\\s\\S]*?${label.source}[\\s\\S]*?前日比[\\s\\S]*?<\/th>\s*<td[^>]*>([+\-]?\\d+(?:\\.\\d+)?)\s*円`, 'is');
-      const m = h.match(re);
-      if (!m) return null;
-      return parseFloat(m[1]);
+      const t = extractTextByLabel(h, label);
+      if (!t) return null;
+      const m = t.match(/([+\\-]?\\d+(?:\\.\\d+)?)\\s*円/);
+      return m ? parseFloat(m[1]) : null;
     };
 
     // ラベルベース抽出（見出しに「店頭小売価格」「店頭買取価格」が含まれる想定）
