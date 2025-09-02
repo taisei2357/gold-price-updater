@@ -9937,11 +9937,11 @@ const action$8 = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$a = () => new Response(null, { status: 405 });
+const loader$b = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$8,
-  loader: loader$a
+  loader: loader$b
 }, Symbol.toStringTag, { value: "Module" }));
 const action$7 = async ({ request }) => {
   const { payload, session, topic, shop } = await authenticate.webhook(request);
@@ -9966,7 +9966,7 @@ const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$8,
-  loader: loader$a
+  loader: loader$b
 }, Symbol.toStringTag, { value: "Module" }));
 const action$6 = async ({ request }) => {
   const { shop, session, topic } = await authenticate.webhook(request);
@@ -9995,6 +9995,224 @@ const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$8,
+  loader: loader$b
+}, Symbol.toStringTag, { value: "Module" }));
+let _goldCache = null;
+let _platinumCache = null;
+const TTL_MS = 10 * 60 * 1e3;
+function getMetalUrl(metalType) {
+  switch (metalType) {
+    case "gold":
+      return "https://gold.tanaka.co.jp/commodity/souba/d-gold.php";
+    case "platinum":
+      return "https://gold.tanaka.co.jp/commodity/souba/d-platinum.php";
+    default:
+      throw new Error(`Unsupported metal type: ${metalType}`);
+  }
+}
+function getMetalRowClass(metalType) {
+  switch (metalType) {
+    case "gold":
+      return "gold";
+    case "platinum":
+      return "pt";
+    // プラチナのclass名
+    default:
+      throw new Error(`Unsupported metal type: ${metalType}`);
+  }
+}
+async function fetchMetalPriceData(metalType) {
+  const cache = metalType === "gold" ? _goldCache : _platinumCache;
+  if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
+  try {
+    const url = getMetalUrl(metalType);
+    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
+    const html = await resp.text();
+    console.log(`${metalType} HTML取得成功、長さ:`, html.length);
+    const textify = (s) => (s || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+    let retailPrice = null;
+    let changeYen = null;
+    let buyPrice = null;
+    let buyChangeYen = null;
+    try {
+      const metalRowLabel = metalType === "gold" ? "金" : "プラチナ";
+      const rowMatch = html.match(new RegExp(`<tr[^>]*>s*<td[^>]*class="metal_name"[^>]*>s*${metalRowLabel}s*<\\/td>[\\s\\S]*?<\\/tr>`, "i"));
+      if (rowMatch) {
+        const rowHtml = rowMatch[0];
+        const tds = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => textify(m[1]));
+        if (tds.length >= 5) {
+          const numFrom = (s) => {
+            const m = s.match(/([\d,]+)\s*円/);
+            return m ? parseInt(m[1].replace(/,/g, "")) : null;
+          };
+          const yenChangeFrom = (s) => {
+            const m = s.match(/([+\-]?\d+(?:\.\d+)?)\s*円/);
+            return m ? parseFloat(m[1]) : null;
+          };
+          retailPrice = numFrom(tds[1]);
+          changeYen = yenChangeFrom(tds[2]);
+          buyPrice = numFrom(tds[3]);
+          buyChangeYen = yenChangeFrom(tds[4]);
+        }
+      }
+    } catch {
+    }
+    const extractTextByLabel = (h, label) => {
+      const re = new RegExp(`<th[^>]*>[\\s\\S]*?${label.source}[\\s\\S]*?<\\/th>\\s*<td[^>]*>([\\s\\S]*?)<\\/td>`, "is");
+      const m = h.match(re);
+      return m ? textify(m[1]) : null;
+    };
+    const extractNumberByLabel = (h, label) => {
+      const t = extractTextByLabel(h, label);
+      if (!t) return null;
+      const m = t.match(/([\\d,]+)\\s*円/);
+      return m ? parseInt(m[1].replace(/,/g, "")) : null;
+    };
+    const extractChangeByLabel = (h, label) => {
+      const t = extractTextByLabel(h, label);
+      if (!t) return null;
+      const m = t.match(/([+\\-]?\\d+(?:\\.\\d+)?)\\s*円/);
+      return m ? parseFloat(m[1]) : null;
+    };
+    if (retailPrice === null) retailPrice = extractNumberByLabel(html, /店頭小売価格/);
+    if (buyPrice === null) buyPrice = extractNumberByLabel(html, /店頭買取価格/);
+    if (changeYen === null) changeYen = extractChangeByLabel(html, /小売価格|店頭小売価格/);
+    if (buyChangeYen === null) buyChangeYen = extractChangeByLabel(html, /買取価格|店頭買取価格/);
+    if (retailPrice === null || buyPrice === null || changeYen === null || buyChangeYen === null) {
+      const metalRowClass = getMetalRowClass(metalType);
+      const metalRowMatch = html.match(new RegExp(`<tr[^>]*class="${metalRowClass}"[^>]*>.*?</tr>`, "is"));
+      if (metalRowMatch) {
+        const metalRow = metalRowMatch[0];
+        console.log(`${metalType} 行（フォールバック）取得成功`);
+        if (retailPrice === null) {
+          const priceMatch = metalRow.match(/<td[^>]*class=\"retail_tax\"[^>]*>([\d,]+)\s*円/);
+          if (priceMatch) retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
+        }
+        if (buyPrice === null) {
+          const buyPriceMatch = metalRow.match(/<td[^>]*class=\"purchase_tax\"[^>]*>([\d,]+)\s*円/);
+          if (buyPriceMatch) buyPrice = parseInt(buyPriceMatch[1].replace(/,/g, ""));
+        }
+        if (changeYen === null) {
+          const changeMatch = metalRow.match(/<td[^>]*class=\"retail_ratio\"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+          if (changeMatch) changeYen = parseFloat(changeMatch[1]);
+        }
+        if (buyChangeYen === null) {
+          const buyChangeMatch = metalRow.match(/<td[^>]*class=\"purchase_ratio\"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
+          if (buyChangeMatch) buyChangeYen = parseFloat(buyChangeMatch[1]);
+        }
+      }
+    }
+    if (!retailPrice) {
+      const priceContexts = html.match(/.{0,50}(\d{1,3}(?:,\d{3})*)\s*円.{0,50}/gi);
+      console.log("価格コンテキスト（最初の5つ）:", priceContexts == null ? void 0 : priceContexts.slice(0, 5));
+    }
+    if (changeYen === null) {
+      const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
+      console.log("前日比コンテキスト:", changeContexts == null ? void 0 : changeContexts.slice(0, 3));
+    }
+    console.log(`${metalType} price extraction result:`, {
+      retailPrice,
+      changeYen,
+      url
+    });
+    let changeRatio = changeYen !== null && retailPrice !== null ? changeYen / retailPrice : null;
+    if (typeof changeRatio === "number" && !Number.isFinite(changeRatio)) {
+      changeRatio = null;
+    }
+    const changePercent = changeRatio !== null ? `${(changeRatio * 100).toFixed(2)}%` : "0.00%";
+    let buyChangeRatio = buyChangeYen !== null && buyPrice !== null ? buyChangeYen / buyPrice : null;
+    if (typeof buyChangeRatio === "number" && !Number.isFinite(buyChangeRatio)) {
+      buyChangeRatio = null;
+    }
+    const buyChangePercent = buyChangeRatio !== null ? `${(buyChangeRatio * 100).toFixed(2)}%` : "0.00%";
+    let changeDirection = "flat";
+    if (changeRatio !== null) {
+      if (changeRatio > 0) changeDirection = "up";
+      else if (changeRatio < 0) changeDirection = "down";
+    }
+    const data = {
+      metalType,
+      retailPrice,
+      retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : "取得失敗",
+      buyPrice,
+      buyPriceFormatted: buyPrice ? `¥${buyPrice.toLocaleString()}/g` : "取得失敗",
+      changeRatio,
+      changePercent: changeRatio !== null ? changeRatio >= 0 ? `+${changePercent}` : changePercent : "0.00%",
+      buyChangeRatio,
+      buyChangePercent: buyChangeRatio !== null ? buyChangeRatio >= 0 ? `+${buyChangePercent}` : buyChangePercent : "0.00%",
+      changeDirection,
+      lastUpdated: /* @__PURE__ */ new Date()
+    };
+    const cacheData = { at: Date.now(), data };
+    if (metalType === "gold") {
+      _goldCache = cacheData;
+    } else {
+      _platinumCache = cacheData;
+    }
+    return data;
+  } catch (error) {
+    console.error(`田中貴金属${metalType}価格取得エラー:`, error);
+    const cacheData = { at: Date.now(), data: null };
+    if (metalType === "gold") {
+      _goldCache = cacheData;
+    } else {
+      _platinumCache = cacheData;
+    }
+    return null;
+  }
+}
+async function fetchGoldPriceDataTanaka() {
+  return await fetchMetalPriceData("gold");
+}
+async function fetchPlatinumPriceDataTanaka() {
+  return await fetchMetalPriceData("platinum");
+}
+const loader$a = async ({ request }) => {
+  console.log("=== Debug Price Fetching ===");
+  try {
+    console.log("Testing gold price...");
+    const goldData = await fetchGoldPriceDataTanaka();
+    console.log("Gold result:", goldData);
+    console.log("Testing platinum price...");
+    const platinumData = await fetchPlatinumPriceDataTanaka();
+    console.log("Platinum result:", platinumData);
+    console.log("Testing raw HTTP request...");
+    const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/d-gold.php", {
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
+    const html = await response.text();
+    console.log("HTTP status:", response.status);
+    console.log("HTML length:", html.length);
+    const goldRowMatch = html.match(new RegExp(`<tr[^>]*>\\s*<td[^>]*class="metal_name"[^>]*>\\s*金\\s*<\\/td>[\\s\\S]*?<\\/tr>`, "i"));
+    console.log("Gold row match found:", !!goldRowMatch);
+    if (goldRowMatch) {
+      console.log("Gold row HTML:", goldRowMatch[0]);
+    }
+    const fallbackMatch = html.match(new RegExp(`<tr[^>]*class="gold"[^>]*>.*?<\\/tr>`, "is"));
+    console.log("Fallback match found:", !!fallbackMatch);
+    if (fallbackMatch) {
+      console.log("Fallback HTML:", fallbackMatch[0]);
+    }
+    return json({
+      success: true,
+      gold: goldData,
+      platinum: platinumData,
+      httpStatus: response.status,
+      htmlLength: html.length,
+      htmlPreview: html.substring(0, 500)
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    return json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+};
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
   loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
 async function sendViaSendGrid(to, subject, html, text) {
@@ -10188,7 +10406,7 @@ const action$5 = async ({ request }) => {
     }, { status: 500 });
   }
 };
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -10255,135 +10473,13 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$4,
   default: Auth,
   links: links$1,
   loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-let _goldCache = null;
-let _platinumCache = null;
-const TTL_MS = 10 * 60 * 1e3;
-function getMetalUrl(metalType) {
-  switch (metalType) {
-    case "gold":
-      return "https://gold.tanaka.co.jp/commodity/souba/";
-    case "platinum":
-      return "https://gold.tanaka.co.jp/commodity/souba/d-platinum.php";
-    default:
-      throw new Error(`Unsupported metal type: ${metalType}`);
-  }
-}
-function getMetalRowClass(metalType) {
-  switch (metalType) {
-    case "gold":
-      return "gold";
-    case "platinum":
-      return "pt";
-    // プラチナのclass名
-    default:
-      throw new Error(`Unsupported metal type: ${metalType}`);
-  }
-}
-async function fetchMetalPriceData(metalType) {
-  const cache = metalType === "gold" ? _goldCache : _platinumCache;
-  if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
-  try {
-    const url = getMetalUrl(metalType);
-    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (!resp.ok) throw new Error(`Tanaka request failed: ${resp.status}`);
-    const html = await resp.text();
-    console.log(`${metalType} HTML取得成功、長さ:`, html.length);
-    let retailPrice = null;
-    let changeYen = null;
-    let buyPrice = null;
-    let buyChangeYen = null;
-    const metalRowClass = getMetalRowClass(metalType);
-    const metalRowMatch = html.match(new RegExp(`<tr[^>]*class="${metalRowClass}"[^>]*>.*?</tr>`, "is"));
-    if (metalRowMatch) {
-      const metalRow = metalRowMatch[0];
-      console.log(`${metalType}行取得成功`);
-      const priceMatch = metalRow.match(/<td[^>]*class="retail_tax"[^>]*>([\d,]+)\s*円/);
-      if (priceMatch) {
-        retailPrice = parseInt(priceMatch[1].replace(/,/g, ""));
-        console.log("小売価格抽出:", priceMatch[0], "→", retailPrice);
-      }
-      const buyPriceMatch = metalRow.match(/<td[^>]*class="purchase_tax"[^>]*>([\d,]+)\s*円/);
-      if (buyPriceMatch) {
-        buyPrice = parseInt(buyPriceMatch[1].replace(/,/g, ""));
-        console.log("買取価格抽出:", buyPriceMatch[0], "→", buyPrice);
-      }
-      const changeMatch = metalRow.match(/<td[^>]*class="retail_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
-      if (changeMatch) {
-        changeYen = parseFloat(changeMatch[1]);
-        console.log("小売価格前日比抽出:", changeMatch[0], "→", changeYen);
-      }
-      const buyChangeMatch = metalRow.match(/<td[^>]*class="purchase_ratio"[^>]*>([+\-]?\d+(?:\.\d+)?)\s*[　\s]*円/);
-      if (buyChangeMatch) {
-        buyChangeYen = parseFloat(buyChangeMatch[1]);
-        console.log("買取価格前日比抽出:", buyChangeMatch[0], "→", buyChangeYen);
-      }
-    }
-    if (!retailPrice) {
-      const priceContexts = html.match(/.{0,50}(\d{1,3}(?:,\d{3})*)\s*円.{0,50}/gi);
-      console.log("価格コンテキスト（最初の5つ）:", priceContexts == null ? void 0 : priceContexts.slice(0, 5));
-    }
-    if (changeYen === null) {
-      const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
-      console.log("前日比コンテキスト:", changeContexts == null ? void 0 : changeContexts.slice(0, 3));
-    }
-    console.log(`${metalType} price extraction result:`, {
-      retailPrice,
-      changeYen,
-      url
-    });
-    const changeRatio = changeYen !== null && retailPrice !== null ? changeYen / retailPrice : null;
-    const changePercent = changeRatio !== null ? `${(changeRatio * 100).toFixed(2)}%` : "0.00%";
-    const buyChangeRatio = buyChangeYen !== null && buyPrice !== null ? buyChangeYen / buyPrice : null;
-    const buyChangePercent = buyChangeRatio !== null ? `${(buyChangeRatio * 100).toFixed(2)}%` : "0.00%";
-    let changeDirection = "flat";
-    if (changeRatio !== null) {
-      if (changeRatio > 0) changeDirection = "up";
-      else if (changeRatio < 0) changeDirection = "down";
-    }
-    const data = {
-      metalType,
-      retailPrice,
-      retailPriceFormatted: retailPrice ? `¥${retailPrice.toLocaleString()}/g` : "取得失敗",
-      buyPrice,
-      buyPriceFormatted: buyPrice ? `¥${buyPrice.toLocaleString()}/g` : "取得失敗",
-      changeRatio,
-      changePercent: changeRatio !== null ? changeRatio >= 0 ? `+${changePercent}` : changePercent : "0.00%",
-      buyChangeRatio,
-      buyChangePercent: buyChangeRatio !== null ? buyChangeRatio >= 0 ? `+${buyChangePercent}` : buyChangePercent : "0.00%",
-      changeDirection,
-      lastUpdated: /* @__PURE__ */ new Date()
-    };
-    const cacheData = { at: Date.now(), data };
-    if (metalType === "gold") {
-      _goldCache = cacheData;
-    } else {
-      _platinumCache = cacheData;
-    }
-    return data;
-  } catch (error) {
-    console.error(`田中貴金属${metalType}価格取得エラー:`, error);
-    const cacheData = { at: Date.now(), data: null };
-    if (metalType === "gold") {
-      _goldCache = cacheData;
-    } else {
-      _platinumCache = cacheData;
-    }
-    return null;
-  }
-}
-async function fetchGoldPriceDataTanaka() {
-  return await fetchMetalPriceData("gold");
-}
-async function fetchPlatinumPriceDataTanaka() {
-  return await fetchMetalPriceData("platinum");
-}
 function verifyCronAuth(request) {
   const fromVercelCron = request.headers.get("x-vercel-cron") === "1";
   if (fromVercelCron) return null;
@@ -10428,7 +10524,13 @@ async function fetchMetalPriceRatios() {
     const platinum = platinumData && platinumData.changeRatio !== null ? platinumData.changeRatio : null;
     console.log(`金価格情報: ${goldData == null ? void 0 : goldData.retailPriceFormatted}, 前日比: ${goldData == null ? void 0 : goldData.changePercent}, 変動率: ${gold ? (gold * 100).toFixed(2) + "%" : "N/A"}`);
     console.log(`プラチナ価格情報: ${platinumData == null ? void 0 : platinumData.retailPriceFormatted}, 前日比: ${platinumData == null ? void 0 : platinumData.changePercent}, 変動率: ${platinum ? (platinum * 100).toFixed(2) + "%" : "N/A"}`);
-    return { gold, platinum };
+    const goldNoChange = gold === 0;
+    const platinumNoChange = platinum === 0;
+    if (goldNoChange && platinumNoChange) {
+      console.log("📊 金・プラチナとも相場変動なし（祝日等）- 価格更新をスキップ");
+      return { gold: null, platinum: null, noChange: true };
+    }
+    return { gold, platinum, noChange: false };
   } catch (error) {
     console.error("金属価格取得エラー:", error);
     return { gold: null, platinum: null };
@@ -10442,6 +10544,7 @@ function calcFinalPriceWithStep$1(current, ratio, minPct01, step = 1) {
 async function processProduct(target, ratio, metalType, admin, entries, details, minPct01) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   try {
+    const productGid2 = target.productId.startsWith("gid://") ? target.productId : `gid://shopify/Product/${target.productId}`;
     const resp = await admin.graphql(`
       query($id: ID!) { 
         product(id: $id) { 
@@ -10457,12 +10560,12 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
           }
         } 
       }
-    `, { variables: { id: target.productId } });
+    `, { variables: { id: productGid2 } });
     if (resp.status === 401 || ((_d = (_c = (_b = (_a = resp.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
-      console.error(`🚨 401 Unauthorized detected for product: ${target.productId}`);
+      console.error(`🚨 401 Unauthorized detected for product: ${productGid2}`);
       details.push({
         success: false,
-        productId: target.productId,
+        productId: productGid2,
         error: "401 Unauthorized: 再認証が必要",
         metalType
       });
@@ -10470,10 +10573,10 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
     }
     if (!resp.ok || ((_e = resp.body) == null ? void 0 : _e.errors) && resp.body.errors.length) {
       const msg = ((_h = (_g = (_f = resp.body) == null ? void 0 : _f.errors) == null ? void 0 : _g[0]) == null ? void 0 : _h.message) ?? `HTTP ${resp.status}`;
-      console.error(`商品 ${target.productId} (${metalType}) GraphQLエラー:`, msg);
+      console.error(`商品 ${productGid2} (${metalType}) GraphQLエラー:`, msg);
       details.push({
         success: false,
-        productId: target.productId,
+        productId: productGid2,
         error: `GraphQLエラー: ${msg}`,
         metalType
       });
@@ -10481,10 +10584,10 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
     }
     const product = (_j = (_i = resp.body) == null ? void 0 : _i.data) == null ? void 0 : _j.product;
     if (!product) {
-      console.error(`商品 ${target.productId} (${metalType}) データが見つかりません`);
+      console.error(`商品 ${productGid2} (${metalType}) データが見つかりません`);
       details.push({
         success: false,
-        productId: target.productId,
+        productId: productGid2,
         error: "商品データが見つかりません",
         metalType
       });
@@ -10497,7 +10600,8 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
       const newPrice = calcFinalPriceWithStep$1(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({
-          productId: target.productId,
+          productId: productGid2,
+          // GID形式を使用 
           productTitle: product.title,
           variantId: variant.id,
           newPrice,
@@ -10507,10 +10611,10 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
       }
     }
   } catch (error) {
-    console.error(`商品 ${target.productId} (${metalType}) の処理でエラー:`, error);
+    console.error(`商品 ${productGid} (${metalType}) の処理でエラー:`, error);
     details.push({
       success: false,
-      productId: target.productId,
+      productId: productGid,
       error: `商品処理エラー: ${error.message}`,
       metalType
     });
@@ -10522,6 +10626,15 @@ async function updateShopPrices(shop, accessToken) {
   let minPctSaved = 93;
   try {
     const ratios = await fetchMetalPriceRatios();
+    if (ratios.noChange) {
+      return {
+        shop,
+        success: true,
+        message: "相場変動なしのためスキップ",
+        updated: 0,
+        failed: 0
+      };
+    }
     if (ratios.gold === null && ratios.platinum === null) {
       return {
         shop,
@@ -10547,9 +10660,13 @@ async function updateShopPrices(shop, accessToken) {
       };
     }
     const targets = await prisma$1.selectedProduct.findMany({
-      where: { shopDomain: shop },
+      where: {
+        shopDomain: shop,
+        selected: true
+      },
       select: { productId: true, metalType: true }
     });
+    console.log(`${shop}: 対象商品数（selected=true）: ${targets.length}`);
     if (!targets.length) {
       return {
         shop,
@@ -10559,8 +10676,9 @@ async function updateShopPrices(shop, accessToken) {
         failed: 0
       };
     }
-    const goldTargets = targets.filter((t) => t.metalType === "gold");
-    const platinumTargets = targets.filter((t) => t.metalType === "platinum");
+    const normalize = (s) => (s ?? "").trim().toLowerCase();
+    const goldTargets = targets.filter((t) => normalize(t.metalType) === "gold");
+    const platinumTargets = targets.filter((t) => normalize(t.metalType) === "platinum");
     console.log(`${shop}: 金商品 ${goldTargets.length}件, プラチナ商品 ${platinumTargets.length}件`);
     if ((ratios.gold === null || goldTargets.length === 0) && (ratios.platinum === null || platinumTargets.length === 0)) {
       return {
@@ -10740,6 +10858,10 @@ async function updateShopPrices(shop, accessToken) {
     const platinumEntries = entries.filter((e) => e.metalType === "platinum");
     const goldDetails = details.filter((d) => d.metalType === "gold");
     const platinumDetails = details.filter((d) => d.metalType === "platinum");
+    const goldUpdated = goldDetails.filter((d) => d.success).length;
+    const goldFailed = goldDetails.filter((d) => !d.success).length;
+    const platinumUpdated = platinumDetails.filter((d) => d.success).length;
+    const platinumFailed = platinumDetails.filter((d) => !d.success).length;
     if (ratios.gold !== null && (goldTargets.length > 0 || goldEntries.length > 0)) {
       await prisma$1.priceUpdateLog.create({
         data: {
@@ -10749,10 +10871,12 @@ async function updateShopPrices(shop, accessToken) {
           priceRatio: ratios.gold,
           minPricePct: minPctSaved,
           totalProducts: goldTargets.length,
-          updatedCount: goldEntries.length,
-          failedCount: goldDetails.filter((d) => !d.success).length,
-          success: goldDetails.filter((d) => !d.success).length === 0,
-          errorMessage: goldDetails.filter((d) => !d.success).length > 0 ? `金: ${goldDetails.filter((d) => !d.success).length}件の更新に失敗` : null,
+          updatedCount: goldUpdated,
+          // 実更新数
+          failedCount: goldFailed,
+          // 実失敗数
+          success: goldFailed === 0,
+          errorMessage: goldFailed > 0 ? `金: ${goldFailed}件の更新に失敗` : null,
           details: JSON.stringify(goldDetails)
         }
       });
@@ -10766,10 +10890,12 @@ async function updateShopPrices(shop, accessToken) {
           priceRatio: ratios.platinum,
           minPricePct: minPctSaved,
           totalProducts: platinumTargets.length,
-          updatedCount: platinumEntries.length,
-          failedCount: platinumDetails.filter((d) => !d.success).length,
-          success: platinumDetails.filter((d) => !d.success).length === 0,
-          errorMessage: platinumDetails.filter((d) => !d.success).length > 0 ? `プラチナ: ${platinumDetails.filter((d) => !d.success).length}件の更新に失敗` : null,
+          updatedCount: platinumUpdated,
+          // 実更新数
+          failedCount: platinumFailed,
+          // 実失敗数
+          success: platinumFailed === 0,
+          errorMessage: platinumFailed > 0 ? `プラチナ: ${platinumFailed}件の更新に失敗` : null,
           details: JSON.stringify(platinumDetails)
         }
       });
@@ -10836,64 +10962,6 @@ async function updateShopPrices(shop, accessToken) {
     };
   }
 }
-function isJapaneseHoliday(date) {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const fixedHolidays = [
-    { month: 1, day: 1 },
-    // 元日
-    { month: 2, day: 11 },
-    // 建国記念の日
-    { month: 2, day: 23 },
-    // 天皇誕生日
-    { month: 4, day: 29 },
-    // 昭和の日
-    { month: 5, day: 3 },
-    // 憲法記念日
-    { month: 5, day: 4 },
-    // みどりの日
-    { month: 5, day: 5 },
-    // こどもの日
-    { month: 8, day: 11 },
-    // 山の日
-    { month: 11, day: 3 },
-    // 文化の日
-    { month: 11, day: 23 }
-    // 勤労感謝の日
-  ];
-  for (const holiday of fixedHolidays) {
-    if (month === holiday.month && day === holiday.day) {
-      return true;
-    }
-  }
-  if (month === 1) {
-    const firstMonday = Math.ceil((9 - new Date(year, 0, 1).getDay()) / 7) * 7 + 2;
-    if (day === firstMonday) return true;
-  }
-  if (month === 7) {
-    const firstMonday = Math.ceil((9 - new Date(year, 6, 1).getDay()) / 7) * 7 + 2;
-    const thirdMonday = firstMonday + 14;
-    if (day === thirdMonday) return true;
-  }
-  if (month === 9) {
-    const firstMonday = Math.ceil((9 - new Date(year, 8, 1).getDay()) / 7) * 7 + 2;
-    const thirdMonday = firstMonday + 14;
-    if (day === thirdMonday) return true;
-  }
-  if (month === 10) {
-    const firstMonday = Math.ceil((9 - new Date(year, 9, 1).getDay()) / 7) * 7 + 2;
-    const secondMonday = firstMonday + 7;
-    if (day === secondMonday) return true;
-  }
-  return false;
-}
-function isBusinessDay(date) {
-  const dayOfWeek = date.getDay();
-  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  const isNotHoliday = !isJapaneseHoliday(date);
-  return isWeekday && isNotHoliday;
-}
 async function runAllShops(opts = {}) {
   const force = !!opts.force;
   try {
@@ -10901,8 +10969,9 @@ async function runAllShops(opts = {}) {
     const now = /* @__PURE__ */ new Date();
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1e3);
     const currentHour = jstNow.getHours();
-    if (!force && !isBusinessDay(jstNow)) {
-      const message = `${jstNow.toDateString()}は土日祝日のため価格更新をスキップします`;
+    const dayOfWeek = jstNow.getDay();
+    if (!force && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      const message = `${jstNow.toDateString()}は土日のため価格更新をスキップします`;
       console.log(message);
       return {
         message,
@@ -10911,16 +10980,17 @@ async function runAllShops(opts = {}) {
         shops: []
       };
     }
+    const targetHour = 10;
     const enabledShops = await prisma$1.shopSetting.findMany({
       where: {
         autoUpdateEnabled: true,
-        // force=trueでない場合は設定時刻もチェック
-        ...force ? {} : { autoUpdateHour: currentHour }
+        // force=trueでない場合は10時のみ実行
+        ...force ? {} : currentHour === targetHour ? {} : { shopDomain: "never-match" }
       },
-      select: { shopDomain: true, autoUpdateHour: true }
+      select: { shopDomain: true }
     });
     if (!enabledShops.length) {
-      const message = force ? "自動更新有効なショップがありません" : `JST ${currentHour}:00に実行予定のショップがありません`;
+      const message = force ? "自動更新有効なショップがありません" : `JST ${currentHour}:00 - ${targetHour}:00でないため実行をスキップします`;
       console.log(message);
       return {
         message,
@@ -10929,11 +10999,15 @@ async function runAllShops(opts = {}) {
         shops: []
       };
     }
-    console.log(`🕐 JST ${currentHour}:00 - ${enabledShops.length}件のショップで価格更新を開始`);
+    console.log(`🕐 JST ${currentHour}:00 (${targetHour}:00実行時刻) - ${enabledShops.length}件のショップで価格更新を開始`);
     const results = [];
     for (const shop of enabledShops) {
       const session = await prisma$1.session.findFirst({
-        where: { shop: shop.shopDomain },
+        where: {
+          shop: shop.shopDomain,
+          isOnline: false
+          // オフライントークンのみ（背景処理用）
+        },
         orderBy: { expires: "desc" }
       });
       if (!session || !session.accessToken) {
@@ -10998,7 +11072,7 @@ const action$3 = async ({ request }) => {
     headers: { "Cache-Control": "no-store" }
   });
 };
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$3,
   loader: loader$8
@@ -11183,7 +11257,7 @@ const action$2 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -11195,7 +11269,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -11204,7 +11278,7 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11232,7 +11306,7 @@ function ErrorBoundary() {
 const headers = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
@@ -11292,7 +11366,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11643,7 +11717,7 @@ function calculateNewPrice(currentPrice, adjustmentRatio, minPriceRate = 0.93) {
   const newPrice = currentPrice * (1 + adjustmentRatio);
   const minPrice = currentPrice * minPriceRate;
   const finalPrice = Math.max(newPrice, minPrice);
-  return Math.ceil(finalPrice / 10) * 10;
+  return adjustmentRatio >= 0 ? Math.ceil(finalPrice / 10) * 10 : Math.floor(finalPrice / 10) * 10;
 }
 async function fetchProductIdsByCollection(admin, collectionId) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
@@ -11825,10 +11899,11 @@ async function fetchMetalPrices() {
       fetchGoldPriceDataTanaka(),
       fetchPlatinumPriceDataTanaka()
     ]);
+    const toPct = (r) => typeof r === "number" && Number.isFinite(r) ? (r * 100).toFixed(2) : "0.00";
     return {
-      gold: goldData && goldData.changeRatio !== null ? {
-        ratio: goldData.changeRatio,
-        percentage: (goldData.changeRatio * 100).toFixed(2),
+      gold: goldData ? {
+        ratio: typeof goldData.changeRatio === "number" && Number.isFinite(goldData.changeRatio) ? goldData.changeRatio : null,
+        percentage: toPct(goldData.changeRatio),
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
@@ -11838,9 +11913,9 @@ async function fetchMetalPrices() {
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
-      platinum: platinumData && platinumData.changeRatio !== null ? {
-        ratio: platinumData.changeRatio,
-        percentage: (platinumData.changeRatio * 100).toFixed(2),
+      platinum: platinumData ? {
+        ratio: typeof platinumData.changeRatio === "number" && Number.isFinite(platinumData.changeRatio) ? platinumData.changeRatio : null,
+        percentage: toPct(platinumData.changeRatio),
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,
@@ -11904,6 +11979,7 @@ const loader$3 = async ({ request }) => {
   });
 };
 const action$1 = async ({ request }) => {
+  var _a, _b;
   const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
   const action2 = formData.get("action");
@@ -11983,6 +12059,31 @@ const action$1 = async ({ request }) => {
           disabled: result.disabled,
           updateResults: []
         });
+      }
+      try {
+        const setting = await prisma$1.shopSetting.findUnique({
+          where: { shopDomain: session.shop },
+          select: { notificationEmail: true }
+        });
+        const updatedCount = ((_a = result.summary) == null ? void 0 : _a.success) ?? result.updated ?? 0;
+        const failedCount = ((_b = result.summary) == null ? void 0 : _b.failed) ?? result.failed ?? 0;
+        if ((setting == null ? void 0 : setting.notificationEmail) && updatedCount > 0) {
+          const emailData = {
+            shopDomain: session.shop,
+            updatedCount,
+            failedCount,
+            goldRatio: typeof result.goldRatio === "number" ? `${(result.goldRatio * 100).toFixed(2)}%` : void 0,
+            platinumRatio: typeof result.platinumRatio === "number" ? `${(result.platinumRatio * 100).toFixed(2)}%` : void 0,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            details: result.details
+          };
+          const emailRes = await sendPriceUpdateNotification(setting.notificationEmail, emailData);
+          if (!emailRes.success) {
+            console.error("📧 手動更新メール送信失敗:", emailRes.error);
+          }
+        }
+      } catch (mailErr) {
+        console.error("📧 手動更新メール通知エラー:", mailErr);
       }
       return json({
         updateResults: result.details,
@@ -12940,7 +13041,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
               Banner,
               {
                 tone: result.success ? "success" : "critical",
-                children: result.success ? `${result.product} - ${result.variant}: ¥${(_a2 = result.oldPrice) == null ? void 0 : _a2.toLocaleString()} → ¥${(_b2 = result.newPrice) == null ? void 0 : _b2.toLocaleString()}` : `${result.product} - ${result.variant}: ${result.error}`
+                children: result.success ? `Variant ${result.variantId}: ¥${(_a2 = result.oldPrice) == null ? void 0 : _a2.toLocaleString()} → ¥${(_b2 = result.newPrice) == null ? void 0 : _b2.toLocaleString()}` : `Product ${result.productId} / Variant ${result.variantId}: ${result.error}`
               },
               index
             );
@@ -12984,8 +13085,16 @@ function Products() {
                   /* @__PURE__ */ jsx("h4", { children: goldPrice.retailPriceFormatted })
                 ] }),
                 /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsx("p", { children: "前日比" }),
+                  /* @__PURE__ */ jsx("p", { children: "小売価格前日比" }),
                   /* @__PURE__ */ jsx("h4", { children: goldPrice.change })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("p", { children: "店頭買取価格（税込）" }),
+                  /* @__PURE__ */ jsx("h4", { children: goldPrice.buyPriceFormatted || "取得失敗" })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("p", { children: "買取価格前日比" }),
+                  /* @__PURE__ */ jsx("h4", { children: goldPrice.buyChangePercent || "0.00%" })
                 ] })
               ] }),
               /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { children: [
@@ -13032,7 +13141,7 @@ function Products() {
     }
   );
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
@@ -13047,8 +13156,7 @@ async function loader$2({ request }) {
     create: {
       shopDomain: shop,
       minPricePct: 93,
-      autoUpdateEnabled: false,
-      autoUpdateHour: 10
+      autoUpdateEnabled: false
     }
   });
   return json({ setting });
@@ -13059,21 +13167,18 @@ async function action({ request }) {
   const form = await request.formData();
   const autoUpdateEnabled = form.get("autoUpdateEnabled") === "true";
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
-  const autoUpdateHour = Math.max(0, Math.min(23, Number(form.get("autoUpdateHour") || 10)));
   const notificationEmail = String(form.get("notificationEmail") || "");
   await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop },
     update: {
       autoUpdateEnabled,
       minPricePct,
-      autoUpdateHour,
       notificationEmail: notificationEmail || null
     },
     create: {
       shopDomain: shop,
       autoUpdateEnabled,
       minPricePct,
-      autoUpdateHour,
       notificationEmail: notificationEmail || null
     }
   });
@@ -13083,7 +13188,6 @@ async function action({ request }) {
     setting: {
       autoUpdateEnabled,
       minPricePct,
-      autoUpdateHour,
       notificationEmail: notificationEmail || null
     }
   });
@@ -13095,7 +13199,6 @@ function Settings() {
   const testEmailFetcher = useFetcher();
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(setting.autoUpdateEnabled);
   const [minPricePct, setMinPricePct] = useState(setting.minPricePct.toString());
-  const [autoUpdateHour, setAutoUpdateHour] = useState(setting.autoUpdateHour.toString());
   const [notificationEmail, setNotificationEmail] = useState(setting.notificationEmail || "");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showEmailTestMessage, setShowEmailTestMessage] = useState(false);
@@ -13114,15 +13217,10 @@ function Settings() {
       return () => clearTimeout(timer);
     }
   }, [testEmailFetcher.data]);
-  const hourOptions = [...Array(24)].map((_, i) => ({
-    label: `${String(i).padStart(2, "0")}:00`,
-    value: i.toString()
-  }));
   const handleSubmit = () => {
     const formData = new FormData();
     formData.append("autoUpdateEnabled", autoUpdateEnabled.toString());
     formData.append("minPricePct", minPricePct);
-    formData.append("autoUpdateHour", autoUpdateHour);
     formData.append("notificationEmail", notificationEmail);
     fetcher.submit(formData, { method: "post" });
   };
@@ -13170,27 +13268,17 @@ function Settings() {
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
           /* @__PURE__ */ jsxs(FormLayout, { children: [
-            /* @__PURE__ */ jsx(
-              Checkbox$1,
-              {
-                label: "自動更新を有効化",
-                helpText: "有効にすると設定時刻に自動で価格調整が実行されます",
-                checked: autoUpdateEnabled,
-                onChange: setAutoUpdateEnabled
-              }
-            ),
             /* @__PURE__ */ jsxs(InlineStack, { gap: "400", align: "start", children: [
-              /* @__PURE__ */ jsx("div", { style: { minWidth: "200px" }, children: /* @__PURE__ */ jsx(
-                Select,
+              /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx(
+                Checkbox$1,
                 {
-                  label: "自動更新時刻（JST）",
-                  options: hourOptions,
-                  value: autoUpdateHour,
-                  onChange: setAutoUpdateHour,
-                  disabled: !autoUpdateEnabled
+                  label: "自動更新を有効化",
+                  helpText: "有効にすると毎日JST 10:00に自動で価格調整が実行されます",
+                  checked: autoUpdateEnabled,
+                  onChange: setAutoUpdateEnabled
                 }
               ) }),
-              /* @__PURE__ */ jsx("div", { style: { paddingTop: "24px" }, children: /* @__PURE__ */ jsx(Badge, { tone: autoUpdateEnabled ? "info" : "warning", children: autoUpdateEnabled ? "有効" : "無効" }) })
+              /* @__PURE__ */ jsx("div", { style: { paddingTop: "24px" }, children: /* @__PURE__ */ jsx(Badge, { tone: autoUpdateEnabled ? "info" : "warning", children: autoUpdateEnabled ? "JST 10:00実行" : "無効" }) })
             ] }),
             /* @__PURE__ */ jsx(
               TextField,
@@ -13261,10 +13349,7 @@ function Settings() {
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "実行時刻" }),
-                /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
-                  String(setting.autoUpdateHour || 10).padStart(2, "0"),
-                  ":00（日本時間）"
-                ] })
+                /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "10:00（日本時間）固定" })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", fontWeight: "semibold", children: "祝日対応" }),
@@ -13276,7 +13361,7 @@ function Settings() {
               /* @__PURE__ */ jsxs(Text, { children: [
                 "• ",
                 /* @__PURE__ */ jsx("strong", { children: "実行時刻:" }),
-                " 設定した時刻に自動実行",
+                " JST 10:00（固定）",
                 /* @__PURE__ */ jsx("br", {}),
                 "• ",
                 /* @__PURE__ */ jsx("strong", { children: "対象曜日:" }),
@@ -13307,7 +13392,7 @@ function Settings() {
     }
   );
 }
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -13336,20 +13421,26 @@ const loader$1 = async ({ request }) => {
     ]);
     return json({
       goldPrice: goldData ? {
-        ratio: goldData.changeRatio,
-        percentage: (goldData.changeRatio * 100).toFixed(2),
+        ratio: typeof goldData.changeRatio === "number" && Number.isFinite(goldData.changeRatio) ? goldData.changeRatio : null,
+        percentage: typeof goldData.changeRatio === "number" && Number.isFinite(goldData.changeRatio) ? (goldData.changeRatio * 100).toFixed(2) : "0.00",
         change: goldData.changePercent,
         retailPrice: goldData.retailPrice,
         retailPriceFormatted: goldData.retailPriceFormatted,
+        buyPrice: goldData.buyPrice,
+        buyPriceFormatted: goldData.buyPriceFormatted,
+        buyChangePercent: goldData.buyChangePercent,
         changeDirection: goldData.changeDirection,
         lastUpdated: goldData.lastUpdated
       } : null,
       platinumPrice: platinumData ? {
-        ratio: platinumData.changeRatio,
-        percentage: (platinumData.changeRatio * 100).toFixed(2),
+        ratio: typeof platinumData.changeRatio === "number" && Number.isFinite(platinumData.changeRatio) ? platinumData.changeRatio : null,
+        percentage: typeof platinumData.changeRatio === "number" && Number.isFinite(platinumData.changeRatio) ? (platinumData.changeRatio * 100).toFixed(2) : "0.00",
         change: platinumData.changePercent,
         retailPrice: platinumData.retailPrice,
         retailPriceFormatted: platinumData.retailPriceFormatted,
+        buyPrice: platinumData.buyPrice,
+        buyPriceFormatted: platinumData.buyPriceFormatted,
+        buyChangePercent: platinumData.buyChangePercent,
         changeDirection: platinumData.changeDirection,
         lastUpdated: platinumData.lastUpdated
       } : null,
@@ -13389,18 +13480,31 @@ function Dashboard() {
               goldPrice ? /* @__PURE__ */ jsxs(Fragment, { children: [
                 /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", tone: "text-inverse", children: goldPrice.retailPriceFormatted }),
                 /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
-                  /* @__PURE__ */ jsx(
+                  /* @__PURE__ */ jsxs(
                     Badge,
                     {
                       tone: goldPrice.changeDirection === "up" ? "critical" : goldPrice.changeDirection === "down" ? "success" : "info",
                       size: "large",
-                      children: goldPrice.change
+                      children: [
+                        "小売 前日比: ",
+                        goldPrice.change
+                      ]
                     }
                   ),
-                  /* @__PURE__ */ jsxs(Text, { variant: "bodyLg", tone: "text-inverse", children: [
-                    "前日比 • 調整率: ",
+                  /* @__PURE__ */ jsxs(Badge, { tone: "base", size: "large", children: [
+                    "調整率: ",
                     goldPrice.percentage,
                     "%"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
+                  /* @__PURE__ */ jsxs(Badge, { tone: "base", size: "medium", children: [
+                    "買取: ",
+                    goldPrice.buyPriceFormatted || "取得失敗"
+                  ] }),
+                  /* @__PURE__ */ jsxs(Badge, { tone: "info", size: "medium", children: [
+                    "買取 前日比: ",
+                    goldPrice.buyChangePercent || "0.00%"
                   ] })
                 ] })
               ] }) : /* @__PURE__ */ jsx(Text, { variant: "headingLg", tone: "text-inverse", children: "価格情報取得中..." })
@@ -13419,18 +13523,31 @@ function Dashboard() {
               platinumPrice ? /* @__PURE__ */ jsxs(Fragment, { children: [
                 /* @__PURE__ */ jsx(Text, { variant: "heading2xl", as: "p", tone: "text-inverse", children: platinumPrice.retailPriceFormatted }),
                 /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
-                  /* @__PURE__ */ jsx(
+                  /* @__PURE__ */ jsxs(
                     Badge,
                     {
                       tone: platinumPrice.changeDirection === "up" ? "critical" : platinumPrice.changeDirection === "down" ? "success" : "info",
                       size: "large",
-                      children: platinumPrice.change
+                      children: [
+                        "小売 前日比: ",
+                        platinumPrice.change
+                      ]
                     }
                   ),
-                  /* @__PURE__ */ jsxs(Text, { variant: "bodyLg", tone: "text-inverse", children: [
-                    "前日比 • 調整率: ",
+                  /* @__PURE__ */ jsxs(Badge, { tone: "base", size: "large", children: [
+                    "調整率: ",
                     platinumPrice.percentage,
                     "%"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
+                  /* @__PURE__ */ jsxs(Badge, { tone: "base", size: "medium", children: [
+                    "買取: ",
+                    platinumPrice.buyPriceFormatted || "取得失敗"
+                  ] }),
+                  /* @__PURE__ */ jsxs(Badge, { tone: "info", size: "medium", children: [
+                    "買取 前日比: ",
+                    platinumPrice.buyChangePercent || "0.00%"
                   ] })
                 ] })
               ] }) : /* @__PURE__ */ jsx(Text, { variant: "headingLg", tone: "text-inverse", children: "価格情報取得中..." })
@@ -13525,7 +13642,7 @@ function Dashboard() {
     }
   );
 }
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -13576,7 +13693,12 @@ function Logs() {
       /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", children: new Date(log.executedAt).toLocaleDateString("ja-JP") }),
       /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: new Date(log.executedAt).toLocaleTimeString("ja-JP") })
     ] }, `time-${log.id}`),
-    /* @__PURE__ */ jsx(Badge, { tone: log.executionType === "auto" ? "info" : "warning", children: log.executionType === "auto" ? "自動実行" : "手動実行" }, `type-${log.id}`),
+    (() => {
+      const type = log.executionType;
+      const label = type === "cron" ? "自動実行" : type === "manual" ? "手動実行" : "Webhook";
+      const tone = type === "cron" ? "info" : type === "manual" ? "warning" : "base";
+      return /* @__PURE__ */ jsx(Badge, { tone, children: label }, `type-${log.id}`);
+    })(),
     /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
       /* @__PURE__ */ jsx(
         Icon,
@@ -13587,10 +13709,10 @@ function Logs() {
       ),
       /* @__PURE__ */ jsx(Badge, { tone: log.success ? "success" : "critical", children: log.success ? "成功" : "失敗" })
     ] }, `status-${log.id}`),
-    /* @__PURE__ */ jsx("div", { children: log.goldRatio !== null && log.goldRatio !== void 0 ? /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
-      /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: log.goldRatio >= 0 ? "critical" : "success", children: log.goldRatio >= 0 ? "📈" : "📉" }),
+    /* @__PURE__ */ jsx("div", { children: log.priceRatio !== null && log.priceRatio !== void 0 ? /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
+      /* @__PURE__ */ jsx(Text, { variant: "bodyMd", tone: log.priceRatio >= 0 ? "critical" : "success", children: log.priceRatio >= 0 ? "📈" : "📉" }),
       /* @__PURE__ */ jsxs(Text, { children: [
-        (log.goldRatio * 100).toFixed(2),
+        (log.priceRatio * 100).toFixed(2),
         "%"
       ] })
     ] }) : /* @__PURE__ */ jsx(Text, { tone: "subdued", children: "-" }) }, `ratio-${log.id}`),
@@ -13665,7 +13787,7 @@ function Logs() {
                 label: "実行タイプ",
                 options: [
                   { label: "すべて", value: "all" },
-                  { label: "自動実行", value: "auto" },
+                  { label: "自動実行", value: "cron" },
                   { label: "手動実行", value: "manual" }
                 ],
                 value: typeFilter,
@@ -13692,7 +13814,7 @@ function Logs() {
               "実行日時",
               "種類",
               "結果",
-              "金価格変動率",
+              "価格変動率",
               "価格下限",
               "対象商品",
               "成功/失敗",
@@ -13721,7 +13843,7 @@ function Logs() {
                   /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 手動実行: UIからの手動実行" })
                 ] }),
                 /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
-                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "semibold", children: "金価格変動率" }),
+                  /* @__PURE__ */ jsx(Text, { variant: "bodyMd", fontWeight: "semibold", children: "価格変動率" }),
                   /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• 田中貴金属から取得した前日比" }),
                   /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "• この変動率で商品価格を調整" })
                 ] }),
@@ -13738,12 +13860,12 @@ function Logs() {
     }
   );
 }
-const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-VSCakobc.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-DS1yuizv.js", "/assets/context-C9td0CMk.js", "/assets/Sticky-DAC3dAc4.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-YAV9eIzI.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/Select-DS1yuizv.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-DSpbBV0Y.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-CKzhJC4c.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-DS1yuizv.js", "/assets/context-C9td0CMk.js", "/assets/Sticky-DAC3dAc4.js"], "css": [] } }, "url": "/assets/manifest-9f6d5596.js", "version": "9f6d5596" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-prices": { "id": "routes/api.debug-prices", "parentId": "root", "path": "api/debug-prices", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-prices-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-DNNwq_w0.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-CVBRsg5v.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BwFMzU7C.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-nbaoxDqu.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-49e806fa.js", "version": "49e806fa" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -13800,13 +13922,21 @@ const routes = {
     caseSensitive: void 0,
     module: route5
   },
+  "routes/api.debug-prices": {
+    id: "routes/api.debug-prices",
+    parentId: "root",
+    path: "api/debug-prices",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route6
+  },
   "routes/api.test-email": {
     id: "routes/api.test-email",
     parentId: "root",
     path: "api/test-email",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
+    module: route7
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -13814,7 +13944,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route8
   },
   "routes/api.cron": {
     id: "routes/api.cron",
@@ -13822,7 +13952,7 @@ const routes = {
     path: "api/cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route9
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -13830,7 +13960,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route9
+    module: route10
   },
   "routes/_index": {
     id: "routes/_index",
@@ -13838,7 +13968,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route10
+    module: route11
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -13846,7 +13976,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route12
   },
   "routes/app": {
     id: "routes/app",
@@ -13854,7 +13984,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route13
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -13862,7 +13992,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route14
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -13870,7 +14000,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route15
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -13878,7 +14008,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route15
+    module: route16
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -13886,7 +14016,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route16
+    module: route17
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -13894,7 +14024,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route17
+    module: route18
   }
 };
 export {

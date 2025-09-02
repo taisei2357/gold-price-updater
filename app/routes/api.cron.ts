@@ -612,15 +612,16 @@ async function runAllShops(opts: { force?: boolean } = {}) {
       };
     }
 
-    // JST 10:00 (currentHour = 10) の時刻チェック
+    // JST 10:00-11:00 の時刻チェック（GitHub Actions遅延対策）
     const targetHour = 10; // JST 10:00固定
+    const inWindow = currentHour >= 10 && currentHour <= 11; // 10〜11時台を許容
     
     // 自動更新有効なショップとそのアクセストークンを取得
     const enabledShops = await prisma.shopSetting.findMany({
       where: { 
         autoUpdateEnabled: true,
-        // force=trueでない場合は10時のみ実行
-        ...(force ? {} : currentHour === targetHour ? {} : { shopDomain: 'never-match' })
+        // force=trueでない場合は10〜11時台実行
+        ...(force ? {} : inWindow ? {} : { shopDomain: 'never-match' })
       },
       select: { shopDomain: true }
     });
@@ -628,7 +629,7 @@ async function runAllShops(opts: { force?: boolean } = {}) {
     if (!enabledShops.length) {
       const message = force 
         ? '自動更新有効なショップがありません'
-        : `JST ${currentHour}:00 - ${targetHour}:00でないため実行をスキップします`;
+        : `JST ${currentHour}:00 - 10:00-11:00時間帯でないため実行をスキップします`;
       console.log(message);
       return {
         message,
@@ -638,7 +639,7 @@ async function runAllShops(opts: { force?: boolean } = {}) {
       };
     }
 
-    console.log(`🕐 JST ${currentHour}:00 (${targetHour}:00実行時刻) - ${enabledShops.length}件のショップで価格更新を開始`);
+    console.log(`🕐 JST ${currentHour}:00 (10:00-11:00実行時間帯) - ${enabledShops.length}件のショップで価格更新を開始`);
 
     // 各ショップのアクセストークンを取得
     const results = [];

@@ -3,6 +3,7 @@ name: 自動価格更新スケジューラー
 on:
   schedule:
     - cron: '0 1 * * 1-5'   # JST 10:00（平日）
+    - cron: '15 1 * * 1-5'  # JST 10:15（遅延対策）
   workflow_dispatch:
     inputs:
       force_execution:
@@ -33,7 +34,7 @@ jobs:
             FORCE_PARAM="?force=1"
           fi
 
-          response=$(curl -s -w "\n%{http_code}" -X POST \
+          response=$(curl -sS --retry 3 --retry-connrefused --max-time 60 -w "\n%{http_code}" -X POST \
             -H "x-vercel-cron: 1" \
             -H "Content-Type: application/json" \
             "$CRON_ENDPOINT$FORCE_PARAM")
