@@ -12,6 +12,10 @@ on:
         default: false
         required: false
 
+concurrency:
+  group: price-update
+  cancel-in-progress: true
+
 jobs:
   price-update:
     runs-on: ubuntu-latest
@@ -32,8 +36,15 @@ jobs:
           FORCE_PARAM=""
           if [ "${{ inputs.force_execution }}" = "true" ]; then
             FORCE_PARAM="?force=1"
+            echo "🚀 強制実行モード: 時刻チェックをスキップ"
+          else
+            echo "⏰ 通常モード: JST 10:00-11:00のみ実行"
           fi
 
+          echo "🌐 エンドポイント接続確認"
+          curl -sS -I -H "x-vercel-cron: 1" "$CRON_ENDPOINT" || true
+
+          echo "📡 価格更新API呼び出し"
           response=$(curl -sS --retry 3 --retry-connrefused --max-time 60 -w "\n%{http_code}" -X POST \
             -H "x-vercel-cron: 1" \
             -H "Content-Type: application/json" \
@@ -45,7 +56,12 @@ jobs:
           echo "📡 HTTP: $http_code"
           echo "📄 BODY: $body"
 
-          [ "$http_code" = "200" ] || { echo "❌ 失敗"; exit 1; }
+          if [ "$http_code" = "200" ]; then
+            echo "✅ 成功"
+          else
+            echo "❌ 失敗: HTTP $http_code"
+            exit 1
+          fi
 
       - name: 📊 Slack通知（任意）
         if: always() && env.SLACK_WEBHOOK_URL != ''
