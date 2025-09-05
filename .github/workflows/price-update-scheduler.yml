@@ -1,9 +1,10 @@
 name: 自動価格更新スケジューラー
 
 on:
-  schedule:
-    - cron: '0 1 * * 1-5'   # JST 10:00（平日）
-    - cron: '15 1 * * 1-5'  # JST 10:15（遅延対策）
+  # Vercel Cronに移行のためscheduleは無効化
+  # schedule:
+  #   - cron: '0 1 * * 1-5'   # JST 10:00（平日）
+  #   - cron: '15 1 * * 1-5'  # JST 10:15（遅延対策）
   workflow_dispatch:
     inputs:
       force_execution:
