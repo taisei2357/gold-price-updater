@@ -706,11 +706,19 @@ export const loader: LoaderFunction = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
   
-  const force = new URL(request.url).searchParams.get('force') === '1';
-  const result = await runAllShops({ force });
-  return json(result, { 
-    headers: { "Cache-Control": "no-store" } 
-  });
+  try {
+    const force = new URL(request.url).searchParams.get('force') === '1';
+    const result = await runAllShops({ force });
+    return json(result, { 
+      headers: { "Cache-Control": "no-store" } 
+    });
+  } catch (e) {
+    console.error('Cron実行エラー:', e);
+    return json({ error: (e as Error).message }, { status: 500 });
+  } finally {
+    // Cronは都度実行なので明示的に閉じる
+    await prisma.$disconnect().catch(() => {});
+  }
 };
 
 // 手動実行用のPOSTエンドポイント
@@ -722,9 +730,17 @@ export const action: ActionFunction = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
   
-  const force = new URL(request.url).searchParams.get('force') === '1';
-  const result = await runAllShops({ force });
-  return json(result, { 
-    headers: { "Cache-Control": "no-store" } 
-  });
+  try {
+    const force = new URL(request.url).searchParams.get('force') === '1';
+    const result = await runAllShops({ force });
+    return json(result, { 
+      headers: { "Cache-Control": "no-store" } 
+    });
+  } catch (e) {
+    console.error('Cron実行エラー:', e);
+    return json({ error: (e as Error).message }, { status: 500 });
+  } finally {
+    // Cronは都度実行なので明示的に閉じる
+    await prisma.$disconnect().catch(() => {});
+  }
 };
