@@ -1,10 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-declare global {
-  // for hot-reload in dev
-  var __prisma: PrismaClient | undefined;
-}
-
+// JavaScript版: global変数の型定義なし
 export const prisma =
   global.__prisma ??
   new PrismaClient({
