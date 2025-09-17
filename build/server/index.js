@@ -20,12 +20,10 @@ import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
 import { NavMenu, TitleBar } from "@shopify/app-bridge-react";
 import { Transition, CSSTransition, TransitionGroup } from "react-transition-group";
 import isEqual from "react-fast-compare";
-if (process.env.NODE_ENV !== "production") {
-  if (!global.prismaGlobal) {
-    global.prismaGlobal = new PrismaClient();
-  }
-}
-const prisma$1 = global.prismaGlobal ?? new PrismaClient();
+const prisma$1 = global.__prisma ?? new PrismaClient({
+  // log: ['query', 'error', 'warn'], // 必要なら一時的に有効化
+});
+if (process.env.NODE_ENV !== "production") global.__prisma = prisma$1;
 const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
 const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
 const shopify = shopifyApp({
@@ -9992,10 +9990,318 @@ const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   __proto__: null,
   action: action$6
 }, Symbol.toStringTag, { value: "Module" }));
+const loader$a = async ({ request }) => {
+  const url = new URL(request.url);
+  const uid = url.searchParams.get("uid");
+  const state = url.searchParams.get("state");
+  url.searchParams.get("code");
+  if (url.searchParams.has("health")) {
+    return json({ ok: true, path: url.pathname });
+  }
+  if (uid && state) {
+    try {
+      const tokenRes = await fetch("https://api.next-engine.org/api_neauth", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          uid,
+          state,
+          client_id: process.env.NE_CLIENT_ID,
+          client_secret: process.env.NE_CLIENT_SECRET
+        })
+      });
+      const tokens = await tokenRes.json();
+      if (tokens.access_token) {
+        const html = `
+          <h1>NextEngine 認証成功</h1>
+          <p>トークンを取得しました。以下の値をconfig.jsonに保存してください：</p>
+          <pre>
+{
+  "access_token": "${tokens.access_token}",
+  "refresh_token": "${tokens.refresh_token || "なし"}",
+  "expires_in": ${tokens.expires_in || "なし"}
+}
+          </pre>
+          <p><strong>config.jsonのaccess_tokenとrefresh_tokenを上記の値で更新してください。</strong></p>
+        `;
+        return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+      } else {
+        return json({ error: "token_exchange_failed", response: tokens }, { status: 400 });
+      }
+    } catch (error) {
+      return json({ error: "api_call_failed", message: String(error) }, { status: 500 });
+    }
+  }
+  return json({ error: "missing_uid_or_code", received: Object.fromEntries(url.searchParams.entries()) }, { status: 400 });
+};
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$a
+}, Symbol.toStringTag, { value: "Module" }));
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$8,
   loader: loader$b
+}, Symbol.toStringTag, { value: "Module" }));
+async function sendViaSendGrid(to, subject, html, text) {
+  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.SENDGRID_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: process.env.SENDGRID_FROM_EMAIL || "noreply@example.com" },
+      subject,
+      content: [
+        { type: "text/plain", value: text },
+        { type: "text/html", value: html }
+      ]
+    })
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`SendGrid API error: ${response.status} - ${error}`);
+  }
+  return { messageId: response.headers.get("x-message-id") || "sendgrid-sent" };
+}
+async function sendViaResend(to, subject, html, text) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL || "noreply@example.com",
+      to,
+      subject,
+      html,
+      text
+    })
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Resend API error: ${response.status} - ${error}`);
+  }
+  const result = await response.json();
+  return { messageId: result.id };
+}
+async function sendPriceUpdateNotification(toEmail, data) {
+  if (!toEmail) {
+    return { success: false, error: "メールアドレスが設定されていません" };
+  }
+  try {
+    const subject = `[${data.shopDomain}] 価格自動更新完了 - ${data.updatedCount}件更新`;
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2d5016;">🔄 価格自動更新が完了しました</h2>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>📊 更新結果</h3>
+          <ul>
+            <li><strong>ショップ:</strong> ${data.shopDomain}</li>
+            <li><strong>実行時刻:</strong> ${new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</li>
+            <li><strong>更新成功:</strong> ${data.updatedCount}件</li>
+            <li><strong>更新失敗:</strong> ${data.failedCount}件</li>
+          </ul>
+        </div>
+
+        ${data.goldRatio || data.platinumRatio ? `
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3>💰 価格変動情報</h3>
+          <ul>
+            ${data.goldRatio ? `<li><strong>🥇 金:</strong> ${data.goldRatio}</li>` : ""}
+            ${data.platinumRatio ? `<li><strong>🥈 プラチナ:</strong> ${data.platinumRatio}</li>` : ""}
+          </ul>
+        </div>` : ""}
+
+        ${data.failedCount > 0 ? `
+        <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #c62828;">⚠️ 注意事項</h3>
+          <p>${data.failedCount}件の商品で価格更新に失敗しました。管理画面でログを確認してください。</p>
+        </div>` : ""}
+
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>📱 次の操作:</strong></p>
+          <ul>
+            <li>更新結果の詳細は管理画面の「ログ」ページで確認できます</li>
+            <li>Shopify管理画面で実際の商品価格をご確認ください</li>
+            <li>問題がある場合は、アプリの設定を見直してください</li>
+          </ul>
+        </div>
+
+        <hr style="border: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #666; font-size: 12px;">
+          この通知は金・プラチナ価格自動更新アプリから送信されています。<br>
+          通知設定はアプリの「設定」ページから変更できます。
+        </p>
+      </div>
+    `;
+    const textContent = `
+[${data.shopDomain}] 価格自動更新が完了しました
+
+📊 更新結果:
+- ショップ: ${data.shopDomain}
+- 実行時刻: ${new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+- 更新成功: ${data.updatedCount}件
+- 更新失敗: ${data.failedCount}件
+
+${data.goldRatio ? `🥇 金: ${data.goldRatio}
+` : ""}${data.platinumRatio ? `🥈 プラチナ: ${data.platinumRatio}
+` : ""}
+${data.failedCount > 0 ? `
+⚠️ ${data.failedCount}件の商品で更新に失敗しました。管理画面でログを確認してください。
+` : ""}
+詳細な結果は管理画面の「ログ」ページでご確認ください。
+    `;
+    let result;
+    if (process.env.RESEND_API_KEY) {
+      result = await sendViaResend(toEmail, subject, htmlContent, textContent);
+    } else if (process.env.SENDGRID_API_KEY) {
+      result = await sendViaSendGrid(toEmail, subject, htmlContent, textContent);
+    } else {
+      console.log("📧 [開発モード] メール通知:");
+      console.log(`宛先: ${toEmail}`);
+      console.log(`件名: ${subject}`);
+      console.log(`本文:
+${textContent}`);
+      result = { messageId: "console-output" };
+    }
+    console.log(`📧 通知メール送信成功: ${toEmail} (MessageID: ${result.messageId})`);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error("📧 メール送信エラー:", error);
+    return {
+      success: false,
+      error: `メール送信に失敗しました: ${error.message}`
+    };
+  }
+}
+async function sendTestEmail(toEmail) {
+  if (!toEmail) {
+    return { success: false, error: "メールアドレスが設定されていません" };
+  }
+  const testData = {
+    shopDomain: "test-shop.myshopify.com",
+    updatedCount: 3,
+    failedCount: 0,
+    goldRatio: "+0.50%",
+    platinumRatio: "-0.25%",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  return await sendPriceUpdateNotification(toEmail, testData);
+}
+const action$5 = async ({ request }) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const shop = session.shop;
+    const setting = await prisma$1.shopSetting.findUnique({
+      where: { shopDomain: shop },
+      select: { notificationEmail: true }
+    });
+    const email = setting == null ? void 0 : setting.notificationEmail;
+    if (!email) {
+      return json({
+        success: false,
+        error: "通知メールアドレスが設定されていません"
+      });
+    }
+    const result = await sendTestEmail(email);
+    if (result.success) {
+      return json({
+        success: true,
+        email,
+        message: "テストメールを送信しました"
+      });
+    } else {
+      return json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error("テストメール送信エラー:", error);
+    return json({
+      success: false,
+      error: "メール送信処理でエラーが発生しました"
+    });
+  }
+};
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$5
+}, Symbol.toStringTag, { value: "Module" }));
+const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
+const polarisTranslations = {
+  Polaris
+};
+function loginErrorMessage(loginErrors) {
+  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
+    return { shop: "Please enter your shop domain to log in" };
+  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
+    return { shop: "Please enter a valid shop domain to log in" };
+  }
+  return {};
+}
+const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
+const loader$9 = async () => {
+  return json({ errors: {}, polarisTranslations });
+};
+const action$4 = async ({ request }) => {
+  const formData = await request.formData();
+  const rawShop = (formData.get("shop") || "").toString();
+  const shop = normalizeShop(rawShop);
+  if (!shop) {
+    return json({ errors: { shop: "Shop domain is required" } }, { status: 400 });
+  }
+  try {
+    const url = new URL(request.url);
+    url.searchParams.set("shop", shop);
+    const newReq = new Request(url.toString(), { method: "POST", body: formData });
+    return await login(newReq);
+  } catch (e) {
+    return json({ errors: loginErrorMessage(e) }, { status: 400 });
+  }
+};
+function normalizeShop(input) {
+  const s = input.trim().toLowerCase();
+  if (!s) return "";
+  if (s.endsWith(".myshopify.com")) return s;
+  if (!s.includes(".")) return `${s}.myshopify.com`;
+  const base = s.split(".myshopify.com")[0].replace(/\.$/, "");
+  return `${base}.myshopify.com`;
+}
+function Auth() {
+  const loaderData = useLoaderData();
+  const actionData = useActionData();
+  const [shop, setShop] = useState("");
+  const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
+  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
+    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
+    /* @__PURE__ */ jsx(
+      TextField,
+      {
+        type: "text",
+        name: "shop",
+        label: "Shop domain",
+        helpText: "example.myshopify.com",
+        value: shop,
+        onChange: (v) => setShop(v),
+        autoComplete: "off",
+        error: errors.shop
+      }
+    ),
+    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
+  ] }) }) }) }) });
+}
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$4,
+  default: Auth,
+  links: links$1,
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
 let _goldCache = null;
 let _platinumCache = null;
@@ -10168,318 +10474,6 @@ async function fetchGoldPriceDataTanaka() {
 async function fetchPlatinumPriceDataTanaka() {
   return await fetchMetalPriceData("platinum");
 }
-const loader$a = async ({ request }) => {
-  console.log("=== Debug Price Fetching ===");
-  try {
-    console.log("Testing gold price...");
-    const goldData = await fetchGoldPriceDataTanaka();
-    console.log("Gold result:", goldData);
-    console.log("Testing platinum price...");
-    const platinumData = await fetchPlatinumPriceDataTanaka();
-    console.log("Platinum result:", platinumData);
-    console.log("Testing raw HTTP request...");
-    const response = await fetch("https://gold.tanaka.co.jp/commodity/souba/d-gold.php", {
-      headers: { "User-Agent": "Mozilla/5.0" }
-    });
-    const html = await response.text();
-    console.log("HTTP status:", response.status);
-    console.log("HTML length:", html.length);
-    const goldRowMatch = html.match(new RegExp(`<tr[^>]*>\\s*<td[^>]*class="metal_name"[^>]*>\\s*金\\s*<\\/td>[\\s\\S]*?<\\/tr>`, "i"));
-    console.log("Gold row match found:", !!goldRowMatch);
-    if (goldRowMatch) {
-      console.log("Gold row HTML:", goldRowMatch[0]);
-    }
-    const fallbackMatch = html.match(new RegExp(`<tr[^>]*class="gold"[^>]*>.*?<\\/tr>`, "is"));
-    console.log("Fallback match found:", !!fallbackMatch);
-    if (fallbackMatch) {
-      console.log("Fallback HTML:", fallbackMatch[0]);
-    }
-    return json({
-      success: true,
-      gold: goldData,
-      platinum: platinumData,
-      httpStatus: response.status,
-      htmlLength: html.length,
-      htmlPreview: html.substring(0, 500)
-    });
-  } catch (error) {
-    console.error("Debug error:", error);
-    return json({
-      success: false,
-      error: error.message,
-      stack: error.stack
-    });
-  }
-};
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  loader: loader$a
-}, Symbol.toStringTag, { value: "Module" }));
-async function sendViaSendGrid(to, subject, html, text) {
-  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.SENDGRID_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
-      from: { email: process.env.SENDGRID_FROM_EMAIL || "noreply@example.com" },
-      subject,
-      content: [
-        { type: "text/plain", value: text },
-        { type: "text/html", value: html }
-      ]
-    })
-  });
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`SendGrid API error: ${response.status} - ${error}`);
-  }
-  return { messageId: response.headers.get("x-message-id") || "sendgrid-sent" };
-}
-async function sendViaResend(to, subject, html, text) {
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL || "noreply@example.com",
-      to,
-      subject,
-      html,
-      text
-    })
-  });
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Resend API error: ${response.status} - ${error}`);
-  }
-  const result = await response.json();
-  return { messageId: result.id };
-}
-async function sendPriceUpdateNotification(toEmail, data) {
-  if (!toEmail) {
-    return { success: false, error: "メールアドレスが設定されていません" };
-  }
-  try {
-    const subject = `[${data.shopDomain}] 価格自動更新完了 - ${data.updatedCount}件更新`;
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2d5016;">🔄 価格自動更新が完了しました</h2>
-        
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3>📊 更新結果</h3>
-          <ul>
-            <li><strong>ショップ:</strong> ${data.shopDomain}</li>
-            <li><strong>実行時刻:</strong> ${new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</li>
-            <li><strong>更新成功:</strong> ${data.updatedCount}件</li>
-            <li><strong>更新失敗:</strong> ${data.failedCount}件</li>
-          </ul>
-        </div>
-
-        ${data.goldRatio || data.platinumRatio ? `
-        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3>💰 価格変動情報</h3>
-          <ul>
-            ${data.goldRatio ? `<li><strong>🥇 金:</strong> ${data.goldRatio}</li>` : ""}
-            ${data.platinumRatio ? `<li><strong>🥈 プラチナ:</strong> ${data.platinumRatio}</li>` : ""}
-          </ul>
-        </div>` : ""}
-
-        ${data.failedCount > 0 ? `
-        <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #c62828;">⚠️ 注意事項</h3>
-          <p>${data.failedCount}件の商品で価格更新に失敗しました。管理画面でログを確認してください。</p>
-        </div>` : ""}
-
-        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>📱 次の操作:</strong></p>
-          <ul>
-            <li>更新結果の詳細は管理画面の「ログ」ページで確認できます</li>
-            <li>Shopify管理画面で実際の商品価格をご確認ください</li>
-            <li>問題がある場合は、アプリの設定を見直してください</li>
-          </ul>
-        </div>
-
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #666; font-size: 12px;">
-          この通知は金・プラチナ価格自動更新アプリから送信されています。<br>
-          通知設定はアプリの「設定」ページから変更できます。
-        </p>
-      </div>
-    `;
-    const textContent = `
-[${data.shopDomain}] 価格自動更新が完了しました
-
-📊 更新結果:
-- ショップ: ${data.shopDomain}
-- 実行時刻: ${new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
-- 更新成功: ${data.updatedCount}件
-- 更新失敗: ${data.failedCount}件
-
-${data.goldRatio ? `🥇 金: ${data.goldRatio}
-` : ""}${data.platinumRatio ? `🥈 プラチナ: ${data.platinumRatio}
-` : ""}
-${data.failedCount > 0 ? `
-⚠️ ${data.failedCount}件の商品で更新に失敗しました。管理画面でログを確認してください。
-` : ""}
-詳細な結果は管理画面の「ログ」ページでご確認ください。
-    `;
-    let result;
-    if (process.env.RESEND_API_KEY) {
-      result = await sendViaResend(toEmail, subject, htmlContent, textContent);
-    } else if (process.env.SENDGRID_API_KEY) {
-      result = await sendViaSendGrid(toEmail, subject, htmlContent, textContent);
-    } else {
-      console.log("📧 [開発モード] メール通知:");
-      console.log(`宛先: ${toEmail}`);
-      console.log(`件名: ${subject}`);
-      console.log(`本文:
-${textContent}`);
-      result = { messageId: "console-output" };
-    }
-    console.log(`📧 通知メール送信成功: ${toEmail} (MessageID: ${result.messageId})`);
-    return { success: true, messageId: result.messageId };
-  } catch (error) {
-    console.error("📧 メール送信エラー:", error);
-    return {
-      success: false,
-      error: `メール送信に失敗しました: ${error.message}`
-    };
-  }
-}
-async function sendTestEmail(toEmail) {
-  if (!toEmail) {
-    return { success: false, error: "メールアドレスが設定されていません" };
-  }
-  const testData = {
-    shopDomain: "test-shop.myshopify.com",
-    updatedCount: 3,
-    failedCount: 0,
-    goldRatio: "+0.50%",
-    platinumRatio: "-0.25%",
-    timestamp: (/* @__PURE__ */ new Date()).toISOString()
-  };
-  return await sendPriceUpdateNotification(toEmail, testData);
-}
-const action$5 = async ({ request }) => {
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
-  }
-  try {
-    const { session } = await authenticate.admin(request);
-    const shop = session.shop;
-    const setting = await prisma$1.shopSetting.findUnique({
-      where: { shopDomain: shop },
-      select: { notificationEmail: true }
-    });
-    if (!(setting == null ? void 0 : setting.notificationEmail)) {
-      return json({
-        success: false,
-        error: "通知メールアドレスが設定されていません。設定画面でメールアドレスを入力してください。"
-      }, { status: 400 });
-    }
-    console.log(`🧪 テストメール送信開始: ${setting.notificationEmail}`);
-    const result = await sendTestEmail(setting.notificationEmail);
-    if (result.success) {
-      console.log(`✅ テストメール送信成功: ${setting.notificationEmail}`);
-      return json({
-        success: true,
-        message: `テストメールを ${setting.notificationEmail} に送信しました`,
-        email: setting.notificationEmail
-      });
-    } else {
-      console.error(`❌ テストメール送信失敗: ${result.error}`);
-      return json({
-        success: false,
-        error: `メール送信に失敗しました: ${result.error}`
-      }, { status: 500 });
-    }
-  } catch (error) {
-    console.error("テストメールAPI エラー:", error);
-    return json({
-      success: false,
-      error: `サーバーエラーが発生しました: ${error.message}`
-    }, { status: 500 });
-  }
-};
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$5
-}, Symbol.toStringTag, { value: "Module" }));
-const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
-const polarisTranslations = {
-  Polaris
-};
-function loginErrorMessage(loginErrors) {
-  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
-    return { shop: "Please enter your shop domain to log in" };
-  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
-    return { shop: "Please enter a valid shop domain to log in" };
-  }
-  return {};
-}
-const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$9 = async () => {
-  return json({ errors: {}, polarisTranslations });
-};
-const action$4 = async ({ request }) => {
-  const formData = await request.formData();
-  const rawShop = (formData.get("shop") || "").toString();
-  const shop = normalizeShop(rawShop);
-  if (!shop) {
-    return json({ errors: { shop: "Shop domain is required" } }, { status: 400 });
-  }
-  try {
-    const url = new URL(request.url);
-    url.searchParams.set("shop", shop);
-    const newReq = new Request(url.toString(), { method: "POST", body: formData });
-    return await login(newReq);
-  } catch (e) {
-    return json({ errors: loginErrorMessage(e) }, { status: 400 });
-  }
-};
-function normalizeShop(input) {
-  const s = input.trim().toLowerCase();
-  if (!s) return "";
-  if (s.endsWith(".myshopify.com")) return s;
-  if (!s.includes(".")) return `${s}.myshopify.com`;
-  const base = s.split(".myshopify.com")[0].replace(/\.$/, "");
-  return `${base}.myshopify.com`;
-}
-function Auth() {
-  const loaderData = useLoaderData();
-  const actionData = useActionData();
-  const [shop, setShop] = useState("");
-  const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
-  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
-    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
-    /* @__PURE__ */ jsx(
-      TextField,
-      {
-        type: "text",
-        name: "shop",
-        label: "Shop domain",
-        helpText: "example.myshopify.com",
-        value: shop,
-        onChange: (v) => setShop(v),
-        autoComplete: "off",
-        error: errors.shop
-      }
-    ),
-    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
-  ] }) }) }) }) });
-}
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$4,
-  default: Auth,
-  links: links$1,
-  loader: loader$9
-}, Symbol.toStringTag, { value: "Module" }));
 function verifyCronAuth(request) {
   const fromVercelCron = request.headers.get("x-vercel-cron") === "1";
   if (fromVercelCron) return null;
@@ -10981,16 +10975,17 @@ async function runAllShops(opts = {}) {
       };
     }
     const targetHour = 10;
+    const inWindow = currentHour >= 10 && currentHour <= 11;
     const enabledShops = await prisma$1.shopSetting.findMany({
       where: {
         autoUpdateEnabled: true,
-        // force=trueでない場合は10時のみ実行
-        ...force ? {} : currentHour === targetHour ? {} : { shopDomain: "never-match" }
+        // force=trueでない場合は10〜11時台実行
+        ...force ? {} : inWindow ? {} : { shopDomain: "never-match" }
       },
       select: { shopDomain: true }
     });
     if (!enabledShops.length) {
-      const message = force ? "自動更新有効なショップがありません" : `JST ${currentHour}:00 - ${targetHour}:00でないため実行をスキップします`;
+      const message = force ? "自動更新有効なショップがありません" : `JST ${currentHour}:00 - 10:00-11:00時間帯でないため実行をスキップします`;
       console.log(message);
       return {
         message,
@@ -10999,7 +10994,7 @@ async function runAllShops(opts = {}) {
         shops: []
       };
     }
-    console.log(`🕐 JST ${currentHour}:00 (${targetHour}:00実行時刻) - ${enabledShops.length}件のショップで価格更新を開始`);
+    console.log(`🕐 JST ${currentHour}:00 (10:00-11:00実行時間帯) - ${enabledShops.length}件のショップで価格更新を開始`);
     const results = [];
     for (const shop of enabledShops) {
       const session = await prisma$1.session.findFirst({
@@ -11054,11 +11049,19 @@ async function runAllShops(opts = {}) {
 const loader$8 = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
-  const force = new URL(request.url).searchParams.get("force") === "1";
-  const result = await runAllShops({ force });
-  return json(result, {
-    headers: { "Cache-Control": "no-store" }
-  });
+  try {
+    const force = new URL(request.url).searchParams.get("force") === "1";
+    const result = await runAllShops({ force });
+    return json(result, {
+      headers: { "Cache-Control": "no-store" }
+    });
+  } catch (e) {
+    console.error("Cron実行エラー:", e);
+    return json({ error: e.message }, { status: 500 });
+  } finally {
+    await prisma$1.$disconnect().catch(() => {
+    });
+  }
 };
 const action$3 = async ({ request }) => {
   if (request.method !== "POST") {
@@ -11066,11 +11069,19 @@ const action$3 = async ({ request }) => {
   }
   const deny = verifyCronAuth(request);
   if (deny) return deny;
-  const force = new URL(request.url).searchParams.get("force") === "1";
-  const result = await runAllShops({ force });
-  return json(result, {
-    headers: { "Cache-Control": "no-store" }
-  });
+  try {
+    const force = new URL(request.url).searchParams.get("force") === "1";
+    const result = await runAllShops({ force });
+    return json(result, {
+      headers: { "Cache-Control": "no-store" }
+    });
+  } catch (e) {
+    console.error("Cron実行エラー:", e);
+    return json({ error: e.message }, { status: 500 });
+  } finally {
+    await prisma$1.$disconnect().catch(() => {
+    });
+  }
 };
 const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -13865,7 +13876,7 @@ const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-prices": { "id": "routes/api.debug-prices", "parentId": "root", "path": "api/debug-prices", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-prices-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-DNNwq_w0.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-CVBRsg5v.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BwFMzU7C.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-nbaoxDqu.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-49e806fa.js", "version": "49e806fa" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-DNNwq_w0.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-CVBRsg5v.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BwFMzU7C.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-nbaoxDqu.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-27f49521.js", "version": "27f49521" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -13914,18 +13925,18 @@ const routes = {
     caseSensitive: void 0,
     module: route4
   },
-  "routes/webhooks.shop.redact": {
-    id: "routes/webhooks.shop.redact",
+  "routes/api.nextengine.callback": {
+    id: "routes/api.nextengine.callback",
     parentId: "root",
-    path: "webhooks/shop/redact",
+    path: "api/nextengine/callback",
     index: void 0,
     caseSensitive: void 0,
     module: route5
   },
-  "routes/api.debug-prices": {
-    id: "routes/api.debug-prices",
+  "routes/webhooks.shop.redact": {
+    id: "routes/webhooks.shop.redact",
     parentId: "root",
-    path: "api/debug-prices",
+    path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
     module: route6

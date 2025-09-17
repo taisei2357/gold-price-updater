@@ -614,6 +614,8 @@ export const action = async ({ request }) => {
     const selectedProductIds = JSON.parse(formData.get("selectedProductIds") || "[]");
     const adjustmentRatio = parseFloat(formData.get("adjustmentRatio"));
 
+    console.log("🔧 Manual price update started:", { selectedProductIds, adjustmentRatio });
+
     if (selectedProductIds.length === 0) {
       return json({ 
         error: "更新対象商品が選択されていません",
@@ -650,7 +652,10 @@ export const action = async ({ request }) => {
         const productData = await productResponse.json();
         const product = productData.data?.product;
 
+        console.log(`📦 Product ${productId} data:`, { product: product?.title, variantCount: product?.variants?.edges?.length });
+
         if (!product) {
+          console.error(`❌ Product ${productId} not found`);
           updateResults.push({
             productId,
             success: false,
@@ -664,6 +669,8 @@ export const action = async ({ request }) => {
           const variant = variantEdge.node;
           const currentPrice = parseFloat(variant.price);
           const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
+
+          console.log(`💰 Variant ${variant.id} price update:`, { currentPrice, newPrice, adjustmentRatio });
 
           try {
             const updateResponse = await admin.graphql(
@@ -691,6 +698,8 @@ export const action = async ({ request }) => {
             );
 
             const updateData = await updateResponse.json();
+            
+            console.log(`🔄 GraphQL update response for ${variant.id}:`, updateData);
             
             if (updateData.data?.productVariantUpdate?.userErrors?.length > 0) {
               updateResults.push({
@@ -1693,7 +1702,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                 checked={true}
                                 onChange={(checked) => handleManualProductSelect(productId, checked)}
                               />
-                              <Text variant="bodySm">{product.title}</Text>
+                              <div style={{ flex: 1 }}>
+                                <Text variant="bodySm">{product.title}</Text>
+                                <Text variant="caption" tone="subdued">{productId}</Text>
+                              </div>
                             </InlineStack>
                           ) : null;
                         })}
