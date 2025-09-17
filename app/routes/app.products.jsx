@@ -830,51 +830,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   // 楽観的更新用のstate
   const [optimisticPrices, setOptimisticPrices] = useState({}); // { productId: newPrice }
   
-  // ポーリング検証用の関数
-  const verifyPricesOnServer = useCallback(async (expectedPrices) => {
-    const timeout = Date.now() + 10000; // 10秒制限
-    
-    while (Date.now() < timeout) {
-      try {
-        const productIds = Object.keys(expectedPrices);
-        const variantIds = [];
-        
-        // 各商品の最初のvariantIDを取得
-        productIds.forEach(productId => {
-          const product = filteredProducts.find(p => p.id === productId);
-          if (product?.variants?.edges?.[0]) {
-            variantIds.push(product.variants.edges[0].node.id);
-          }
-        });
-        
-        const response = await fetch(`/api/variants?ids=${variantIds.join(",")}`, {
-          cache: "no-store"
-        });
-        const data = await response.json();
-        
-        if (data.variants) {
-          const allMatched = data.variants.every(variant => {
-            const expectedPrice = expectedPrices[variant.productId];
-            return expectedPrice && Math.abs(variant.price - expectedPrice) < 1;
-          });
-          
-          if (allMatched) {
-            console.log("✅ All prices verified on server");
-            return true;
-          }
-        }
-        
-        await new Promise(r => setTimeout(r, 500)); // 500ms待機
-      } catch (error) {
-        console.error("Polling error:", error);
-        break;
-      }
-    }
-    
-    console.log("⏰ Polling timeout reached");
-    return false;
-  }, [filteredProducts]);
-  
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
     () => new Set((savedSelectedProducts || []).map(sp => sp.productId))
@@ -1039,6 +994,51 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 商品フィルタリング
   const filteredProducts = filterProducts(products, searchValue, filterType);
+
+  // ポーリング検証用の関数
+  const verifyPricesOnServer = useCallback(async (expectedPrices) => {
+    const timeout = Date.now() + 10000; // 10秒制限
+    
+    while (Date.now() < timeout) {
+      try {
+        const productIds = Object.keys(expectedPrices);
+        const variantIds = [];
+        
+        // 各商品の最初のvariantIDを取得
+        productIds.forEach(productId => {
+          const product = filteredProducts.find(p => p.id === productId);
+          if (product?.variants?.edges?.[0]) {
+            variantIds.push(product.variants.edges[0].node.id);
+          }
+        });
+        
+        const response = await fetch(`/api/variants?ids=${variantIds.join(",")}`, {
+          cache: "no-store"
+        });
+        const data = await response.json();
+        
+        if (data.variants) {
+          const allMatched = data.variants.every(variant => {
+            const expectedPrice = expectedPrices[variant.productId];
+            return expectedPrice && Math.abs(variant.price - expectedPrice) < 1;
+          });
+          
+          if (allMatched) {
+            console.log("✅ All prices verified on server");
+            return true;
+          }
+        }
+        
+        await new Promise(r => setTimeout(r, 500)); // 500ms待機
+      } catch (error) {
+        console.error("Polling error:", error);
+        break;
+      }
+    }
+    
+    console.log("⏰ Polling timeout reached");
+    return false;
+  }, [filteredProducts]);
 
   // 商品選択ハンドラ
   const handleSelectProduct = useCallback((productId, isSelected) => {
