@@ -901,10 +901,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         
         // 商品データを再取得してUI更新
         ClientCache.clear(CACHE_KEYS.PRODUCTS);
-        scheduleRevalidate();
+        
+        // 強制的にページをリロード（ハイドレーションエラーを回避）
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     }
-  }, [updater.state, updater.data, scheduleRevalidate]);
+  }, [updater.state, updater.data]);
 
   // 保存完了時の後処理
   useEffect(() => {
@@ -1301,7 +1305,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </p>
                       </div>
                       
-                      <p style={{color: 'white', margin: 0, fontSize: '12px'}}>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+                      <p style={{color: 'white', margin: 0, fontSize: '12px'}} suppressHydrationWarning>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                     </BlockStack>
                   </div>
                 </Card>
@@ -1358,7 +1362,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </p>
                       </div>
                       
-                      <p style={{color: 'white', margin: 0, fontSize: '12px'}}>最終更新: {new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+                      <p style={{color: 'white', margin: 0, fontSize: '12px'}} suppressHydrationWarning>最終更新: {new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                     </BlockStack>
                   </div>
                 </Card>
@@ -1396,7 +1400,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
               
               {/* キャッシュ状態表示 */}
               <div>
-                <Text variant="bodySm" tone="subdued">
+                <Text variant="bodySm" tone="subdued" suppressHydrationWarning>
                   最終更新: {lastUpdated ? lastUpdated.toLocaleString('ja-JP') : '読み込み中...'} 
                   {isUsingCache && (
                     <Badge tone="info" size="small">キャッシュ</Badge>
@@ -2194,7 +2198,7 @@ export default function Products() {
                     <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
                   </div>
                     
-                    <p>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
+                    <p suppressHydrationWarning>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                   </BlockStack>
                 </Card>
               )}
