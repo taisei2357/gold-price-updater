@@ -1243,13 +1243,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       { method: "post" }
     );
 
-    // 手動更新開始後、一定時間待機してからページをリロード
+    // 手動更新開始後、一定時間待機してからデータを再取得
     setTimeout(() => {
-      console.log("🔄 Auto-reloading page after manual update...");
-      // 強制的にキャッシュをクリアしてリロード
-      window.location.href = window.location.href.split('?')[0] + '?refresh=true&t=' + Date.now();
-    }, 3000); // 3秒後にリロード
-  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater]);
+      console.log("🔄 Refreshing data after manual update...");
+      // キャッシュをクリアしてデータのみ再取得（ページ全体はリロードしない）
+      ClientCache.clear(CACHE_KEYS.PRODUCTS);
+      scheduleRevalidate();
+    }, 3000); // 3秒後に再取得
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, scheduleRevalidate]);
 
 
   return (
