@@ -1552,10 +1552,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       </InlineStack>
                       
                       <BlockStack gap="200">
-                        {selectedProducts.map(product => {
+                        {selectedProducts.map((product, index) => {
                           const metalType = productMetalTypes[product.id];
                           return (
-                            <InlineStack key={product.id} gap="200" blockAlign="center">
+                            <InlineStack key={`selected-${product.id}-${index}`} gap="200" blockAlign="center">
                               <span style={{ fontSize: '14px' }}>
                                 {metalType === 'gold' ? '🥇' : metalType === 'platinum' ? '🥈' : '⚠️'}
                               </span>
@@ -1782,7 +1782,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     return (
                       <IndexTable.Row
                         id={product.id}
-                        key={product.id}
+                        key={`product-${product.id}-${index}`}
                       >
                         <IndexTable.Cell>
                           <Box minWidth="60px" maxWidth="60px">
@@ -1926,14 +1926,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   })
                   ) : (
                     // コレクション表示モード
-                    collections?.map((collection) => {
+                    collections?.map((collection, index) => {
                       const isChecked = selectedCollections.includes(collection.id);
                       const cType = collectionMetalTypes[collection.id] || "";
 
                       return (
                         <IndexTable.Row
                           id={collection.id}
-                          key={collection.id}
+                          key={`collection-${collection.id}-${index}`}
                         >
                           {/* 選択 */}
                           <IndexTable.Cell>
@@ -2044,8 +2044,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         >
           <Modal.Section>
             <BlockStack gap="400">
-              {pricePreview.map(product => (
-                <Card key={product.id}>
+              {pricePreview.map((product, index) => (
+                <Card key={`preview-${product.id}-${index}`}>
                   <BlockStack gap="300">
                     <InlineStack align="space-between">
                       <h4>{product.title}</h4>
@@ -2058,8 +2058,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         {product.error}
                       </Banner>
                     ) : (
-                      product.variants.map(variant => (
-                        <InlineStack key={variant.id} align="space-between">
+                      product.variants.map((variant, vIndex) => (
+                        <InlineStack key={`variant-${variant.id}-${vIndex}`} align="space-between">
                           <span>{variant.title || "デフォルト"}</span>
                           <InlineStack gap="200">
                             <span>¥{variant.currentPrice} → ¥{variant.newPrice}</span>
