@@ -38,6 +38,9 @@ if (host === "localhost") {
 }
 
 export default defineConfig({
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+  },
   server: {
     allowedHosts: [host, "candidate-jeremy-fossil-match.trycloudflare.com"],
     cors: {

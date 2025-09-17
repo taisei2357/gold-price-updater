@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, Suspense, Fragment } from "react";
 import { json, defer } from "@remix-run/node";
 import { useLoaderData, useFetcher, Await, useRevalidator } from "@remix-run/react";
 import {
@@ -802,10 +802,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
   const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {}); // { [collectionId]: 'gold'|'platinum' }
   
-  // 手動価格更新用のstate - 一時的に無効化
-  // const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
-  // const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
-  // const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
+  // 手動価格更新用のstate
+  const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
+  const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
+  const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
   
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
@@ -891,8 +891,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
 
-  // 更新完了時の後処理 - 一時的に無効化
-  /*
+  // 更新完了時の後処理
   useEffect(() => {
     if (updater.state === "idle" && updater.data) {
       // 手動更新完了後の処理
@@ -906,7 +905,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       }
     }
   }, [updater.state, updater.data, scheduleRevalidate]);
-  */
 
   // 保存完了時の後処理
   useEffect(() => {
@@ -1189,8 +1187,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     setShowPreview(false);
   }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, updater]);
 
-  // 手動価格更新用のハンドラー - 一時的に無効化
-  /*
+  // 手動価格更新用のハンドラー
   const handleManualProductSelect = useCallback((productId, isSelected) => {
     if (isSelected) {
       setManualSelectedProducts(prev => [...prev, productId]);
@@ -1223,7 +1220,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       { method: "post" }
     );
   }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater]);
-  */
 
 
   return (
@@ -1271,23 +1267,23 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       </InlineStack>
                       
                       <InlineStack gap="400" wrap>
-                        <div>
+                        <div key="gold-retail">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭小売価格（税込）</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.retailPriceFormatted}</h4>
                         </div>
-                        <div>
+                        <div key="gold-change">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>小売価格前日比</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.change}</h4>
                         </div>
-                        <div>
+                        <div key="gold-buy">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭買取価格（税込）</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.buyPriceFormatted || '取得失敗'}</h4>
                         </div>
-                        <div>
+                        <div key="gold-buy-change">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>買取価格前日比</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.buyChangePercent || '0.00%'}</h4>
                         </div>
-                        <div>
+                        <div key="gold-ratio">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>価格調整率</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.percentage}%</h4>
                         </div>
@@ -1328,23 +1324,23 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       </InlineStack>
                       
                       <InlineStack gap="400" wrap>
-                        <div>
+                        <div key="platinum-retail">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭小売価格（税込）</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.retailPriceFormatted}</h4>
                         </div>
-                        <div>
+                        <div key="platinum-change">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>小売価格前日比</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.change}</h4>
                         </div>
-                        <div>
+                        <div key="platinum-buy">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭買取価格（税込）</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.buyPriceFormatted || '取得失敗'}</h4>
                         </div>
-                        <div>
+                        <div key="platinum-buy-change">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>買取価格前日比</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.buyChangePercent || '0.00%'}</h4>
                         </div>
-                        <div>
+                        <div key="platinum-ratio">
                           <p style={{color: 'white', margin: 0, fontSize: '12px'}}>価格調整率</p>
                           <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.percentage}%</h4>
                         </div>
@@ -1464,6 +1460,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 <BlockStack gap="300">
                   <InlineStack gap="300">
                     <Button 
+                      key="select-all"
                       onClick={() => handleSelectAll(true)}
                       disabled={filteredProducts.length === 0}
                       size="large"
@@ -1471,6 +1468,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       すべて選択
                     </Button>
                     <Button 
+                      key="deselect-all"
                       onClick={() => handleSelectAll(false)}
                       disabled={selectedProducts.length === 0}
                       size="large"
@@ -1478,6 +1476,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       選択解除
                     </Button>
                     <Button 
+                      key="bulk-unselect"
                       onClick={handleBulkUnselect}
                       tone="critical"
                       disabled={selectedProducts.filter(p => savedIdSet.has(p.id)).length === 0 || mu.state === "submitting"}
@@ -1486,6 +1485,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       選択中の保存済み {selectedProducts.filter(p => savedIdSet.has(p.id)).length} 件を解除
                     </Button>
                     <Button 
+                      key="save-selection"
                       onClick={saveSelection}
                       disabled={
                         mu.state === "submitting" || 
@@ -1600,8 +1600,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           </Card>
         </Layout.Section>
 
-        {/* 手動価格更新セクション - 一時的に無効化 */}
-        {false && <Layout.Section>
+        {/* 手動価格更新セクション */}
+        <Layout.Section>
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
@@ -1724,7 +1724,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
               )}
             </BlockStack>
           </Card>
-        </Layout.Section>}
+        </Layout.Section>
 
         <Layout.Section>
           <Card>
@@ -1753,7 +1753,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   }}
                   headings={selectionType === 'products' ? [
                     { title: '選択' },
-                    // { title: '手動更新' }, // 一時的に無効化
+                    { title: '手動更新' },
                     { title: '商品名' },
                     { title: 'ステータス' },
                     { title: '価格' },
@@ -1793,8 +1793,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           </Box>
                         </IndexTable.Cell>
                         
-                        {/* 手動更新選択 - 一時的に無効化 */}
-                        {/*
+                        {/* 手動更新選択 */}
                         <IndexTable.Cell>
                           <Box minWidth="80px" maxWidth="80px">
                             <Checkbox
@@ -1803,7 +1802,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             />
                           </Box>
                         </IndexTable.Cell>
-                        */}
                         
                         <IndexTable.Cell>
                           <Box minWidth="480px" maxWidth="720px">
