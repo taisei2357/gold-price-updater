@@ -802,10 +802,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
   const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {}); // { [collectionId]: 'gold'|'platinum' }
   
-  // 手動価格更新用のstate
-  const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
-  const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
-  const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
+  // 手動価格更新用のstate - 一時的に無効化
+  // const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
+  // const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
+  // const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
   
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
@@ -891,7 +891,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
 
-  // 更新完了時の後処理
+  // 更新完了時の後処理 - 一時的に無効化
+  /*
   useEffect(() => {
     if (updater.state === "idle" && updater.data) {
       // 手動更新完了後の処理
@@ -905,6 +906,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       }
     }
   }, [updater.state, updater.data, scheduleRevalidate]);
+  */
 
   // 保存完了時の後処理
   useEffect(() => {
@@ -1187,7 +1189,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     setShowPreview(false);
   }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, updater]);
 
-  // 手動価格更新用のハンドラー
+  // 手動価格更新用のハンドラー - 一時的に無効化
+  /*
   const handleManualProductSelect = useCallback((productId, isSelected) => {
     if (isSelected) {
       setManualSelectedProducts(prev => [...prev, productId]);
@@ -1220,6 +1223,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       { method: "post" }
     );
   }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater]);
+  */
 
 
   return (
@@ -1596,8 +1600,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           </Card>
         </Layout.Section>
 
-        {/* 手動価格更新セクション */}
-        <Layout.Section>
+        {/* 手動価格更新セクション - 一時的に無効化 */}
+        {false && <Layout.Section>
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
@@ -1720,7 +1724,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
               )}
             </BlockStack>
           </Card>
-        </Layout.Section>
+        </Layout.Section>}
 
         <Layout.Section>
           <Card>
@@ -1749,7 +1753,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   }}
                   headings={selectionType === 'products' ? [
                     { title: '選択' },
-                    { title: '手動更新' },
+                    // { title: '手動更新' }, // 一時的に無効化
                     { title: '商品名' },
                     { title: 'ステータス' },
                     { title: '価格' },
@@ -1789,7 +1793,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           </Box>
                         </IndexTable.Cell>
                         
-                        {/* 手動更新選択 */}
+                        {/* 手動更新選択 - 一時的に無効化 */}
+                        {/*
                         <IndexTable.Cell>
                           <Box minWidth="80px" maxWidth="80px">
                             <Checkbox
@@ -1798,6 +1803,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             />
                           </Box>
                         </IndexTable.Cell>
+                        */}
                         
                         <IndexTable.Cell>
                           <Box minWidth="480px" maxWidth="720px">
