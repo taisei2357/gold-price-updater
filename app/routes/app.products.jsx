@@ -893,9 +893,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 更新完了時の後処理
   useEffect(() => {
+    console.log("🔍 Updater state changed:", { state: updater.state, data: updater.data });
+    
     if (updater.state === "idle" && updater.data) {
       // 手動更新完了後の処理
       if (updater.data.updateResults && updater.data.summary) {
+        console.log("✅ Manual update completed:", updater.data);
+        
         // 選択をクリア
         setManualSelectedProducts([]);
         
@@ -903,6 +907,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         ClientCache.clear(CACHE_KEYS.PRODUCTS);
         
         // 強制的にページをリロード（ハイドレーションエラーを回避）
+        console.log("🔄 Reloading page in 1 second...");
         setTimeout(() => {
           window.location.reload();
         }, 1000);
@@ -1221,6 +1226,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       ? manualUpdatePercentage / 100 
       : -(manualUpdatePercentage / 100);
 
+    console.log("🚀 Starting manual price update:", { manualSelectedProducts, adjustmentRatio });
+
     updater.submit(
       {
         action: "manualUpdatePrices",
@@ -1229,6 +1236,12 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       },
       { method: "post" }
     );
+
+    // 手動更新開始後、一定時間待機してからページをリロード
+    setTimeout(() => {
+      console.log("🔄 Auto-reloading page after manual update...");
+      window.location.reload();
+    }, 3000); // 3秒後にリロード
   }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater]);
 
 
