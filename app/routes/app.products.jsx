@@ -1610,25 +1610,29 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 <div style={{ minWidth: '120px' }}>
                   <Text variant="bodyMd" as="p">価格調整方向</Text>
                   <InlineStack gap="200" blockAlign="center">
-                    <input
-                      type="radio"
-                      id="plus"
-                      name="direction"
-                      value="plus"
-                      checked={manualUpdateDirection === 'plus'}
-                      onChange={() => setManualUpdateDirection('plus')}
-                    />
-                    <label htmlFor="plus">+ 値上げ</label>
+                    <div key="plus-radio">
+                      <input
+                        type="radio"
+                        id="plus"
+                        name="direction"
+                        value="plus"
+                        checked={manualUpdateDirection === 'plus'}
+                        onChange={() => setManualUpdateDirection('plus')}
+                      />
+                      <label htmlFor="plus">+ 値上げ</label>
+                    </div>
                     
-                    <input
-                      type="radio"
-                      id="minus"
-                      name="direction"
-                      value="minus"
-                      checked={manualUpdateDirection === 'minus'}
-                      onChange={() => setManualUpdateDirection('minus')}
-                    />
-                    <label htmlFor="minus">- 値下げ</label>
+                    <div key="minus-radio">
+                      <input
+                        type="radio"
+                        id="minus"
+                        name="direction"
+                        value="minus"
+                        checked={manualUpdateDirection === 'minus'}
+                        onChange={() => setManualUpdateDirection('minus')}
+                      />
+                      <label htmlFor="minus">- 値下げ</label>
+                    </div>
                   </InlineStack>
                 </div>
                 
@@ -1637,18 +1641,18 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   <Select
                     label="調整率"
                     options={[
-                      { label: "1%", value: 1 },
-                      { label: "2%", value: 2 },
-                      { label: "3%", value: 3 },
-                      { label: "4%", value: 4 },
-                      { label: "5%", value: 5 },
-                      { label: "6%", value: 6 },
-                      { label: "7%", value: 7 },
-                      { label: "8%", value: 8 },
-                      { label: "9%", value: 9 },
-                      { label: "10%", value: 10 }
+                      { label: "1%", value: "1" },
+                      { label: "2%", value: "2" },
+                      { label: "3%", value: "3" },
+                      { label: "4%", value: "4" },
+                      { label: "5%", value: "5" },
+                      { label: "6%", value: "6" },
+                      { label: "7%", value: "7" },
+                      { label: "8%", value: "8" },
+                      { label: "9%", value: "9" },
+                      { label: "10%", value: "10" }
                     ]}
-                    value={manualUpdatePercentage}
+                    value={manualUpdatePercentage.toString()}
                     onChange={(value) => setManualUpdatePercentage(parseInt(value))}
                   />
                 </div>
@@ -1694,10 +1698,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
                     <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
                       <BlockStack gap="100">
-                        {manualSelectedProducts.map(productId => {
+                        {manualSelectedProducts.map((productId, index) => {
                           const product = products.find(p => p.id === productId);
                           return product ? (
-                            <InlineStack key={productId} gap="200" blockAlign="center">
+                            <InlineStack key={`manual-${productId}-${index}`} gap="200" blockAlign="center">
                               <Checkbox
                                 checked={true}
                                 onChange={(checked) => handleManualProductSelect(productId, checked)}
@@ -2104,7 +2108,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 {/* 詳細結果 */}
                 {updater.data.updateResults.map((result, index) => (
                   <Banner
-                    key={index}
+                    key={`result-${index}-${result.variantId || result.productId}`}
                     tone={result.success ? "success" : "critical"}
                   >
                     {result.success 
