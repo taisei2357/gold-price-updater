@@ -994,6 +994,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 金属種別変更ハンドラー
   const handleMetalTypeChange = useCallback((productId, metalType) => {
+    // "none"は無効な選択なので無視
+    if (metalType === "none") return;
+    
     setProductMetalTypes(prev => ({ ...prev, [productId]: metalType }));
     addSaved([productId]); // 即座に保存扱い
     
@@ -1022,6 +1025,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // コレクションの金属種別を設定→即保存
   const handleCollectionMetalTypeChange = useCallback((collectionId, type) => {
+    // "none"は無効な選択なので無視
+    if (type === "none") return;
+    
     setCollectionMetalTypes(prev => ({ ...prev, [collectionId]: type }));
 
     const fd = new FormData();
@@ -1777,7 +1783,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       : `¥${variants[0]?.node.price || 0}`;
                     const metalType = productMetalTypes[product.id];
                     const isSaved = savedIdSet.has(product.id);
-                    const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "";
+                    const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "none";
 
                     return (
                       <IndexTable.Row
@@ -1874,7 +1880,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                   label="金属種別"
                                   labelHidden
                                   options={[
-                                    { label: "金属種別を選択...", value: "", disabled: true },
+                                    { label: "金属種別を選択...", value: "none", disabled: true },
                                     { label: "🥇 金価格", value: "gold" },
                                     { label: "🥈 プラチナ価格", value: "platinum" }
                                   ]}
@@ -1883,7 +1889,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                   placeholder="選択してください"
                                   disabled={isSaved && !isSelected}
                                 />
-                                {!displayType && isSelected && !isSaved && (
+                                {displayType === "none" && isSelected && !isSaved && (
                                   <div style={{ marginTop: '4px' }}>
                                     <Text variant="bodySm" tone="critical">
                                       ※選択が必要です
@@ -1926,7 +1932,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     // コレクション表示モード
                     collections?.map((collection, index) => {
                       const isChecked = selectedCollections.includes(collection.id);
-                      const cType = collectionMetalTypes[collection.id] || "";
+                      const cType = collectionMetalTypes[collection.id] || "none";
 
                       return (
                         <IndexTable.Row
@@ -1964,7 +1970,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                     {collection.title}
                                   </Text>
                                 </Tooltip>
-                                {isChecked && cType && (
+                                {isChecked && cType && cType !== "none" && (
                                   <Badge tone={cType === 'gold' ? 'warning' : 'info'} size="small">
                                     {cType === 'gold' ? '金' : 'Pt'}
                                   </Badge>
@@ -1999,7 +2005,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                                   label="金属種別"
                                   labelHidden
                                   options={[
-                                    { label: "金属種別を選択...", value: "", disabled: true },
+                                    { label: "金属種別を選択...", value: "none", disabled: true },
                                     { label: "🥇 金価格", value: "gold" },
                                     { label: "🥈 プラチナ価格", value: "platinum" },
                                   ]}
