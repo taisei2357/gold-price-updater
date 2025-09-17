@@ -610,6 +610,139 @@ export const action = async ({ request }) => {
     }
   }
 
+  if (action === "manualUpdatePrices") {
+    const selectedProductIds = JSON.parse(formData.get("selectedProductIds") || "[]");
+    const adjustmentRatio = parseFloat(formData.get("adjustmentRatio"));
+
+    if (selectedProductIds.length === 0) {
+      return json({ 
+        error: "更新対象商品が選択されていません",
+        updateResults: []
+      });
+    }
+
+    try {
+      // 手動価格更新実行
+      const updateResults = [];
+      
+      for (const productId of selectedProductIds) {
+        // 商品とバリアントを取得
+        const productResponse = await admin.graphql(
+          `#graphql
+            query getProduct($id: ID!) {
+              product(id: $id) {
+                id
+                title
+                variants(first: 250) {
+                  edges {
+                    node {
+                      id
+                      title
+                      price
+                    }
+                  }
+                }
+              }
+            }`,
+          { variables: { id: productId } }
+        );
+
+        const productData = await productResponse.json();
+        const product = productData.data?.product;
+
+        if (!product) {
+          updateResults.push({
+            productId,
+            success: false,
+            error: "商品が見つかりません"
+          });
+          continue;
+        }
+
+        // 各バリアントの価格を更新
+        for (const variantEdge of product.variants.edges) {
+          const variant = variantEdge.node;
+          const currentPrice = parseFloat(variant.price);
+          const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
+
+          try {
+            const updateResponse = await admin.graphql(
+              `#graphql
+                mutation productVariantUpdate($input: ProductVariantInput!) {
+                  productVariantUpdate(input: $input) {
+                    productVariant {
+                      id
+                      price
+                    }
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }`,
+              {
+                variables: {
+                  input: {
+                    id: variant.id,
+                    price: newPrice.toString()
+                  }
+                }
+              }
+            );
+
+            const updateData = await updateResponse.json();
+            
+            if (updateData.data?.productVariantUpdate?.userErrors?.length > 0) {
+              updateResults.push({
+                productId,
+                variantId: variant.id,
+                success: false,
+                error: updateData.data.productVariantUpdate.userErrors[0].message
+              });
+            } else {
+              updateResults.push({
+                productId,
+                variantId: variant.id,
+                productTitle: product.title,
+                variantTitle: variant.title,
+                success: true,
+                oldPrice: currentPrice,
+                newPrice: newPrice,
+                adjustmentRatio: adjustmentRatio
+              });
+            }
+          } catch (variantError) {
+            updateResults.push({
+              productId,
+              variantId: variant.id,
+              success: false,
+              error: `価格更新エラー: ${variantError.message}`
+            });
+          }
+        }
+      }
+
+      const successCount = updateResults.filter(r => r.success).length;
+      const failureCount = updateResults.filter(r => !r.success).length;
+
+      return json({
+        updateResults,
+        summary: {
+          total: updateResults.length,
+          success: successCount,
+          failed: failureCount
+        },
+        message: `手動価格更新完了: ${successCount}件成功、${failureCount}件失敗`
+      });
+
+    } catch (error) {
+      return json({
+        error: `手動価格更新中にエラーが発生しました: ${error.message}`,
+        updateResults: []
+      });
+    }
+  }
+
   return json({ error: "不正なアクション" });
 };
 
@@ -659,6 +792,11 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   // コレクション選択用のstate（初期値をDBから設定）
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
   const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {}); // { [collectionId]: 'gold'|'platinum' }
+  
+  // 手動価格更新用のstate
+  const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
+  const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
+  const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
   
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
@@ -743,6 +881,17 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       }
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
+
+  // 更新完了時の後処理
+  useEffect(() => {
+    if (updater.state === "idle" && updater.data) {
+      // 手動更新完了後の処理
+      if (updater.data.updateResults && updater.data.summary) {
+        // 選択をクリア
+        setManualSelectedProducts([]);
+      }
+    }
+  }, [updater.state, updater.data]);
 
   // 保存完了時の後処理
   useEffect(() => {
@@ -1024,6 +1173,40 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
     setShowPreview(false);
   }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, updater]);
+
+  // 手動価格更新用のハンドラー
+  const handleManualProductSelect = useCallback((productId, isSelected) => {
+    if (isSelected) {
+      setManualSelectedProducts(prev => [...prev, productId]);
+    } else {
+      setManualSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  }, []);
+
+  const handleManualSelectAll = useCallback((isSelected) => {
+    if (isSelected) {
+      setManualSelectedProducts(filteredProducts.map(p => p.id));
+    } else {
+      setManualSelectedProducts([]);
+    }
+  }, [filteredProducts]);
+
+  const executeManualPriceUpdate = useCallback(() => {
+    if (manualSelectedProducts.length === 0) return;
+    
+    const adjustmentRatio = manualUpdateDirection === 'plus' 
+      ? manualUpdatePercentage / 100 
+      : -(manualUpdatePercentage / 100);
+
+    updater.submit(
+      {
+        action: "manualUpdatePrices",
+        selectedProductIds: JSON.stringify(manualSelectedProducts),
+        adjustmentRatio: adjustmentRatio.toString()
+      },
+      { method: "post" }
+    );
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater]);
 
 
   return (
@@ -1400,6 +1583,121 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           </Card>
         </Layout.Section>
 
+        {/* 手動価格更新セクション */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between">
+                <h3>手動価格更新</h3>
+                <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
+              </InlineStack>
+              
+              <InlineStack gap="400" wrap>
+                {/* ±選択 */}
+                <div style={{ minWidth: '120px' }}>
+                  <Text variant="bodyMd" as="p">価格調整方向</Text>
+                  <InlineStack gap="200" blockAlign="center">
+                    <input
+                      type="radio"
+                      id="plus"
+                      name="direction"
+                      value="plus"
+                      checked={manualUpdateDirection === 'plus'}
+                      onChange={() => setManualUpdateDirection('plus')}
+                    />
+                    <label htmlFor="plus">+ 値上げ</label>
+                    
+                    <input
+                      type="radio"
+                      id="minus"
+                      name="direction"
+                      value="minus"
+                      checked={manualUpdateDirection === 'minus'}
+                      onChange={() => setManualUpdateDirection('minus')}
+                    />
+                    <label htmlFor="minus">- 値下げ</label>
+                  </InlineStack>
+                </div>
+                
+                {/* パーセンテージ選択 */}
+                <div style={{ minWidth: '150px' }}>
+                  <Select
+                    label="調整率"
+                    options={[
+                      { label: "1%", value: 1 },
+                      { label: "2%", value: 2 },
+                      { label: "3%", value: 3 },
+                      { label: "4%", value: 4 },
+                      { label: "5%", value: 5 },
+                      { label: "6%", value: 6 },
+                      { label: "7%", value: 7 },
+                      { label: "8%", value: 8 },
+                      { label: "9%", value: 9 },
+                      { label: "10%", value: 10 }
+                    ]}
+                    value={manualUpdatePercentage}
+                    onChange={(value) => setManualUpdatePercentage(parseInt(value))}
+                  />
+                </div>
+                
+                <div>
+                  <Text variant="bodyMd" as="p" tone="subdued">
+                    調整例: {manualUpdateDirection === 'plus' ? '+' : '-'}{manualUpdatePercentage}% 
+                    （¥10,000 → ¥{(10000 * (1 + (manualUpdateDirection === 'plus' ? manualUpdatePercentage : -manualUpdatePercentage) / 100)).toLocaleString()}）
+                  </Text>
+                </div>
+              </InlineStack>
+              
+              <InlineStack gap="300">
+                <Button 
+                  onClick={() => handleManualSelectAll(true)}
+                  disabled={filteredProducts.length === 0}
+                >
+                  すべて選択
+                </Button>
+                <Button 
+                  onClick={() => handleManualSelectAll(false)}
+                  disabled={manualSelectedProducts.length === 0}
+                >
+                  選択解除
+                </Button>
+                <Button 
+                  onClick={executeManualPriceUpdate}
+                  disabled={manualSelectedProducts.length === 0 || updater.state === "submitting"}
+                  variant="primary"
+                  tone="critical"
+                >
+                  選択商品の価格を手動更新 ({manualSelectedProducts.length}件)
+                </Button>
+              </InlineStack>
+              
+              {manualSelectedProducts.length > 0 && (
+                <Card>
+                  <BlockStack gap="200">
+                    <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      <BlockStack gap="100">
+                        {manualSelectedProducts.map(productId => {
+                          const product = products.find(p => p.id === productId);
+                          return product ? (
+                            <InlineStack key={productId} gap="200" blockAlign="center">
+                              <Checkbox
+                                checked={true}
+                                onChange={(checked) => handleManualProductSelect(productId, checked)}
+                              />
+                              <Text variant="bodySm">{product.title}</Text>
+                            </InlineStack>
+                          ) : null;
+                        })}
+                      </BlockStack>
+                    </div>
+                  </BlockStack>
+                </Card>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
         <Layout.Section>
           <Card>
             {selectionType === "collections" && (collections?.length ?? 0) === 0 && (
@@ -1427,6 +1725,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   }}
                   headings={selectionType === 'products' ? [
                     { title: '選択' },
+                    { title: '手動更新' },
                     { title: '商品名' },
                     { title: 'ステータス' },
                     { title: '価格' },
@@ -1462,6 +1761,16 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             <Checkbox
                               checked={isSelected}
                               onChange={(checked) => handleSelectProduct(product.id, checked)}
+                            />
+                          </Box>
+                        </IndexTable.Cell>
+                        
+                        {/* 手動更新選択 */}
+                        <IndexTable.Cell>
+                          <Box minWidth="80px" maxWidth="80px">
+                            <Checkbox
+                              checked={manualSelectedProducts.includes(product.id)}
+                              onChange={(checked) => handleManualProductSelect(product.id, checked)}
                             />
                           </Box>
                         </IndexTable.Cell>
