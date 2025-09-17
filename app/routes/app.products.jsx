@@ -732,7 +732,7 @@ export const action = async ({ request }) => {
           success: successCount,
           failed: failureCount
         },
-        message: `手動価格更新完了: ${successCount}件成功、${failureCount}件失敗`
+        message: `手動価格更新完了: ${successCount}件成功、${failureCount}件失敗 (調整率: ${adjustmentRatio > 0 ? '+' : ''}${(adjustmentRatio * 100).toFixed(1)}%)`
       });
 
     } catch (error) {
@@ -889,9 +889,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       if (updater.data.updateResults && updater.data.summary) {
         // 選択をクリア
         setManualSelectedProducts([]);
+        
+        // 商品データを再取得してUI更新
+        ClientCache.clear(CACHE_KEYS.PRODUCTS);
+        scheduleRevalidate();
       }
     }
-  }, [updater.state, updater.data]);
+  }, [updater.state, updater.data, scheduleRevalidate]);
 
   // 保存完了時の後処理
   useEffect(() => {
@@ -1666,8 +1670,12 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   disabled={manualSelectedProducts.length === 0 || updater.state === "submitting"}
                   variant="primary"
                   tone="critical"
+                  loading={updater.state === "submitting"}
                 >
-                  選択商品の価格を手動更新 ({manualSelectedProducts.length}件)
+                  {updater.state === "submitting" 
+                    ? "価格更新中..." 
+                    : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
+                  }
                 </Button>
               </InlineStack>
               
@@ -2088,7 +2096,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     tone={result.success ? "success" : "critical"}
                   >
                     {result.success 
-                      ? `Variant ${result.variantId}: ¥${result.oldPrice?.toLocaleString()} → ¥${result.newPrice?.toLocaleString()}`
+                      ? `${result.productTitle} ${result.variantTitle ? `(${result.variantTitle})` : ''}: ¥${result.oldPrice?.toLocaleString()} → ¥${result.newPrice?.toLocaleString()} ${result.adjustmentRatio ? `(${result.adjustmentRatio > 0 ? '+' : ''}${(result.adjustmentRatio * 100).toFixed(1)}%)` : ''}`
                       : `Product ${result.productId} / Variant ${result.variantId}: ${result.error}`
                     }
                   </Banner>
