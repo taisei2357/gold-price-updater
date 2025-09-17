@@ -36,6 +36,20 @@ import { sendPriceUpdateNotification } from "../utils/email.server";
 import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
 
+// Cache-Control: no-store ヘッダー
+export const headers = () => ({
+  "Cache-Control": "no-store, no-cache, must-revalidate"
+});
+
+// Revalidation制御
+export function shouldRevalidate({ formAction, actionResult }) {
+  // 手動価格更新後は常に再検証
+  if (actionResult?.updateResults || actionResult?.message) {
+    return true;
+  }
+  return true; // この画面は常にリフレッシュ
+}
+
 // 行ごとの独立した解除ボタンコンポーネント
 function UnselectButton({ productId, onOptimistic, scheduleRevalidate }) {
   const fx = useFetcher();
@@ -813,6 +827,54 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
   const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
   
+  // 楽観的更新用のstate
+  const [optimisticPrices, setOptimisticPrices] = useState({}); // { productId: newPrice }
+  
+  // ポーリング検証用の関数
+  const verifyPricesOnServer = useCallback(async (expectedPrices) => {
+    const timeout = Date.now() + 10000; // 10秒制限
+    
+    while (Date.now() < timeout) {
+      try {
+        const productIds = Object.keys(expectedPrices);
+        const variantIds = [];
+        
+        // 各商品の最初のvariantIDを取得
+        productIds.forEach(productId => {
+          const product = filteredProducts.find(p => p.id === productId);
+          if (product?.variants?.edges?.[0]) {
+            variantIds.push(product.variants.edges[0].node.id);
+          }
+        });
+        
+        const response = await fetch(`/api/variants?ids=${variantIds.join(",")}`, {
+          cache: "no-store"
+        });
+        const data = await response.json();
+        
+        if (data.variants) {
+          const allMatched = data.variants.every(variant => {
+            const expectedPrice = expectedPrices[variant.productId];
+            return expectedPrice && Math.abs(variant.price - expectedPrice) < 1;
+          });
+          
+          if (allMatched) {
+            console.log("✅ All prices verified on server");
+            return true;
+          }
+        }
+        
+        await new Promise(r => setTimeout(r, 500)); // 500ms待機
+      } catch (error) {
+        console.error("Polling error:", error);
+        break;
+      }
+    }
+    
+    console.log("⏰ Polling timeout reached");
+    return false;
+  }, [filteredProducts]);
+  
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
     () => new Set((savedSelectedProducts || []).map(sp => sp.productId))
@@ -1234,6 +1296,20 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
     console.log("🚀 Starting manual price update:", { manualSelectedProducts, adjustmentRatio });
 
+    // 楽観的更新: 即座にUIの価格を更新
+    const optimisticUpdates = {};
+    manualSelectedProducts.forEach(productId => {
+      const product = filteredProducts.find(p => p.id === productId);
+      if (product?.variants?.length > 0) {
+        const currentPrice = parseFloat(product.variants[0].node.price);
+        const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
+        optimisticUpdates[productId] = newPrice;
+      }
+    });
+    
+    setOptimisticPrices(prev => ({ ...prev, ...optimisticUpdates }));
+    console.log("✨ Optimistic price updates applied:", optimisticUpdates);
+
     updater.submit(
       {
         action: "manualUpdatePrices",
@@ -1243,14 +1319,21 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       { method: "post" }
     );
 
-    // 手動更新開始後、一定時間待機してからデータを再取得
-    setTimeout(() => {
-      console.log("🔄 Refreshing data after manual update...");
-      // キャッシュをクリアしてデータのみ再取得（ページ全体はリロードしない）
-      ClientCache.clear(CACHE_KEYS.PRODUCTS);
-      scheduleRevalidate();
-    }, 3000); // 3秒後に再取得
-  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, scheduleRevalidate]);
+    // バックグラウンドでポーリング検証を開始
+    verifyPricesOnServer(optimisticUpdates).then((verified) => {
+      if (verified) {
+        // サーバーで価格が確認できたら楽観的更新をクリア
+        setOptimisticPrices({});
+        ClientCache.clear(CACHE_KEYS.PRODUCTS);
+        scheduleRevalidate();
+      } else {
+        // タイムアウト時は強制リフレッシュ
+        console.log("🔄 Forcing refresh due to polling timeout");
+        setOptimisticPrices({});
+        scheduleRevalidate();
+      }
+    });
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, scheduleRevalidate, filteredProducts, verifyPricesOnServer]);
 
 
   return (
@@ -1803,9 +1886,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     filteredProducts.map((product, index) => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
                     const variants = product.variants.edges;
-                    const priceRange = variants.length > 1 
+                    const basePrice = variants.length > 1 
                       ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
                       : `¥${variants[0]?.node.price || 0}`;
+                    
+                    // 楽観的更新があれば優先表示
+                    const optimisticPrice = optimisticPrices[product.id];
+                    const priceRange = optimisticPrice ? `¥${optimisticPrice}` : basePrice;
                     const metalType = productMetalTypes[product.id];
                     const isSaved = savedIdSet.has(product.id);
                     const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "none";
