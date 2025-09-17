@@ -377,6 +377,12 @@ export const loader = async ({ request }) => {
   const selectedProductIds = selectedProducts.map(p => p.productId);
   const selectedCollectionIds = selectedCollections.map(c => c.collectionId);
 
+  // forceRefreshが有効な場合はキャッシュをクリア
+  if (forceRefresh) {
+    console.log("🔄 Force refresh enabled - clearing product cache");
+    ClientCache.clear(CACHE_KEYS.PRODUCTS);
+  }
+
   // 重い商品・コレクション取得処理は非同期化
   const productsPromise = fetchAllProducts(admin);
   const collectionsPromise = fetchAllCollections(admin).catch((e) => {
@@ -1240,7 +1246,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     // 手動更新開始後、一定時間待機してからページをリロード
     setTimeout(() => {
       console.log("🔄 Auto-reloading page after manual update...");
-      window.location.reload();
+      // 強制的にキャッシュをクリアしてリロード
+      window.location.href = window.location.href.split('?')[0] + '?refresh=true&t=' + Date.now();
     }, 3000); // 3秒後にリロード
   }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater]);
 
