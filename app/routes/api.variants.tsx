@@ -13,8 +13,9 @@ export async function loader({ request }) {
   }
   
   try {
-    const queries = ids.map(id => 
-      admin.graphql(`
+    const queries = ids.map(id => {
+      console.log("🔍 Querying variant with ID:", id);
+      return admin.graphql(`
         query getVariant($id: ID!) {
           productVariant(id: $id) {
             id
@@ -25,14 +26,20 @@ export async function loader({ request }) {
             }
           }
         }
-      `, { variables: { id } })
-    );
+      `, { variables: { id } });
+    });
     
     const results = await Promise.all(queries);
     const variants = [];
     
     for (const response of results) {
       const data = await response.json();
+      console.log("📊 GraphQL response:", data);
+      
+      if (data.errors) {
+        console.error("❌ GraphQL errors:", data.errors);
+      }
+      
       if (data.data?.productVariant) {
         variants.push({
           id: data.data.productVariant.id,
@@ -40,6 +47,8 @@ export async function loader({ request }) {
           productId: data.data.productVariant.product.id,
           productTitle: data.data.productVariant.product.title
         });
+      } else {
+        console.warn("⚠️ No productVariant in response:", data);
       }
     }
     

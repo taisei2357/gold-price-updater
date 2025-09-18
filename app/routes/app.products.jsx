@@ -923,17 +923,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       if (updater.data.updateResults && updater.data.summary) {
         console.log("✅ Manual update completed:", updater.data);
         
-        // 選択をクリア
+        // 選択をクリア（楽観的更新は30秒後に自動クリアされる）
         setManualSelectedProducts([]);
-        
-        // 商品データを再取得してUI更新
-        ClientCache.clear(CACHE_KEYS.PRODUCTS);
-        
-        // 強制的にページをリロード（ハイドレーションエラーを回避）
-        console.log("🔄 Reloading page in 1 second...");
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
       }
     }
   }, [updater.state, updater.data]);
@@ -1300,15 +1291,27 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     const optimisticUpdates = {};
     manualSelectedProducts.forEach(productId => {
       const product = filteredProducts.find(p => p.id === productId);
-      if (product?.variants?.length > 0) {
-        const currentPrice = parseFloat(product.variants[0].node.price);
+      console.log("🔍 Product found for optimistic update:", { productId, product: product?.title, variants: product?.variants });
+      
+      if (product?.variants?.edges?.length > 0) {
+        const currentPrice = parseFloat(product.variants.edges[0].node.price);
         const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
+        console.log("💰 Price calculation:", { productId, currentPrice, adjustmentRatio, newPrice });
         optimisticUpdates[productId] = newPrice;
+      } else {
+        console.warn("⚠️ No variants found for product:", productId);
       }
     });
     
-    setOptimisticPrices(prev => ({ ...prev, ...optimisticUpdates }));
-    console.log("✨ Optimistic price updates applied:", optimisticUpdates);
+    setOptimisticPrices(prev => {
+      const newState = { ...prev, ...optimisticUpdates };
+      console.log("✨ Optimistic price updates applied:", {
+        previous: prev,
+        updates: optimisticUpdates,
+        newState
+      });
+      return newState;
+    });
 
     updater.submit(
       {
@@ -1319,21 +1322,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       { method: "post" }
     );
 
-    // バックグラウンドでポーリング検証を開始
-    verifyPricesOnServer(optimisticUpdates).then((verified) => {
-      if (verified) {
-        // サーバーで価格が確認できたら楽観的更新をクリア
-        setOptimisticPrices({});
-        ClientCache.clear(CACHE_KEYS.PRODUCTS);
-        scheduleRevalidate();
-      } else {
-        // タイムアウト時は強制リフレッシュ
-        console.log("🔄 Forcing refresh due to polling timeout");
-        setOptimisticPrices({});
-        scheduleRevalidate();
-      }
-    });
-  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, scheduleRevalidate, filteredProducts, verifyPricesOnServer]);
+    // 楽観的更新を30秒間保持（Shopify API反映遅延を考慮）
+    setTimeout(() => {
+      console.log("🔄 Clearing optimistic updates after 30 seconds");
+      setOptimisticPrices({});
+      ClientCache.clear(CACHE_KEYS.PRODUCTS);
+      scheduleRevalidate();
+    }, 30000);
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, scheduleRevalidate, filteredProducts]);
 
 
   return (
@@ -1892,7 +1888,17 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     
                     // 楽観的更新があれば優先表示
                     const optimisticPrice = optimisticPrices[product.id];
-                    const priceRange = optimisticPrice ? `¥${optimisticPrice}` : basePrice;
+                    const priceRange = optimisticPrice ? `¥${optimisticPrice} (更新中)` : basePrice;
+                    
+                    // デバッグログ
+                    if (optimisticPrice) {
+                      console.log(`🎯 Optimistic price for ${product.title}:`, {
+                        productId: product.id,
+                        optimisticPrice,
+                        basePrice,
+                        finalDisplay: priceRange
+                      });
+                    }
                     const metalType = productMetalTypes[product.id];
                     const isSaved = savedIdSet.has(product.id);
                     const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "none";
