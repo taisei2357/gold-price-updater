@@ -7,7 +7,6 @@ application_url = "https://gold-price-updater-pb8o.vercel.app"
 embedded = true
 
 [build]
-include_config_on_deploy = false          # 誤上書きを避けるためfalse
 automatically_update_urls_on_dev = false  # CLI使わない運用のためfalse
 
 [webhooks]

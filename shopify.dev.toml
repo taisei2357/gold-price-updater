@@ -1,0 +1,32 @@
+# Development Configuration for Shopify App
+# ローカル開発用の一時設定
+
+client_id = "2f40bebdf8ef160d9aa4cf3f915a6a75"
+name = "gold-price-updater-2024-dev"
+handle = "gold-price-updater-2024-dev"
+application_url = "https://91769a9b3fe3.ngrok-free.app"
+embedded = true
+
+[build]
+include_config_on_deploy = false
+automatically_update_urls_on_dev = false
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+[access_scopes]
+scopes = "read_products,write_products"
+
+[auth]
+redirect_urls = ["https://91769a9b3fe3.ngrok-free.app/auth/callback"]
+
+[pos]
+embedded = false

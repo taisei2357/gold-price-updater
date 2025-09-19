@@ -23,6 +23,7 @@ import {
 import { authenticate } from "../shopify.server";
 import { fetchGoldPriceDataTanaka, fetchPlatinumPriceDataTanaka } from "../models/gold.server";
 import prisma from "../db.server";
+import { AppErrorHandler, handleAppError } from "../utils/error-handler";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -83,12 +84,19 @@ export const loader = async ({ request }) => {
       recentLogs
     });
   } catch (error) {
-    console.error('Dashboard loader error:', error);
+    AppErrorHandler.logError(error, { 
+      route: 'app._index',
+      shop: session?.shop
+    });
+    
+    // フォールバックデータを返す
     return json({
       goldPrice: null,
       platinumPrice: null,
       stats: { selectedProducts: 0, totalLogs: 0, lastExecution: null, autoScheduleEnabled: false },
-      recentLogs: []
+      recentLogs: [],
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      fallback: true
     });
   }
 };

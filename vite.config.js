@@ -42,7 +42,7 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   },
   server: {
-    allowedHosts: [host, "candidate-jeremy-fossil-match.trycloudflare.com"],
+    allowedHosts: [host, "candidate-jeremy-fossil-match.trycloudflare.com", "91769a9b3fe3.ngrok-free.app"],
     cors: {
       preflightContinue: true,
     },

@@ -265,12 +265,14 @@ async function fetchAllCollections(admin) {
 
 // 重い商品取得処理を分離
 async function fetchAllProducts(admin) {
+  console.log("🔍 Starting fetchAllProducts");
   let allProducts = [];
   let cursor = null;
   let hasNextPage = true;
 
-  while (hasNextPage) {
-    const response = await admin.graphql(
+  try {
+    while (hasNextPage) {
+      const response = await admin.graphql(
       `#graphql
         query getProducts($first: Int!, $after: String) {
           products(first: $first, after: $after) {
@@ -288,6 +290,7 @@ async function fetchAllProducts(admin) {
                       price
                       sku
                       inventoryQuantity
+                      updatedAt
                     }
                   }
                 }
@@ -308,16 +311,34 @@ async function fetchAllProducts(admin) {
     );
 
     const responseJson = await response.json();
+    
+    // GraphQLエラーをチェック
+    if (responseJson.errors) {
+      console.error('GraphQL query errors:', responseJson.errors);
+      throw new Error(`GraphQL Error: ${responseJson.errors[0]?.message || 'Unknown error'}`);
+    }
+    
+    if (!responseJson.data?.products) {
+      console.error('No products data in response:', responseJson);
+      throw new Error('No products data returned from GraphQL');
+    }
+    
     const products = responseJson.data.products.edges.map(edge => edge.node);
     allProducts = [...allProducts, ...products];
+    console.log(`Fetched ${products.length} products, total: ${allProducts.length}`);
     
     hasNextPage = responseJson.data.products.pageInfo.hasNextPage;
     cursor = responseJson.data.products.edges.length > 0 
       ? responseJson.data.products.edges[responseJson.data.products.edges.length - 1].cursor 
       : null;
+    }
+    
+    console.log(`✅ fetchAllProducts completed: ${allProducts.length} products fetched`);
+    return allProducts;
+  } catch (error) {
+    console.error('❌ fetchAllProducts error:', error);
+    throw error;
   }
-  
-  return allProducts;
 }
 
 // 金・プラチナ価格情報を取得（詳細データ版）- Server-side only
@@ -416,6 +437,12 @@ export const loader = async ({ request }) => {
     shopSetting: shopSetting,
     forceRefresh: forceRefresh,
     cacheTimestamp: Date.now()
+  }, {
+    // キャッシュを完全に禁止して生データを強制取得
+    headers: { 
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      "Pragma": "no-cache"
+    }
   });
 };
 
@@ -687,48 +714,62 @@ export const action = async ({ request }) => {
         // 各バリアントの価格を更新
         for (const variantEdge of product.variants.edges) {
           const variant = variantEdge.node;
-          const currentPrice = parseFloat(variant.price);
-          const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
+          const currentPrice = Number(variant.price ?? 0);
+          // UIと同じ丸めルール（10円単位、下限制限）
+          function round10Yen(price, ratio, minRate = 0.93) {
+            const newP = price * (1 + ratio);
+            const minP = price * minRate;
+            const bounded = Math.max(newP, minP);
+            return ratio >= 0 ? Math.ceil(bounded / 10) * 10 : Math.floor(bounded / 10) * 10;
+          }
+          const newPrice = round10Yen(currentPrice, adjustmentRatio);
 
           console.log(`💰 Variant ${variant.id} price update:`, { currentPrice, newPrice, adjustmentRatio });
 
           try {
+            console.log(`🚀 Starting GraphQL update for variant ${variant.id} with price ${newPrice}`);
+            const inputData = {
+              id: variant.id,
+              price: newPrice.toString()
+            };
+            console.log(`📝 GraphQL input data:`, inputData);
             const updateResponse = await admin.graphql(
               `#graphql
-                mutation productVariantUpdate($input: ProductVariantInput!) {
-                  productVariantUpdate(input: $input) {
-                    productVariant {
-                      id
-                      price
-                    }
-                    userErrors {
-                      field
-                      message
-                    }
+                mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+                  productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                    product { id }
+                    productVariants { id price }
+                    userErrors { field message }
                   }
                 }`,
               {
                 variables: {
-                  input: {
-                    id: variant.id,
-                    price: newPrice.toString()
-                  }
+                  productId: productId,
+                  variants: [{ id: variant.id, price: newPrice.toString() }]
                 }
               }
             );
 
+            console.log(`📡 GraphQL response status: ${updateResponse.status} ${updateResponse.statusText}`);
             const updateData = await updateResponse.json();
             
             console.log(`🔄 GraphQL update response for ${variant.id}:`, updateData);
             
-            if (updateData.data?.productVariantUpdate?.userErrors?.length > 0) {
+            if (updateData.data?.productVariantsBulkUpdate?.userErrors?.length > 0) {
               updateResults.push({
                 productId,
                 variantId: variant.id,
                 success: false,
-                error: updateData.data.productVariantUpdate.userErrors[0].message
+                error: updateData.data.productVariantsBulkUpdate.userErrors[0].message
               });
             } else {
+              // Shopifyから返された確定価格を使用
+              const updatedVariants = updateData.data?.productVariantsBulkUpdate?.productVariants || [];
+              const updatedVariant = updatedVariants.find(v => v.id === variant.id);
+              const confirmedPrice = updatedVariant?.price 
+                ? parseFloat(updatedVariant.price)
+                : newPrice;
+                
               updateResults.push({
                 productId,
                 variantId: variant.id,
@@ -737,10 +778,37 @@ export const action = async ({ request }) => {
                 success: true,
                 oldPrice: currentPrice,
                 newPrice: newPrice,
+                confirmedPrice: confirmedPrice, // 確定価格を追加
                 adjustmentRatio: adjustmentRatio
               });
+
+              // 手動更新成功時：6時間ロックを設定
+              try {
+                const lockUntil = new Date(Date.now() + 6 * 60 * 60 * 1000);
+                
+                // 既存ロックを削除してから新規作成
+                await prisma.manualPriceLock.deleteMany({
+                  where: {
+                    shopDomain: session.shop,
+                    variantId: variant.id
+                  }
+                });
+                
+                await prisma.manualPriceLock.create({
+                  data: {
+                    shopDomain: session.shop,
+                    variantId: variant.id,
+                    until: lockUntil
+                  }
+                });
+                
+                console.log(`🔒 Manual lock set for variant ${variant.id} until ${lockUntil.toISOString()}`);
+              } catch (lockError) {
+                console.warn(`⚠️ Failed to set manual lock for ${variant.id}:`, lockError);
+              }
             }
           } catch (variantError) {
+            console.error(`❌ GraphQL update error for variant ${variant.id}:`, variantError);
             updateResults.push({
               productId,
               variantId: variant.id,
@@ -829,6 +897,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   
   // 楽観的更新用のstate
   const [optimisticPrices, setOptimisticPrices] = useState({}); // { productId: newPrice }
+  const [refreshCountdown, setRefreshCountdown] = useState(0); // 更新までのカウントダウン
+  // TTL付きオーバーレイ（variantId -> { price, until }）
+  const [priceOverlay, setPriceOverlay] = useState({}); // { variantId: { price: number, until: number } }
   
   // 保存済みIDのローカルミラー
   const [savedIdSet, setSavedIdSet] = useState(
@@ -863,7 +934,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   
   // キャッシュ管理とデータ初期化
   useEffect(() => {
-    // キャッシュからの復元試行
+    // 価格ページではキャッシュ復元をやめる（常に最新を前提）
+    /* キャッシュ復元を無効化 - 常に最新データを使用するため無効化
     if (!forceRefresh) {
       const cachedProducts = ClientCache.get(CACHE_KEYS.PRODUCTS);
       if (cachedProducts && Array.isArray(cachedProducts) && cachedProducts.length > 0) {
@@ -890,6 +962,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         return;
       }
     }
+    */
     
     // 新しいデータでキャッシュ更新
     if (products && products.length > 0) {
@@ -923,11 +996,55 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       if (updater.data.updateResults && updater.data.summary) {
         console.log("✅ Manual update completed:", updater.data);
         
-        // 選択をクリア（楽観的更新は30秒後に自動クリアされる）
+        // 確定価格でオーバーレイを更新（楽観的更新 → 確定価格）
+        const confirmedPrices = {};
+        updater.data.updateResults.forEach(result => {
+          if (result.success && result.confirmedPrice !== undefined) {
+            confirmedPrices[result.variantId] = result.confirmedPrice;
+          }
+        });
+        
+        if (Object.keys(confirmedPrices).length > 0) {
+          console.log("🎯 Applying confirmed prices from server:", confirmedPrices);
+          // 楽観的更新を確定価格で上書き
+          setOptimisticPrices(prev => ({ ...prev, ...confirmedPrices }));
+          
+          // TTL付きオーバーレイに3分間保護する
+          const now = Date.now();
+          const overlayUpdates = Object.fromEntries(
+            Object.entries(confirmedPrices).map(([variantId, price]) => [
+              variantId,
+              { price, until: now + 3 * 60 * 1000 } // 3分間は戻させない
+            ])
+          );
+          setPriceOverlay(prev => ({ ...prev, ...overlayUpdates }));
+        }
+        
+        // 選択をクリア
         setManualSelectedProducts([]);
       }
     }
   }, [updater.state, updater.data]);
+
+  // TTL掃除機能（5秒ごとに期限切れエントリを削除）
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      setPriceOverlay(prev => {
+        const next = {...prev};
+        let changed = false;
+        for (const [k, v] of Object.entries(next)) {
+          if (v.until <= now) { 
+            delete next[k]; 
+            changed = true; 
+            console.log(`🧹 Cleaned expired overlay for variant: ${k}`);
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // 保存完了時の後処理
   useEffect(() => {
@@ -986,7 +1103,34 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   // 商品フィルタリング
   const filteredProducts = filterProducts(products, searchValue, filterType);
 
-  // ポーリング検証用の関数
+  // Admin nodes APIを使った検証ポーリング
+  const verifyVariantsOnServer = useCallback(async (variantIds, expectedPrices) => {
+    const timeout = Date.now() + 10000; // 10秒制限
+    
+    while (Date.now() < timeout) {
+      try {
+        const response = await fetch(`/api/verify-variants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variantIds, expectedPrices }),
+          cache: "no-store"
+        });
+        const data = await response.json();
+        
+        if (data.verified) {
+          return true;
+        }
+        
+        await new Promise(r => setTimeout(r, 500));
+      } catch (error) {
+        console.error("Verification polling error:", error);
+        break;
+      }
+    }
+    return false;
+  }, []);
+
+  // ポーリング検証用の関数（旧版）
   const verifyPricesOnServer = useCallback(async (expectedPrices) => {
     const timeout = Date.now() + 10000; // 10秒制限
     
@@ -1219,7 +1363,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         metalType,
         variants: product.variants.edges.map(edge => {
           const variant = edge.node;
-          const currentPrice = parseFloat(variant.price);
+          const currentPrice = Number(variant.price?.amount ?? 0);
           const newPrice = calculateNewPrice(currentPrice, priceData.ratio, minPriceRate / 100);
           
           return {
@@ -1287,17 +1431,27 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
     console.log("🚀 Starting manual price update:", { manualSelectedProducts, adjustmentRatio });
 
-    // 楽観的更新: 即座にUIの価格を更新
+    // 楽観的更新: 即座にUIの価格を更新（variantId単位）
     const optimisticUpdates = {};
     manualSelectedProducts.forEach(productId => {
       const product = filteredProducts.find(p => p.id === productId);
       console.log("🔍 Product found for optimistic update:", { productId, product: product?.title, variants: product?.variants });
       
       if (product?.variants?.edges?.length > 0) {
-        const currentPrice = parseFloat(product.variants.edges[0].node.price);
-        const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
-        console.log("💰 Price calculation:", { productId, currentPrice, adjustmentRatio, newPrice });
-        optimisticUpdates[productId] = newPrice;
+        // 各variantの価格を個別に更新（scalar price対応）
+        product.variants.edges.forEach(({ node: variant }) => {
+          const currentPrice = Math.round(Number(variant.price ?? 0));
+          // サーバーと同じ10円単位丸め（下限制限付き）
+          function round10Yen(price, ratio, minRate = 0.93) {
+            const newP = price * (1 + ratio);
+            const minP = price * minRate;
+            const bounded = Math.max(newP, minP);
+            return ratio >= 0 ? Math.ceil(bounded / 10) * 10 : Math.floor(bounded / 10) * 10;
+          }
+          const newPrice = round10Yen(currentPrice, adjustmentRatio);
+          console.log("💰 Variant price calculation:", { variantId: variant.id, currentPrice, adjustmentRatio, newPrice });
+          optimisticUpdates[variant.id] = newPrice;
+        });
       } else {
         console.warn("⚠️ No variants found for product:", productId);
       }
@@ -1322,14 +1476,40 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       { method: "post" }
     );
 
-    // 楽観的更新を30秒間保持（Shopify API反映遅延を考慮）
-    setTimeout(() => {
-      console.log("🔄 Clearing optimistic updates after 30 seconds");
-      setOptimisticPrices({});
-      ClientCache.clear(CACHE_KEYS.PRODUCTS);
-      scheduleRevalidate();
-    }, 30000);
-  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, scheduleRevalidate, filteredProducts]);
+    // サーバー検証ポーリング + TTL調整
+    const variantIds = Object.keys(optimisticUpdates).map(vid => vid);
+    verifyVariantsOnServer(variantIds, optimisticUpdates).then((verified) => {
+      if (verified) {
+        console.log("✅ Server verification successful - extending TTL");
+        // 検証成功：TTLを短縮（60秒で切り替え）
+        setTimeout(() => {
+          console.log("🔄 Clearing optimistic updates after verification");
+          setOptimisticPrices({});
+          ClientCache.clear(CACHE_KEYS.PRODUCTS);
+          revalidator.revalidate();
+        }, 60000);
+      } else {
+        console.log("⚠️ Server verification failed - extending protection");
+        // 検証失敗：TTLを延長（5分間保護）
+        // TTLオーバーレイで5分間保護されるので、楽観的更新はクリア
+        setTimeout(() => {
+          setOptimisticPrices({});
+        }, 5000);
+      }
+    });
+    
+    // カウントダウン表示のための短期タイマー
+    let countdown = 10;
+    setRefreshCountdown(countdown);
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      setRefreshCountdown(countdown);
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
+        setRefreshCountdown(0);
+      }
+    }, 1000);
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, filteredProducts, revalidator]);
 
 
   return (
@@ -1882,20 +2062,41 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     filteredProducts.map((product, index) => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
                     const variants = product.variants.edges;
-                    const basePrice = variants.length > 1 
-                      ? `¥${Math.min(...variants.map(v => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map(v => parseFloat(v.node.price)))}`
-                      : `¥${variants[0]?.node.price || 0}`;
+                    // variantごとに表示価格を決定（オーバーレイ → 楽観的更新 → 基本価格）
+                    const now = Date.now();
+                    const variantDisplayPrices = variants.map(({ node }) => {
+                      const vid = node.id;
+                      const overlay = priceOverlay[vid];
+                      
+                      if (overlay && overlay.until > now) {
+                        return { price: overlay.price, status: ' (確定)' };
+                      }
+                      
+                      if (optimisticPrices[vid] != null) {
+                        return { 
+                          price: optimisticPrices[vid], 
+                          status: ` (更新中${refreshCountdown > 0 ? ` - ${refreshCountdown}秒後に確認` : ''})`
+                        };
+                      }
+                      
+                      // 基本価格（Admin GraphQLの読み値、整数円で統一）
+                      return { price: Math.round(Number(node.price ?? 0)), status: '' };
+                    });
                     
-                    // 楽観的更新があれば優先表示
-                    const optimisticPrice = optimisticPrices[product.id];
-                    const priceRange = optimisticPrice ? `¥${optimisticPrice} (更新中)` : basePrice;
+                    // 価格レンジの計算
+                    const prices = variantDisplayPrices.map(v => v.price);
+                    const hasSpecialStatus = variantDisplayPrices.some(v => v.status !== '');
+                    const commonStatus = hasSpecialStatus ? variantDisplayPrices.find(v => v.status !== '')?.status || '' : '';
+                    
+                    const priceRange = variantDisplayPrices.length > 1
+                      ? `¥${Math.min(...prices)} - ¥${Math.max(...prices)}${commonStatus}`
+                      : `¥${prices[0] ?? 0}${commonStatus}`;
                     
                     // デバッグログ
-                    if (optimisticPrice) {
-                      console.log(`🎯 Optimistic price for ${product.title}:`, {
+                    if (hasSpecialStatus) {
+                      console.log(`🎯 Special price display for ${product.title}:`, {
                         productId: product.id,
-                        optimisticPrice,
-                        basePrice,
+                        variantDisplayPrices,
                         finalDisplay: priceRange
                       });
                     }

@@ -157,6 +157,35 @@ async function processProduct(target: { productId: string, metalType: string }, 
       const current = Number(variant.price || 0);
       if (!current) continue;
 
+      // 手動ロック確認：ロックされているvariantはスキップ
+      try {
+        const now = new Date();
+        const manualLock = await prisma.manualPriceLock.findFirst({
+          where: {
+            shopDomain: shop,
+            variantId: variant.id,
+            until: { gt: now }
+          }
+        });
+
+        if (manualLock) {
+          console.log(`🔒 Skipping variant ${variant.id} due to manual lock until ${manualLock.until.toISOString()}`);
+          continue;
+        }
+
+        // 期限切れロックを削除（バッチ処理）
+        await prisma.manualPriceLock.deleteMany({
+          where: {
+            shopDomain: shop,
+            variantId: variant.id,
+            until: { lte: now }
+          }
+        });
+      } catch (lockError) {
+        console.warn(`⚠️ Manual lock check failed for ${variant.id}:`, lockError);
+        // ロック確認に失敗しても価格更新は継続
+      }
+
       const newPrice = calcFinalPriceWithStep(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({ 

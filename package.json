@@ -4,6 +4,7 @@
   "scripts": {
     "build": "prisma generate && remix vite:build",
     "dev": "shopify app dev",
+    "dev:fallback": "node dev-fallback.js",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy",

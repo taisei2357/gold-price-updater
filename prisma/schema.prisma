@@ -82,6 +82,17 @@ model PriceUpdateLog {
   @@index([shopDomain, metalType, executedAt])
 }
 
+model ManualPriceLock {
+  id         String   @id @default(cuid())
+  shopDomain String
+  variantId  String
+  until      DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([shopDomain, variantId])
+  @@index([shopDomain, until])
+}
+
 enum ExecutionType {
   cron
   manual
