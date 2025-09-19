@@ -26,6 +26,14 @@ import prisma from "../db.server";
 import { AppErrorHandler, handleAppError } from "../utils/error-handler";
 
 export const loader = async ({ request }) => {
+  // デバッグ: 現在の環境変数とホストを確認
+  console.log('🔍 DEBUG INFO:', {
+    host: request.headers.get('x-forwarded-host') || request.headers.get('host'),
+    SHOPIFY_APP_URL: process.env.SHOPIFY_APP_URL,
+    NODE_ENV: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+
   const { session } = await authenticate.admin(request);
 
   try {
