@@ -892,7 +892,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   
   // 手動価格更新用のstate
   const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
-  const [manualUpdatePercentage, setManualUpdatePercentage] = useState(1); // 1-10%
+  const [manualUpdatePercentage, setManualUpdatePercentage] = useState(0.1); // 0.1-1.0%
   const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
   
   // 楽観的更新用のstate
@@ -1935,19 +1935,19 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   <Select
                     label="調整率"
                     options={[
-                      { label: "1%", value: "1" },
-                      { label: "2%", value: "2" },
-                      { label: "3%", value: "3" },
-                      { label: "4%", value: "4" },
-                      { label: "5%", value: "5" },
-                      { label: "6%", value: "6" },
-                      { label: "7%", value: "7" },
-                      { label: "8%", value: "8" },
-                      { label: "9%", value: "9" },
-                      { label: "10%", value: "10" }
+                      { label: "0.1%", value: "0.1" },
+                      { label: "0.2%", value: "0.2" },
+                      { label: "0.3%", value: "0.3" },
+                      { label: "0.4%", value: "0.4" },
+                      { label: "0.5%", value: "0.5" },
+                      { label: "0.6%", value: "0.6" },
+                      { label: "0.7%", value: "0.7" },
+                      { label: "0.8%", value: "0.8" },
+                      { label: "0.9%", value: "0.9" },
+                      { label: "1.0%", value: "1.0" }
                     ]}
                     value={manualUpdatePercentage.toString()}
-                    onChange={(value) => setManualUpdatePercentage(parseInt(value))}
+                    onChange={(value) => setManualUpdatePercentage(parseFloat(value))}
                   />
                 </div>
                 
