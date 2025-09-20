@@ -23,7 +23,6 @@ import isEqual from "react-fast-compare";
 const prisma$1 = global.__prisma ?? new PrismaClient({
   // log: ['query', 'error', 'warn'], // 必要なら一時的に有効化
 });
-if (process.env.NODE_ENV !== "production") global.__prisma = prisma$1;
 const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
 const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
 const shopify = shopifyApp({
@@ -1371,9 +1370,6 @@ var styles$Q = {
   "numeric": "Polaris-Text--numeric",
   "line-through": "Polaris-Text__line--through"
 };
-const deprecatedVariants = {
-  heading3xl: "heading2xl"
-};
 const Text = ({
   alignment,
   as,
@@ -1388,9 +1384,6 @@ const Text = ({
   visuallyHidden = false,
   textDecorationLine
 }) => {
-  if (process.env.NODE_ENV === "development" && variant && Object.prototype.hasOwnProperty.call(deprecatedVariants, variant)) {
-    console.warn(`Deprecation: <Text variant="${variant}" />. The value "${variant}" will be removed in a future major version of Polaris. Use "${deprecatedVariants[variant]}" instead.`);
-  }
   const Component2 = as || (visuallyHidden ? "span" : "p");
   const className = classNames(styles$Q.root, variant && styles$Q[variant], fontWeight && styles$Q[fontWeight], (alignment || truncate) && styles$Q.block, alignment && styles$Q[alignment], breakWord && styles$Q.break, tone && styles$Q[tone], numeric && styles$Q.numeric, truncate && styles$Q.truncate, visuallyHidden && styles$Q.visuallyHidden, textDecorationLine && styles$Q[textDecorationLine]);
   return /* @__PURE__ */ React.createElement(Component2, Object.assign({
@@ -1411,9 +1404,6 @@ function Icon({
     sourceType = "placeholder";
   } else {
     sourceType = "external";
-  }
-  if (tone && sourceType === "external" && process.env.NODE_ENV === "development") {
-    console.warn("Recoloring external SVGs is not supported. Set the intended color on your SVG instead.");
   }
   const className = classNames(styles$R.Icon, tone && styles$R[variationName("tone", tone)]);
   const {
@@ -4161,7 +4151,7 @@ function wrapWithComponent(element, Component2, props) {
   }
   return isElementOfType(element, Component2) ? element : /* @__PURE__ */ React.createElement(Component2, props, element);
 }
-const isComponent = process.env.NODE_ENV === "development" ? hotReloadComponentCheck : (AComponent, AnotherComponent) => AComponent === AnotherComponent;
+const isComponent = (AComponent, AnotherComponent) => AComponent === AnotherComponent;
 function isElementOfType(element, Component2) {
   var _a;
   if (element == null || !/* @__PURE__ */ isValidElement(element) || typeof element.type === "string") {
@@ -4190,11 +4180,6 @@ function ConditionalRender({
   children
 }) {
   return condition ? children : null;
-}
-function hotReloadComponentCheck(AComponent, AnotherComponent) {
-  const componentName = AComponent.name;
-  const anotherComponentName = AnotherComponent.displayName;
-  return AComponent === AnotherComponent || Boolean(componentName) && componentName === anotherComponentName;
 }
 var styles$w = {
   "Popover": "Polaris-Popover",
@@ -4495,11 +4480,11 @@ class PopoverOverlay extends PureComponent {
       const focusableChild = findFirstKeyboardFocusableNode(this.contentNode.current);
       if (focusableChild && autofocusTarget === "first-node") {
         focusableChild.focus({
-          preventScroll: process.env.NODE_ENV === "development"
+          preventScroll: false
         });
       } else {
         this.contentNode.current.focus({
-          preventScroll: process.env.NODE_ENV === "development"
+          preventScroll: false
         });
       }
     });
@@ -7386,11 +7371,7 @@ class DataTableInner extends PureComponent {
     };
   }
   componentDidMount() {
-    if (process.env.NODE_ENV === "development") {
-      setTimeout(() => {
-        this.handleResize();
-      }, 10);
-    } else {
+    {
       this.handleResize();
     }
   }
@@ -7424,9 +7405,6 @@ class DataTableInner extends PureComponent {
       isScrolledFarthestLeft,
       isScrolledFarthestRight
     } = this.state;
-    if (fixedFirstColumn && process.env.NODE_ENV === "development") {
-      console.warn("Deprecation: The `hasFixedFirstColumn` prop on the `DataTable` has been deprecated. Use fixedFirstColumns={n} instead.");
-    }
     const fixedFirstColumns = this.fixedFirstColumns();
     const rowCountIsEven = rows.length % 2 === 0;
     const className = classNames(styles$h.DataTable, condensed && styles$h.condensed, totals && styles$h.ShowTotals, showTotalsInFooter && styles$h.ShowTotalsInFooter, hasZebraStripingOnData && styles$h.ZebraStripingOnData, hasZebraStripingOnData && rowCountIsEven && styles$h.RowCountIsEven);
@@ -9926,7 +9904,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App$2,
   links: links$2
 }, Symbol.toStringTag, { value: "Module" }));
-const action$8 = async ({ request }) => {
+const action$a = async ({ request }) => {
   const raw = await request.text();
   const hmac = request.headers.get("x-shopify-hmac-sha256") ?? "";
   const digest = createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(raw, "utf8").digest("base64");
@@ -9935,15 +9913,15 @@ const action$8 = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$b = () => new Response(null, { status: 405 });
+const loader$e = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$8,
-  loader: loader$b
+  action: action$a,
+  loader: loader$e
 }, Symbol.toStringTag, { value: "Module" }));
-const action$7 = async ({ request }) => {
-  const { payload, session, topic, shop } = await authenticate.webhook(request);
-  console.log(`Received ${topic} webhook for ${shop}`);
+const action$9 = async ({ request }) => {
+  const { payload, session, topic, shop: shop2 } = await authenticate.webhook(request);
+  console.log(`Received ${topic} webhook for ${shop2}`);
   const current = payload.current;
   if (session) {
     await prisma$1.session.update({
@@ -9959,38 +9937,123 @@ const action$7 = async ({ request }) => {
 };
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7
+  action: action$9
 }, Symbol.toStringTag, { value: "Module" }));
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$8,
-  loader: loader$b
+  action: action$a,
+  loader: loader$e
 }, Symbol.toStringTag, { value: "Module" }));
-const action$6 = async ({ request }) => {
-  const { shop, session, topic } = await authenticate.webhook(request);
-  console.log(`Received ${topic} webhook for ${shop}`);
+const action$8 = async ({ request }) => {
+  const { shop: shop2, session, topic } = await authenticate.webhook(request);
+  console.log(`Received ${topic} webhook for ${shop2}`);
   try {
     await prisma$1.$transaction([
       // セッションデータ削除
-      prisma$1.session.deleteMany({ where: { shop } }),
+      prisma$1.session.deleteMany({ where: { shop: shop2 } }),
       // 商品選択データ削除
-      prisma$1.selectedProduct.deleteMany({ where: { shopDomain: shop } }),
+      prisma$1.selectedProduct.deleteMany({ where: { shopDomain: shop2 } }),
       // ショップ設定削除
-      prisma$1.shopSetting.deleteMany({ where: { shopDomain: shop } })
+      prisma$1.shopSetting.deleteMany({ where: { shopDomain: shop2 } })
       // 実行ログは監査のため残す（必要に応じて削除）
       // db.priceUpdateLog.deleteMany({ where: { shopDomain: shop } }),
     ]);
-    console.log(`Successfully cleaned up all data for shop: ${shop}`);
+    console.log(`Successfully cleaned up all data for shop: ${shop2}`);
   } catch (error) {
-    console.error(`Error cleaning up data for shop ${shop}:`, error);
+    console.error(`Error cleaning up data for shop ${shop2}:`, error);
   }
   return new Response();
 };
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6
+  action: action$8
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$a = async ({ request }) => {
+const action$7 = async ({ request }) => {
+  var _a, _b;
+  const { admin } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const action2 = formData.get("action");
+  if (action2 === "testManualUpdate") {
+    const productId = formData.get("productId");
+    const adjustmentRatio = parseFloat(formData.get("adjustmentRatio") || "0.05");
+    console.log("🧪 Debug manual update test:", { productId, adjustmentRatio });
+    try {
+      const productResponse = await admin.graphql(
+        `#graphql
+          query getProduct($id: ID!) {
+            product(id: $id) {
+              id
+              title
+              variants(first: 1) {
+                edges {
+                  node {
+                    id
+                    title
+                    price
+                  }
+                }
+              }
+            }
+          }`,
+        { variables: { id: productId } }
+      );
+      const productData = await productResponse.json();
+      const product = (_a = productData.data) == null ? void 0 : _a.product;
+      if (!product) {
+        return json({ error: "Product not found" });
+      }
+      const variant = (_b = product.variants.edges[0]) == null ? void 0 : _b.node;
+      if (!variant) {
+        return json({ error: "No variants found" });
+      }
+      const currentPrice = parseFloat(variant.price);
+      const newPrice = Math.round(currentPrice * (1 + adjustmentRatio));
+      console.log("🎯 Test update:", { currentPrice, newPrice });
+      const updateResponse = await admin.graphql(
+        `#graphql
+          mutation productVariantUpdate($input: ProductVariantInput!) {
+            productVariantUpdate(input: $input) {
+              productVariant {
+                id
+                price
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }`,
+        {
+          variables: {
+            input: {
+              id: variant.id,
+              price: newPrice.toString()
+            }
+          }
+        }
+      );
+      const updateData = await updateResponse.json();
+      return json({
+        success: true,
+        product: product.title,
+        variant: variant.title,
+        originalPrice: currentPrice,
+        newPrice,
+        adjustmentRatio,
+        graphqlResponse: updateData
+      });
+    } catch (error) {
+      console.error("❌ Debug test failed:", error);
+      return json({ error: error.message });
+    }
+  }
+  return json({ error: "Invalid action" });
+};
+const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$7
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$d = async ({ request }) => {
   const url = new URL(request.url);
   const uid = url.searchParams.get("uid");
   const state = url.searchParams.get("state");
@@ -10034,14 +10097,77 @@ const loader$a = async ({ request }) => {
   }
   return json({ error: "missing_uid_or_code", received: Object.fromEntries(url.searchParams.entries()) }, { status: 400 });
 };
-const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  loader: loader$a
-}, Symbol.toStringTag, { value: "Module" }));
 const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$8,
-  loader: loader$b
+  loader: loader$d
+}, Symbol.toStringTag, { value: "Module" }));
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$a,
+  loader: loader$e
+}, Symbol.toStringTag, { value: "Module" }));
+async function action$6({ request }) {
+  var _a, _b;
+  const { admin } = await authenticate.admin(request);
+  const { variantIds, expectedPrices } = await request.json();
+  if (!variantIds || variantIds.length === 0) {
+    return json({ verified: false, error: "No variant IDs provided" });
+  }
+  try {
+    const response = await admin.graphql(`
+      query VerifyVariants($ids: [ID!]!) {
+        nodes(ids: $ids) {
+          ... on ProductVariant {
+            id
+            price
+            updatedAt
+          }
+        }
+      }
+    `, { variables: { ids: variantIds } });
+    const data = await response.json();
+    if (data.errors) {
+      console.error("GraphQL verification errors:", data.errors);
+      return json({ verified: false, error: (_a = data.errors[0]) == null ? void 0 : _a.message });
+    }
+    const variants = ((_b = data.data) == null ? void 0 : _b.nodes) || [];
+    const verified = variants.every((variant) => {
+      if (!variant) return false;
+      const currentPrice = Number(variant.price ?? 0);
+      const expectedPrice = expectedPrices[variant.id];
+      const matches2 = currentPrice === expectedPrice;
+      console.log(`🔍 Verification for ${variant.id}:`, {
+        current: currentPrice,
+        expected: expectedPrice,
+        matches: matches2
+      });
+      return matches2;
+    });
+    return json({
+      verified,
+      variants: variants.map((v) => ({
+        id: v.id,
+        currentPrice: Number(v.price ?? 0),
+        expectedPrice: expectedPrices[v.id],
+        updatedAt: v.updatedAt
+      }))
+    }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  } catch (error) {
+    console.error("Variant verification error:", error);
+    return json({
+      verified: false,
+      error: error.message
+    }, {
+      status: 500,
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  }
+}
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$6
 }, Symbol.toStringTag, { value: "Module" }));
 async function sendViaSendGrid(to, subject, html, text) {
   const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
@@ -10196,9 +10322,9 @@ async function sendTestEmail(toEmail) {
 const action$5 = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
-    const shop = session.shop;
+    const shop2 = session.shop;
     const setting = await prisma$1.shopSetting.findUnique({
-      where: { shopDomain: shop },
+      where: { shopDomain: shop2 },
       select: { notificationEmail: true }
     });
     const email = setting == null ? void 0 : setting.notificationEmail;
@@ -10229,9 +10355,221 @@ const action$5 = async ({ request }) => {
     });
   }
 };
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$5
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$c = async ({ request }) => {
+  const host = request.headers.get("host");
+  const isProduction = (host == null ? void 0 : host.includes("vercel.app")) || (host == null ? void 0 : host.includes("gold-price-updater"));
+  if (!isProduction) {
+    return json({ error: "Debug endpoint only available in production" }, { status: 403 });
+  }
+  const debugInfo = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    host,
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    userAgent: request.headers.get("user-agent"),
+    env: {
+      NODE_ENV: "production",
+      SHOPIFY_APP_URL: process.env.SHOPIFY_APP_URL,
+      APP_URL: process.env.APP_URL,
+      PUBLIC_APP_URL: process.env.PUBLIC_APP_URL,
+      NEXT_PUBLIC_SHOPIFY_APP_URL: process.env.NEXT_PUBLIC_SHOPIFY_APP_URL,
+      VERCEL_URL: process.env.VERCEL_URL,
+      VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA
+    },
+    headers: {
+      host: request.headers.get("host"),
+      origin: request.headers.get("origin"),
+      referer: request.headers.get("referer"),
+      "x-forwarded-for": request.headers.get("x-forwarded-for"),
+      "x-forwarded-proto": request.headers.get("x-forwarded-proto")
+    }
+  };
+  return json(debugInfo, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, no-cache, must-revalidate"
+    }
+  });
+};
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$c
+}, Symbol.toStringTag, { value: "Module" }));
+async function loader$b({ request }) {
+  var _a, _b;
+  const { admin } = await authenticate.admin(request);
+  const url = new URL(request.url);
+  const ids = ((_a = url.searchParams.get("ids")) == null ? void 0 : _a.split(",")) || [];
+  if (ids.length === 0) {
+    return json({ variants: [] }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  }
+  try {
+    const queries = ids.map((id) => {
+      console.log("🔍 Querying variant with ID:", id);
+      return admin.graphql(`
+        query getVariant($id: ID!) {
+          productVariant(id: $id) {
+            id
+            price
+            product {
+              id
+              title
+            }
+          }
+        }
+      `, { variables: { id } });
+    });
+    const results = await Promise.all(queries);
+    const variants = [];
+    for (const response of results) {
+      const data = await response.json();
+      console.log("📊 GraphQL response:", data);
+      if (data.errors) {
+        console.error("❌ GraphQL errors:", data.errors);
+      }
+      if ((_b = data.data) == null ? void 0 : _b.productVariant) {
+        variants.push({
+          id: data.data.productVariant.id,
+          price: parseFloat(data.data.productVariant.price),
+          productId: data.data.productVariant.product.id,
+          productTitle: data.data.productVariant.product.title
+        });
+      } else {
+        console.warn("⚠️ No productVariant in response:", data);
+      }
+    }
+    return json({ variants }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  } catch (error) {
+    console.error("Error fetching variants:", error);
+    return json({ error: error.message }, {
+      status: 500,
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  }
+}
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$b
+}, Symbol.toStringTag, { value: "Module" }));
+class AppErrorHandler {
+  static logError(error, context, requestId) {
+    const entry2 = {
+      timestamp: /* @__PURE__ */ new Date(),
+      level: "error",
+      message: error.message,
+      stack: error.stack,
+      context,
+      requestId
+    };
+    this.logs.push(entry2);
+    if (this.logs.length > 1e3) {
+      this.logs = this.logs.slice(-1e3);
+    }
+    console.error("🚨 Application Error:", {
+      message: error.message,
+      stack: error.stack,
+      context,
+      requestId,
+      timestamp: entry2.timestamp.toISOString()
+    });
+  }
+  static logWarning(message, context) {
+    const entry2 = {
+      timestamp: /* @__PURE__ */ new Date(),
+      level: "warning",
+      message,
+      context
+    };
+    this.logs.push(entry2);
+    console.warn("⚠️ Application Warning:", { message, context });
+  }
+  static logInfo(message, context) {
+    console.log("ℹ️ Application Info:", { message, context });
+  }
+  static getRecentLogs(limit = 100) {
+    return this.logs.slice(-limit);
+  }
+  static clearLogs() {
+    this.logs = [];
+  }
+}
+__publicField(AppErrorHandler, "logs", []);
+const loader$a = async ({ request }) => {
+  var _a;
+  const startTime = Date.now();
+  const checks = {};
+  try {
+    try {
+      await prisma$1.$queryRaw`SELECT 1`;
+      checks.database = { status: "healthy", latency: `${Date.now() - startTime}ms` };
+    } catch (dbError) {
+      checks.database = { status: "unhealthy", error: dbError.message };
+    }
+    const memUsage = process.memoryUsage();
+    checks.memory = {
+      status: memUsage.heapUsed < 500 * 1024 * 1024 ? "healthy" : "warning",
+      // 500MB threshold
+      usage: {
+        heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+        heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
+        rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`
+      }
+    };
+    const recentErrors = AppErrorHandler.getRecentLogs(10).filter((log) => log.level === "error");
+    checks.errorLogs = {
+      status: recentErrors.length === 0 ? "healthy" : recentErrors.length < 5 ? "warning" : "unhealthy",
+      recentErrors: recentErrors.length,
+      lastError: (_a = recentErrors[0]) == null ? void 0 : _a.timestamp
+    };
+    const requiredEnvVars = ["DATABASE_URL", "SHOPIFY_API_KEY", "SHOPIFY_API_SECRET"];
+    const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+    checks.environment = {
+      status: missingEnvVars.length === 0 ? "healthy" : "unhealthy",
+      missingVars: missingEnvVars
+    };
+    const hasUnhealthy = Object.values(checks).some((check) => check.status === "unhealthy");
+    const hasWarning = Object.values(checks).some((check) => check.status === "warning");
+    const overallStatus = hasUnhealthy ? "unhealthy" : hasWarning ? "warning" : "healthy";
+    const responseTime = Date.now() - startTime;
+    return json({
+      status: overallStatus,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      responseTime: `${responseTime}ms`,
+      version: process.env.npm_package_version || "unknown",
+      checks
+    }, {
+      status: overallStatus === "unhealthy" ? 503 : 200,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
+    AppErrorHandler.logError(error, { route: "health" });
+    return json({
+      status: "unhealthy",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      responseTime: `${Date.now() - startTime}ms`,
+      error: error.message
+    }, {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Content-Type": "application/json"
+      }
+    });
+  }
+};
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
 const polarisTranslations = {
@@ -10252,13 +10590,13 @@ const loader$9 = async () => {
 const action$4 = async ({ request }) => {
   const formData = await request.formData();
   const rawShop = (formData.get("shop") || "").toString();
-  const shop = normalizeShop(rawShop);
-  if (!shop) {
+  const shop2 = normalizeShop(rawShop);
+  if (!shop2) {
     return json({ errors: { shop: "Shop domain is required" } }, { status: 400 });
   }
   try {
     const url = new URL(request.url);
-    url.searchParams.set("shop", shop);
+    url.searchParams.set("shop", shop2);
     const newReq = new Request(url.toString(), { method: "POST", body: formData });
     return await login(newReq);
   } catch (e) {
@@ -10276,7 +10614,7 @@ function normalizeShop(input) {
 function Auth() {
   const loaderData = useLoaderData();
   const actionData = useActionData();
-  const [shop, setShop] = useState("");
+  const [shop2, setShop] = useState("");
   const errors = (actionData == null ? void 0 : actionData.errors) || loaderData.errors || {};
   return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", replace: true, children: /* @__PURE__ */ jsxs(FormLayout, { children: [
     /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
@@ -10287,7 +10625,7 @@ function Auth() {
         name: "shop",
         label: "Shop domain",
         helpText: "example.myshopify.com",
-        value: shop,
+        value: shop2,
         onChange: (v) => setShop(v),
         autoComplete: "off",
         error: errors.shop
@@ -10296,7 +10634,7 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$4,
   default: Auth,
@@ -10484,8 +10822,8 @@ function verifyCronAuth(request) {
   return json({ error: "Unauthorized" }, { status: 401 });
 }
 class ShopifyAdminClient {
-  constructor(shop, accessToken) {
-    this.shop = shop;
+  constructor(shop2, accessToken) {
+    this.shop = shop2;
     this.accessToken = accessToken;
   }
   async graphql(query, options = {}) {
@@ -10591,6 +10929,29 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
       const variant = edge.node;
       const current = Number(variant.price || 0);
       if (!current) continue;
+      try {
+        const now = /* @__PURE__ */ new Date();
+        const manualLock = await prisma$1.manualPriceLock.findFirst({
+          where: {
+            shopDomain: shop,
+            variantId: variant.id,
+            until: { gt: now }
+          }
+        });
+        if (manualLock) {
+          console.log(`🔒 Skipping variant ${variant.id} due to manual lock until ${manualLock.until.toISOString()}`);
+          continue;
+        }
+        await prisma$1.manualPriceLock.deleteMany({
+          where: {
+            shopDomain: shop,
+            variantId: variant.id,
+            until: { lte: now }
+          }
+        });
+      } catch (lockError) {
+        console.warn(`⚠️ Manual lock check failed for ${variant.id}:`, lockError);
+      }
       const newPrice = calcFinalPriceWithStep$1(current, ratio, minPct01, 10);
       if (parseFloat(newPrice) !== current) {
         entries.push({
@@ -10614,15 +10975,15 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
     });
   }
 }
-async function updateShopPrices(shop, accessToken) {
+async function updateShopPrices(shop2, accessToken) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
-  const admin = new ShopifyAdminClient(shop, accessToken);
+  const admin = new ShopifyAdminClient(shop2, accessToken);
   let minPctSaved = 93;
   try {
     const ratios = await fetchMetalPriceRatios();
     if (ratios.noChange) {
       return {
-        shop,
+        shop: shop2,
         success: true,
         message: "相場変動なしのためスキップ",
         updated: 0,
@@ -10631,7 +10992,7 @@ async function updateShopPrices(shop, accessToken) {
     }
     if (ratios.gold === null && ratios.platinum === null) {
       return {
-        shop,
+        shop: shop2,
         success: false,
         error: "金・プラチナ価格の取得に失敗",
         updated: 0,
@@ -10639,14 +11000,14 @@ async function updateShopPrices(shop, accessToken) {
       };
     }
     const setting = await prisma$1.shopSetting.findUnique({
-      where: { shopDomain: shop }
+      where: { shopDomain: shop2 }
     });
     minPctSaved = (setting == null ? void 0 : setting.minPricePct) ?? 93;
     const minPct01 = minPctSaved > 1 ? minPctSaved / 100 : minPctSaved;
     if (!setting || !setting.autoUpdateEnabled) {
-      console.log(`${shop}: 自動更新が無効です`);
+      console.log(`${shop2}: 自動更新が無効です`);
       return {
-        shop,
+        shop: shop2,
         success: true,
         message: "自動更新無効",
         updated: 0,
@@ -10655,15 +11016,15 @@ async function updateShopPrices(shop, accessToken) {
     }
     const targets = await prisma$1.selectedProduct.findMany({
       where: {
-        shopDomain: shop,
+        shopDomain: shop2,
         selected: true
       },
       select: { productId: true, metalType: true }
     });
-    console.log(`${shop}: 対象商品数（selected=true）: ${targets.length}`);
+    console.log(`${shop2}: 対象商品数（selected=true）: ${targets.length}`);
     if (!targets.length) {
       return {
-        shop,
+        shop: shop2,
         success: true,
         message: "対象商品なし",
         updated: 0,
@@ -10673,10 +11034,10 @@ async function updateShopPrices(shop, accessToken) {
     const normalize = (s) => (s ?? "").trim().toLowerCase();
     const goldTargets = targets.filter((t) => normalize(t.metalType) === "gold");
     const platinumTargets = targets.filter((t) => normalize(t.metalType) === "platinum");
-    console.log(`${shop}: 金商品 ${goldTargets.length}件, プラチナ商品 ${platinumTargets.length}件`);
+    console.log(`${shop2}: 金商品 ${goldTargets.length}件, プラチナ商品 ${platinumTargets.length}件`);
     if ((ratios.gold === null || goldTargets.length === 0) && (ratios.platinum === null || platinumTargets.length === 0)) {
       return {
-        shop,
+        shop: shop2,
         success: true,
         message: "有効な価格変動・対象商品なし",
         updated: 0,
@@ -10687,14 +11048,14 @@ async function updateShopPrices(shop, accessToken) {
     let updated = 0, failed = 0;
     const details = [];
     if (ratios.gold !== null && goldTargets.length > 0) {
-      console.log(`${shop}: 金商品価格更新開始（変動率: ${(ratios.gold * 100).toFixed(2)}%）`);
+      console.log(`${shop2}: 金商品価格更新開始（変動率: ${(ratios.gold * 100).toFixed(2)}%）`);
       for (const target of goldTargets) {
         await processProduct(target, ratios.gold, "gold", admin, entries, details, minPct01);
         await new Promise((r) => setTimeout(r, 100));
       }
     }
     if (ratios.platinum !== null && platinumTargets.length > 0) {
-      console.log(`${shop}: プラチナ商品価格更新開始（変動率: ${(ratios.platinum * 100).toFixed(2)}%）`);
+      console.log(`${shop2}: プラチナ商品価格更新開始（変動率: ${(ratios.platinum * 100).toFixed(2)}%）`);
       for (const target of platinumTargets) {
         await processProduct(target, ratios.platinum, "platinum", admin, entries, details, minPct01);
         await new Promise((r) => setTimeout(r, 100));
@@ -10706,7 +11067,7 @@ async function updateShopPrices(shop, accessToken) {
       if (goldRatio !== null && goldTargets.length > 0) {
         await prisma$1.priceUpdateLog.create({
           data: {
-            shopDomain: shop,
+            shopDomain: shop2,
             executionType: "cron",
             metalType: "gold",
             priceRatio: goldRatio,
@@ -10722,7 +11083,7 @@ async function updateShopPrices(shop, accessToken) {
       if (platinumRatio !== null && platinumTargets.length > 0) {
         await prisma$1.priceUpdateLog.create({
           data: {
-            shopDomain: shop,
+            shopDomain: shop2,
             executionType: "cron",
             metalType: "platinum",
             priceRatio: platinumRatio,
@@ -10736,7 +11097,7 @@ async function updateShopPrices(shop, accessToken) {
         });
       }
       return {
-        shop,
+        shop: shop2,
         success: true,
         message: "価格変更不要",
         updated: 0,
@@ -10768,11 +11129,11 @@ async function updateShopPrices(shop, accessToken) {
           }
         });
         if (res.status === 401 || ((_d = (_c = (_b = (_a = res.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
-          console.error(`🚨 401 Unauthorized detected during price update for shop: ${shop}`);
-          await prisma$1.session.deleteMany({ where: { shop } });
+          console.error(`🚨 401 Unauthorized detected during price update for shop: ${shop2}`);
+          await prisma$1.session.deleteMany({ where: { shop: shop2 } });
           await prisma$1.priceUpdateLog.create({
             data: {
-              shopDomain: shop,
+              shopDomain: shop2,
               executionType: "cron",
               metalType: "gold",
               priceRatio: null,
@@ -10785,7 +11146,7 @@ async function updateShopPrices(shop, accessToken) {
             }
           });
           return {
-            shop,
+            shop: shop2,
             success: false,
             needsReauth: true,
             message: "価格更新中に認証エラー: アプリの再インストールが必要です",
@@ -10859,7 +11220,7 @@ async function updateShopPrices(shop, accessToken) {
     if (ratios.gold !== null && (goldTargets.length > 0 || goldEntries.length > 0)) {
       await prisma$1.priceUpdateLog.create({
         data: {
-          shopDomain: shop,
+          shopDomain: shop2,
           executionType: "cron",
           metalType: "gold",
           priceRatio: ratios.gold,
@@ -10878,7 +11239,7 @@ async function updateShopPrices(shop, accessToken) {
     if (ratios.platinum !== null && (platinumTargets.length > 0 || platinumEntries.length > 0)) {
       await prisma$1.priceUpdateLog.create({
         data: {
-          shopDomain: shop,
+          shopDomain: shop2,
           executionType: "cron",
           metalType: "platinum",
           priceRatio: ratios.platinum,
@@ -10895,13 +11256,13 @@ async function updateShopPrices(shop, accessToken) {
       });
     }
     const shopSetting = await prisma$1.shopSetting.findUnique({
-      where: { shopDomain: shop },
+      where: { shopDomain: shop2 },
       select: { notificationEmail: true }
     });
     if (shopSetting == null ? void 0 : shopSetting.notificationEmail) {
       try {
         const emailData = {
-          shopDomain: shop,
+          shopDomain: shop2,
           updatedCount: updated,
           failedCount: failed,
           goldRatio: ratios.gold ? (ratios.gold * 100).toFixed(2) + "%" : void 0,
@@ -10923,7 +11284,7 @@ async function updateShopPrices(shop, accessToken) {
       }
     }
     return {
-      shop,
+      shop: shop2,
       success: true,
       updated,
       failed,
@@ -10932,10 +11293,10 @@ async function updateShopPrices(shop, accessToken) {
       emailSent: !!(shopSetting == null ? void 0 : shopSetting.notificationEmail)
     };
   } catch (error) {
-    console.error(`${shop}の処理でエラー:`, error);
+    console.error(`${shop2}の処理でエラー:`, error);
     await prisma$1.priceUpdateLog.create({
       data: {
-        shopDomain: shop,
+        shopDomain: shop2,
         executionType: "cron",
         metalType: "gold",
         priceRatio: null,
@@ -10948,7 +11309,7 @@ async function updateShopPrices(shop, accessToken) {
       }
     });
     return {
-      shop,
+      shop: shop2,
       success: false,
       error: error.message,
       updated: 0,
@@ -10996,19 +11357,19 @@ async function runAllShops(opts = {}) {
     }
     console.log(`🕐 JST ${currentHour}:00 (10:00-11:00実行時間帯) - ${enabledShops.length}件のショップで価格更新を開始`);
     const results = [];
-    for (const shop of enabledShops) {
+    for (const shop2 of enabledShops) {
       const session = await prisma$1.session.findFirst({
         where: {
-          shop: shop.shopDomain,
+          shop: shop2.shopDomain,
           isOnline: false
           // オフライントークンのみ（背景処理用）
         },
         orderBy: { expires: "desc" }
       });
       if (!session || !session.accessToken) {
-        console.log(`${shop.shopDomain}: 有効なセッションが見つかりません`);
+        console.log(`${shop2.shopDomain}: 有効なセッションが見つかりません`);
         results.push({
-          shop: shop.shopDomain,
+          shop: shop2.shopDomain,
           success: false,
           error: "有効なセッションなし",
           updated: 0,
@@ -11016,8 +11377,8 @@ async function runAllShops(opts = {}) {
         });
         continue;
       }
-      console.log(`${shop.shopDomain}: 価格更新を開始`);
-      const result = await updateShopPrices(shop.shopDomain, session.accessToken);
+      console.log(`${shop2.shopDomain}: 価格更新を開始`);
+      const result = await updateShopPrices(shop2.shopDomain, session.accessToken);
       results.push(result);
       await new Promise((r) => setTimeout(r, 1e3));
     }
@@ -11083,7 +11444,7 @@ const action$3 = async ({ request }) => {
     });
   }
 };
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$3,
   loader: loader$8
@@ -11268,7 +11629,7 @@ const action$2 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -11280,7 +11641,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -11289,7 +11650,7 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11314,14 +11675,14 @@ function App() {
 function ErrorBoundary() {
   return boundary.error(useRouteError());
 }
-const headers = (headersArgs) => {
+const headers$1 = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
-  headers,
+  headers: headers$1,
   links,
   loader: loader$4
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11377,7 +11738,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11457,7 +11818,7 @@ function calcFinalPriceWithStep(current, ratio, minPct01, step = 1) {
   const rounded = ratio >= 0 ? Math.ceil(target / step) * step : Math.floor(target / step) * step;
   return String(rounded);
 }
-async function runBulkUpdateBySpec(admin, shop, opts = {}) {
+async function runBulkUpdateBySpec(admin, shop2, opts = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
   const onlyIds = Array.isArray(opts.onlyProductIds) && opts.onlyProductIds.length ? opts.onlyProductIds : null;
   const minPriceRate = typeof opts.minPriceRate === "number" ? opts.minPriceRate : void 0;
@@ -11466,11 +11827,11 @@ async function runBulkUpdateBySpec(admin, shop, opts = {}) {
     fetchMetalPriceData("gold"),
     fetchMetalPriceData("platinum")
   ]);
-  const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop } });
+  const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop2 } });
   const minPct = minPriceRate ?? (setting == null ? void 0 : setting.minPricePct) ?? 93;
   const targets = await prisma$1.selectedProduct.findMany({
     where: {
-      shopDomain: shop,
+      shopDomain: shop2,
       selected: true,
       ...onlyIds ? { productId: { in: onlyIds } } : {}
     },
@@ -11631,7 +11992,7 @@ async function runBulkUpdateBySpec(admin, shop, opts = {}) {
   if (goldEntries.length > 0) {
     logPromises.push(prisma$1.priceUpdateLog.create({
       data: {
-        shopDomain: shop,
+        shopDomain: shop2,
         executionType: "manual",
         metalType: "gold",
         priceRatio: goldData.changeRatio,
@@ -11647,7 +12008,7 @@ async function runBulkUpdateBySpec(admin, shop, opts = {}) {
   if (platinumEntries.length > 0) {
     logPromises.push(prisma$1.priceUpdateLog.create({
       data: {
-        shopDomain: shop,
+        shopDomain: shop2,
         executionType: "manual",
         metalType: "platinum",
         priceRatio: platinumData.changeRatio,
@@ -11678,6 +12039,15 @@ async function runBulkUpdateBySpec(admin, shop, opts = {}) {
     },
     message: `${goldTargets.length}件の金商品、${platinumTargets.length}件のプラチナ商品を処理完了`
   };
+}
+const headers = () => ({
+  "Cache-Control": "no-store, no-cache, must-revalidate"
+});
+function shouldRevalidate({ formAction, actionResult }) {
+  if ((actionResult == null ? void 0 : actionResult.updateResults) || (actionResult == null ? void 0 : actionResult.message)) {
+    return true;
+  }
+  return true;
 }
 function UnselectButton({ productId, onOptimistic, scheduleRevalidate }) {
   const fx = useFetcher();
@@ -11856,12 +12226,15 @@ async function fetchAllCollections(admin) {
   }
 }
 async function fetchAllProducts(admin) {
+  var _a, _b;
+  console.log("🔍 Starting fetchAllProducts");
   let allProducts = [];
   let cursor = null;
   let hasNextPage = true;
-  while (hasNextPage) {
-    const response = await admin.graphql(
-      `#graphql
+  try {
+    while (hasNextPage) {
+      const response = await admin.graphql(
+        `#graphql
         query getProducts($first: Int!, $after: String) {
           products(first: $first, after: $after) {
             edges {
@@ -11878,6 +12251,7 @@ async function fetchAllProducts(admin) {
                       price
                       sku
                       inventoryQuantity
+                      updatedAt
                     }
                   }
                 }
@@ -11889,20 +12263,34 @@ async function fetchAllProducts(admin) {
             }
           }
         }`,
-      {
-        variables: {
-          first: 250,
-          after: cursor
+        {
+          variables: {
+            first: 250,
+            after: cursor
+          }
         }
+      );
+      const responseJson = await response.json();
+      if (responseJson.errors) {
+        console.error("GraphQL query errors:", responseJson.errors);
+        throw new Error(`GraphQL Error: ${((_a = responseJson.errors[0]) == null ? void 0 : _a.message) || "Unknown error"}`);
       }
-    );
-    const responseJson = await response.json();
-    const products = responseJson.data.products.edges.map((edge) => edge.node);
-    allProducts = [...allProducts, ...products];
-    hasNextPage = responseJson.data.products.pageInfo.hasNextPage;
-    cursor = responseJson.data.products.edges.length > 0 ? responseJson.data.products.edges[responseJson.data.products.edges.length - 1].cursor : null;
+      if (!((_b = responseJson.data) == null ? void 0 : _b.products)) {
+        console.error("No products data in response:", responseJson);
+        throw new Error("No products data returned from GraphQL");
+      }
+      const products = responseJson.data.products.edges.map((edge) => edge.node);
+      allProducts = [...allProducts, ...products];
+      console.log(`Fetched ${products.length} products, total: ${allProducts.length}`);
+      hasNextPage = responseJson.data.products.pageInfo.hasNextPage;
+      cursor = responseJson.data.products.edges.length > 0 ? responseJson.data.products.edges[responseJson.data.products.edges.length - 1].cursor : null;
+    }
+    console.log(`✅ fetchAllProducts completed: ${allProducts.length} products fetched`);
+    return allProducts;
+  } catch (error) {
+    console.error("❌ fetchAllProducts error:", error);
+    throw error;
   }
-  return allProducts;
 }
 async function fetchMetalPrices() {
   try {
@@ -11968,6 +12356,10 @@ const loader$3 = async ({ request }) => {
   ]);
   const selectedProductIds = selectedProducts.map((p) => p.productId);
   const selectedCollectionIds = selectedCollections.map((c) => c.collectionId);
+  if (forceRefresh) {
+    console.log("🔄 Force refresh enabled - clearing product cache");
+    ClientCache.clear(CACHE_KEYS.PRODUCTS);
+  }
   const productsPromise = fetchAllProducts(admin);
   const collectionsPromise = fetchAllCollections(admin).catch((e) => {
     console.error("fetchAllCollections failed:", e);
@@ -11987,10 +12379,16 @@ const loader$3 = async ({ request }) => {
     shopSetting,
     forceRefresh,
     cacheTimestamp: Date.now()
+  }, {
+    // キャッシュを完全に禁止して生データを強制取得
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      "Pragma": "no-cache"
+    }
   });
 };
 const action$1 = async ({ request }) => {
-  var _a, _b;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
   const action2 = formData.get("action");
@@ -12164,6 +12562,159 @@ const action$1 = async ({ request }) => {
       });
     }
   }
+  if (action2 === "manualUpdatePrices") {
+    const selectedProductIds = JSON.parse(formData.get("selectedProductIds") || "[]");
+    const adjustmentRatio = parseFloat(formData.get("adjustmentRatio"));
+    console.log("🔧 Manual price update started:", { selectedProductIds, adjustmentRatio });
+    if (selectedProductIds.length === 0) {
+      return json({
+        error: "更新対象商品が選択されていません",
+        updateResults: []
+      });
+    }
+    try {
+      const updateResults = [];
+      for (const productId of selectedProductIds) {
+        const productResponse = await admin.graphql(
+          `#graphql
+            query getProduct($id: ID!) {
+              product(id: $id) {
+                id
+                title
+                variants(first: 250) {
+                  edges {
+                    node {
+                      id
+                      title
+                      price
+                    }
+                  }
+                }
+              }
+            }`,
+          { variables: { id: productId } }
+        );
+        const productData = await productResponse.json();
+        const product = (_c = productData.data) == null ? void 0 : _c.product;
+        console.log(`📦 Product ${productId} data:`, { product: product == null ? void 0 : product.title, variantCount: (_e = (_d = product == null ? void 0 : product.variants) == null ? void 0 : _d.edges) == null ? void 0 : _e.length });
+        if (!product) {
+          console.error(`❌ Product ${productId} not found`);
+          updateResults.push({
+            productId,
+            success: false,
+            error: "商品が見つかりません"
+          });
+          continue;
+        }
+        for (const variantEdge of product.variants.edges) {
+          let round10Yen = function(price, ratio, minRate = 0.93) {
+            const newP = price * (1 + ratio);
+            const minP = price * minRate;
+            const bounded = Math.max(newP, minP);
+            return ratio >= 0 ? Math.ceil(bounded / 10) * 10 : Math.floor(bounded / 10) * 10;
+          };
+          const variant = variantEdge.node;
+          const currentPrice = Number(variant.price ?? 0);
+          const newPrice = round10Yen(currentPrice, adjustmentRatio);
+          console.log(`💰 Variant ${variant.id} price update:`, { currentPrice, newPrice, adjustmentRatio });
+          try {
+            console.log(`🚀 Starting GraphQL update for variant ${variant.id} with price ${newPrice}`);
+            const inputData = {
+              id: variant.id,
+              price: newPrice.toString()
+            };
+            console.log(`📝 GraphQL input data:`, inputData);
+            const updateResponse = await admin.graphql(
+              `#graphql
+                mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+                  productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                    product { id }
+                    productVariants { id price }
+                    userErrors { field message }
+                  }
+                }`,
+              {
+                variables: {
+                  productId,
+                  variants: [{ id: variant.id, price: newPrice.toString() }]
+                }
+              }
+            );
+            console.log(`📡 GraphQL response status: ${updateResponse.status} ${updateResponse.statusText}`);
+            const updateData = await updateResponse.json();
+            console.log(`🔄 GraphQL update response for ${variant.id}:`, updateData);
+            if (((_h = (_g = (_f = updateData.data) == null ? void 0 : _f.productVariantsBulkUpdate) == null ? void 0 : _g.userErrors) == null ? void 0 : _h.length) > 0) {
+              updateResults.push({
+                productId,
+                variantId: variant.id,
+                success: false,
+                error: updateData.data.productVariantsBulkUpdate.userErrors[0].message
+              });
+            } else {
+              const updatedVariants = ((_j = (_i = updateData.data) == null ? void 0 : _i.productVariantsBulkUpdate) == null ? void 0 : _j.productVariants) || [];
+              const updatedVariant = updatedVariants.find((v) => v.id === variant.id);
+              const confirmedPrice = (updatedVariant == null ? void 0 : updatedVariant.price) ? parseFloat(updatedVariant.price) : newPrice;
+              updateResults.push({
+                productId,
+                variantId: variant.id,
+                productTitle: product.title,
+                variantTitle: variant.title,
+                success: true,
+                oldPrice: currentPrice,
+                newPrice,
+                confirmedPrice,
+                // 確定価格を追加
+                adjustmentRatio
+              });
+              try {
+                const lockUntil = new Date(Date.now() + 6 * 60 * 60 * 1e3);
+                await prisma$1.manualPriceLock.deleteMany({
+                  where: {
+                    shopDomain: session.shop,
+                    variantId: variant.id
+                  }
+                });
+                await prisma$1.manualPriceLock.create({
+                  data: {
+                    shopDomain: session.shop,
+                    variantId: variant.id,
+                    until: lockUntil
+                  }
+                });
+                console.log(`🔒 Manual lock set for variant ${variant.id} until ${lockUntil.toISOString()}`);
+              } catch (lockError) {
+                console.warn(`⚠️ Failed to set manual lock for ${variant.id}:`, lockError);
+              }
+            }
+          } catch (variantError) {
+            console.error(`❌ GraphQL update error for variant ${variant.id}:`, variantError);
+            updateResults.push({
+              productId,
+              variantId: variant.id,
+              success: false,
+              error: `価格更新エラー: ${variantError.message}`
+            });
+          }
+        }
+      }
+      const successCount = updateResults.filter((r) => r.success).length;
+      const failureCount = updateResults.filter((r) => !r.success).length;
+      return json({
+        updateResults,
+        summary: {
+          total: updateResults.length,
+          success: successCount,
+          failed: failureCount
+        },
+        message: `手動価格更新完了: ${successCount}件成功、${failureCount}件失敗 (調整率: ${adjustmentRatio > 0 ? "+" : ""}${(adjustmentRatio * 100).toFixed(1)}%)`
+      });
+    } catch (error) {
+      return json({
+        error: `手動価格更新中にエラーが発生しました: ${error.message}`,
+        updateResults: []
+      });
+    }
+  }
   return json({ error: "不正なアクション" });
 };
 function ProductsContent({ products, collections, goldPrice, platinumPrice, selectedProductIds, savedSelectedProducts, selectedCollectionIds, savedSelectedCollections, shopSetting, forceRefresh, cacheTimestamp }) {
@@ -12206,6 +12757,12 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []);
   const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {});
+  const [manualUpdateDirection, setManualUpdateDirection] = useState("plus");
+  const [manualUpdatePercentage, setManualUpdatePercentage] = useState(0.1);
+  const [manualSelectedProducts, setManualSelectedProducts] = useState([]);
+  const [optimisticPrices, setOptimisticPrices] = useState({});
+  const [refreshCountdown, setRefreshCountdown] = useState(0);
+  const [priceOverlay, setPriceOverlay] = useState({});
   const [savedIdSet, setSavedIdSet] = useState(
     () => new Set((savedSelectedProducts || []).map((sp) => sp.productId))
   );
@@ -12231,28 +12788,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     if (revalidateTimer.current) clearTimeout(revalidateTimer.current);
   }, []);
   useEffect(() => {
-    if (!forceRefresh) {
-      const cachedProducts = ClientCache.get(CACHE_KEYS.PRODUCTS);
-      if (cachedProducts && Array.isArray(cachedProducts) && cachedProducts.length > 0) {
-        setIsUsingCache(true);
-        const cacheInfo = ClientCache.getInfo(CACHE_KEYS.PRODUCTS);
-        if (cacheInfo) {
-          setLastUpdated(new Date(cacheInfo.timestamp));
-        }
-        if (selectedProductIds && selectedProductIds.length > 0) {
-          const persistedSelected = cachedProducts.filter((p) => selectedProductIds.includes(p.id));
-          setSelectedProducts(persistedSelected);
-          if (savedSelectedProducts && savedSelectedProducts.length > 0) {
-            const metalTypeMap = {};
-            savedSelectedProducts.forEach((sp) => {
-              metalTypeMap[sp.productId] = sp.metalType;
-            });
-            setProductMetalTypes(metalTypeMap);
-          }
-        }
-        return;
-      }
-    }
     if (products && products.length > 0) {
       ClientCache.set(CACHE_KEYS.PRODUCTS, products);
       setIsUsingCache(false);
@@ -12270,6 +12805,52 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       }
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
+  useEffect(() => {
+    console.log("🔍 Updater state changed:", { state: updater.state, data: updater.data });
+    if (updater.state === "idle" && updater.data) {
+      if (updater.data.updateResults && updater.data.summary) {
+        console.log("✅ Manual update completed:", updater.data);
+        const confirmedPrices = {};
+        updater.data.updateResults.forEach((result) => {
+          if (result.success && result.confirmedPrice !== void 0) {
+            confirmedPrices[result.variantId] = result.confirmedPrice;
+          }
+        });
+        if (Object.keys(confirmedPrices).length > 0) {
+          console.log("🎯 Applying confirmed prices from server:", confirmedPrices);
+          setOptimisticPrices((prev) => ({ ...prev, ...confirmedPrices }));
+          const now = Date.now();
+          const overlayUpdates = Object.fromEntries(
+            Object.entries(confirmedPrices).map(([variantId, price]) => [
+              variantId,
+              { price, until: now + 3 * 60 * 1e3 }
+              // 3分間は戻させない
+            ])
+          );
+          setPriceOverlay((prev) => ({ ...prev, ...overlayUpdates }));
+        }
+        setManualSelectedProducts([]);
+      }
+    }
+  }, [updater.state, updater.data]);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      setPriceOverlay((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const [k, v] of Object.entries(next)) {
+          if (v.until <= now) {
+            delete next[k];
+            changed = true;
+            console.log(`🧹 Cleaned expired overlay for variant: ${k}`);
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 5e3);
+    return () => clearInterval(id);
+  }, []);
   useEffect(() => {
     if (mu.state === "idle" && mu.data) {
       if (mu.data.savedProducts) {
@@ -12311,6 +12892,64 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     revalidator.revalidate();
   }, [revalidator]);
   const filteredProducts = filterProducts(products, searchValue, filterType);
+  const verifyVariantsOnServer = useCallback(async (variantIds, expectedPrices) => {
+    const timeout = Date.now() + 1e4;
+    while (Date.now() < timeout) {
+      try {
+        const response = await fetch(`/api/verify-variants`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variantIds, expectedPrices }),
+          cache: "no-store"
+        });
+        const data = await response.json();
+        if (data.verified) {
+          return true;
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      } catch (error) {
+        console.error("Verification polling error:", error);
+        break;
+      }
+    }
+    return false;
+  }, []);
+  useCallback(async (expectedPrices) => {
+    const timeout = Date.now() + 1e4;
+    while (Date.now() < timeout) {
+      try {
+        const productIds = Object.keys(expectedPrices);
+        const variantIds = [];
+        productIds.forEach((productId) => {
+          var _a2, _b2;
+          const product = filteredProducts.find((p) => p.id === productId);
+          if ((_b2 = (_a2 = product == null ? void 0 : product.variants) == null ? void 0 : _a2.edges) == null ? void 0 : _b2[0]) {
+            variantIds.push(product.variants.edges[0].node.id);
+          }
+        });
+        const response = await fetch(`/api/variants?ids=${variantIds.join(",")}`, {
+          cache: "no-store"
+        });
+        const data = await response.json();
+        if (data.variants) {
+          const allMatched = data.variants.every((variant) => {
+            const expectedPrice = expectedPrices[variant.productId];
+            return expectedPrice && Math.abs(variant.price - expectedPrice) < 1;
+          });
+          if (allMatched) {
+            console.log("✅ All prices verified on server");
+            return true;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      } catch (error) {
+        console.error("Polling error:", error);
+        break;
+      }
+    }
+    console.log("⏰ Polling timeout reached");
+    return false;
+  }, [filteredProducts]);
   const handleSelectProduct = useCallback((productId, isSelected) => {
     const product = products.find((p) => p.id === productId);
     if (isSelected) {
@@ -12333,6 +12972,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     }
   }, [filteredProducts]);
   const handleMetalTypeChange = useCallback((productId, metalType) => {
+    if (metalType === "none") return;
     setProductMetalTypes((prev) => ({ ...prev, [productId]: metalType }));
     addSaved([productId]);
     const formData = new FormData();
@@ -12353,6 +12993,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     }
   }, [mu]);
   const handleCollectionMetalTypeChange = useCallback((collectionId, type) => {
+    if (type === "none") return;
     setCollectionMetalTypes((prev) => ({ ...prev, [collectionId]: type }));
     const fd = new FormData();
     fd.append("action", "saveCollectionSelection");
@@ -12444,8 +13085,9 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
         ...product,
         metalType,
         variants: product.variants.edges.map((edge) => {
+          var _a2;
           const variant = edge.node;
-          const currentPrice = parseFloat(variant.price);
+          const currentPrice = Number(((_a2 = variant.price) == null ? void 0 : _a2.amount) ?? 0);
           const newPrice = calculateNewPrice(currentPrice, priceData.ratio, minPriceRate / 100);
           return {
             ...variant,
@@ -12476,6 +13118,91 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
     );
     setShowPreview(false);
   }, [selectedProducts, goldPrice, platinumPrice, productMetalTypes, minPriceRate, updater]);
+  const handleManualProductSelect = useCallback((productId, isSelected) => {
+    if (isSelected) {
+      setManualSelectedProducts((prev) => [...prev, productId]);
+    } else {
+      setManualSelectedProducts((prev) => prev.filter((id) => id !== productId));
+    }
+  }, []);
+  const handleManualSelectAll = useCallback((isSelected) => {
+    if (isSelected) {
+      setManualSelectedProducts(filteredProducts.map((p) => p.id));
+    } else {
+      setManualSelectedProducts([]);
+    }
+  }, [filteredProducts]);
+  const executeManualPriceUpdate = useCallback(() => {
+    if (manualSelectedProducts.length === 0) return;
+    const adjustmentRatio = manualUpdateDirection === "plus" ? manualUpdatePercentage / 100 : -(manualUpdatePercentage / 100);
+    console.log("🚀 Starting manual price update:", { manualSelectedProducts, adjustmentRatio });
+    const optimisticUpdates = {};
+    manualSelectedProducts.forEach((productId) => {
+      var _a2, _b2;
+      const product = filteredProducts.find((p) => p.id === productId);
+      console.log("🔍 Product found for optimistic update:", { productId, product: product == null ? void 0 : product.title, variants: product == null ? void 0 : product.variants });
+      if (((_b2 = (_a2 = product == null ? void 0 : product.variants) == null ? void 0 : _a2.edges) == null ? void 0 : _b2.length) > 0) {
+        product.variants.edges.forEach(({ node: variant }) => {
+          const currentPrice = Math.round(Number(variant.price ?? 0));
+          function round10Yen(price, ratio, minRate = 0.93) {
+            const newP = price * (1 + ratio);
+            const minP = price * minRate;
+            const bounded = Math.max(newP, minP);
+            return ratio >= 0 ? Math.ceil(bounded / 10) * 10 : Math.floor(bounded / 10) * 10;
+          }
+          const newPrice = round10Yen(currentPrice, adjustmentRatio);
+          console.log("💰 Variant price calculation:", { variantId: variant.id, currentPrice, adjustmentRatio, newPrice });
+          optimisticUpdates[variant.id] = newPrice;
+        });
+      } else {
+        console.warn("⚠️ No variants found for product:", productId);
+      }
+    });
+    setOptimisticPrices((prev) => {
+      const newState = { ...prev, ...optimisticUpdates };
+      console.log("✨ Optimistic price updates applied:", {
+        previous: prev,
+        updates: optimisticUpdates,
+        newState
+      });
+      return newState;
+    });
+    updater.submit(
+      {
+        action: "manualUpdatePrices",
+        selectedProductIds: JSON.stringify(manualSelectedProducts),
+        adjustmentRatio: adjustmentRatio.toString()
+      },
+      { method: "post" }
+    );
+    const variantIds = Object.keys(optimisticUpdates).map((vid) => vid);
+    verifyVariantsOnServer(variantIds, optimisticUpdates).then((verified) => {
+      if (verified) {
+        console.log("✅ Server verification successful - extending TTL");
+        setTimeout(() => {
+          console.log("🔄 Clearing optimistic updates after verification");
+          setOptimisticPrices({});
+          ClientCache.clear(CACHE_KEYS.PRODUCTS);
+          revalidator.revalidate();
+        }, 6e4);
+      } else {
+        console.log("⚠️ Server verification failed - extending protection");
+        setTimeout(() => {
+          setOptimisticPrices({});
+        }, 5e3);
+      }
+    });
+    let countdown = 10;
+    setRefreshCountdown(countdown);
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      setRefreshCountdown(countdown);
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
+        setRefreshCountdown(0);
+      }
+    }, 1e3);
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, filteredProducts, revalidator]);
   return /* @__PURE__ */ jsx(
     Page,
     {
@@ -12512,32 +13239,32 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭小売価格（税込）" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.retailPriceFormatted })
-                  ] }),
+                  ] }, "gold-retail"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "小売価格前日比" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.change })
-                  ] }),
+                  ] }, "gold-change"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭買取価格（税込）" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.buyPriceFormatted || "取得失敗" })
-                  ] }),
+                  ] }, "gold-buy"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "買取価格前日比" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: goldPrice.buyChangePercent || "0.00%" })
-                  ] }),
+                  ] }, "gold-buy-change"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "価格調整率" }),
                     /* @__PURE__ */ jsxs("h4", { style: { color: "white", margin: "4px 0" }, children: [
                       goldPrice.percentage,
                       "%"
                     ] })
-                  ] })
+                  ] }, "gold-ratio")
                 ] }),
                 /* @__PURE__ */ jsx("div", { style: { marginTop: "12px" }, children: /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "11px" }, children: [
                   "出典: ",
                   /* @__PURE__ */ jsx("a", { href: "https://gold.tanaka.co.jp/commodity/souba/", target: "_blank", rel: "noopener noreferrer", style: { color: "white", textDecoration: "underline" }, children: "田中貴金属工業株式会社" })
                 ] }) }),
-                /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: [
+                /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "12px" }, suppressHydrationWarning: true, children: [
                   "最終更新: ",
                   new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
                 ] })
@@ -12557,32 +13284,32 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭小売価格（税込）" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.retailPriceFormatted })
-                  ] }),
+                  ] }, "platinum-retail"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "小売価格前日比" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.change })
-                  ] }),
+                  ] }, "platinum-change"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "店頭買取価格（税込）" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.buyPriceFormatted || "取得失敗" })
-                  ] }),
+                  ] }, "platinum-buy"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "買取価格前日比" }),
                     /* @__PURE__ */ jsx("h4", { style: { color: "white", margin: "4px 0" }, children: platinumPrice.buyChangePercent || "0.00%" })
-                  ] }),
+                  ] }, "platinum-buy-change"),
                   /* @__PURE__ */ jsxs("div", { children: [
                     /* @__PURE__ */ jsx("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: "価格調整率" }),
                     /* @__PURE__ */ jsxs("h4", { style: { color: "white", margin: "4px 0" }, children: [
                       platinumPrice.percentage,
                       "%"
                     ] })
-                  ] })
+                  ] }, "platinum-ratio")
                 ] }),
                 /* @__PURE__ */ jsx("div", { style: { marginTop: "12px" }, children: /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "11px" }, children: [
                   "出典: ",
                   /* @__PURE__ */ jsx("a", { href: "https://gold.tanaka.co.jp/commodity/souba/d-platinum.php", target: "_blank", rel: "noopener noreferrer", style: { color: "white", textDecoration: "underline" }, children: "田中貴金属工業株式会社" })
                 ] }) }),
-                /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "12px" }, children: [
+                /* @__PURE__ */ jsxs("p", { style: { color: "white", margin: 0, fontSize: "12px" }, suppressHydrationWarning: true, children: [
                   "最終更新: ",
                   new Date(platinumPrice.lastUpdated).toLocaleString("ja-JP")
                 ] })
@@ -12606,7 +13333,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
               }
             )
           ] }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", suppressHydrationWarning: true, children: [
             "最終更新: ",
             lastUpdated ? lastUpdated.toLocaleString("ja-JP") : "読み込み中...",
             isUsingCache && /* @__PURE__ */ jsx(Badge, { tone: "info", size: "small", children: "キャッシュ" })
@@ -12673,7 +13400,8 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   disabled: filteredProducts.length === 0,
                   size: "large",
                   children: "すべて選択"
-                }
+                },
+                "select-all"
               ),
               /* @__PURE__ */ jsx(
                 Button,
@@ -12682,7 +13410,8 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   disabled: selectedProducts.length === 0,
                   size: "large",
                   children: "選択解除"
-                }
+                },
+                "deselect-all"
               ),
               /* @__PURE__ */ jsxs(
                 Button,
@@ -12696,7 +13425,8 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                     selectedProducts.filter((p) => savedIdSet.has(p.id)).length,
                     " 件を解除"
                   ]
-                }
+                },
+                "bulk-unselect"
               ),
               /* @__PURE__ */ jsx(
                 Button,
@@ -12706,7 +13436,8 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   variant: "primary",
                   size: "large",
                   children: "選択を保存"
-                }
+                },
+                "save-selection"
               )
             ] }),
             selectedProducts.length > 0 && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
@@ -12767,13 +13498,13 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                 ] })
               ] })
             ] }),
-            /* @__PURE__ */ jsx(BlockStack, { gap: "200", children: selectedProducts.map((product) => {
+            /* @__PURE__ */ jsx(BlockStack, { gap: "200", children: selectedProducts.map((product, index) => {
               const metalType = productMetalTypes[product.id];
               return /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
                 /* @__PURE__ */ jsx("span", { style: { fontSize: "14px" }, children: metalType === "gold" ? "🥇" : metalType === "platinum" ? "🥈" : "⚠️" }),
                 /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: product.title }),
                 metalType ? /* @__PURE__ */ jsx(Badge, { tone: metalType === "gold" ? "warning" : "info", size: "small", children: metalType === "gold" ? "金価格" : "プラチナ価格" }) : /* @__PURE__ */ jsx(Badge, { tone: "critical", size: "small", children: "金属種別未選択" })
-              ] }, product.id);
+              ] }, `selected-${product.id}-${index}`);
             }) }),
             selectedProducts.filter((p) => !productMetalTypes[p.id]).length > 0 && /* @__PURE__ */ jsxs(Banner, { tone: "warning", children: [
               /* @__PURE__ */ jsx("strong", { children: "金属種別未選択の商品があります。" }),
@@ -12789,6 +13520,127 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             " の商品が自動更新対象として保存されています"
           ] }),
           ((_a = mu.data) == null ? void 0 : _a.message) && /* @__PURE__ */ jsx(Banner, { tone: "success", children: mu.data.message })
+        ] }) }) }),
+        /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
+          /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+            /* @__PURE__ */ jsx("h3", { children: "手動価格更新" }),
+            /* @__PURE__ */ jsx(Badge, { tone: "info", children: "金・プラチナ価格に関係なく手動で価格を調整" })
+          ] }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "400", wrap: true, children: [
+            /* @__PURE__ */ jsxs("div", { style: { minWidth: "120px" }, children: [
+              /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", children: "価格調整方向" }),
+              /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      id: "plus",
+                      name: "direction",
+                      value: "plus",
+                      checked: manualUpdateDirection === "plus",
+                      onChange: () => setManualUpdateDirection("plus")
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("label", { htmlFor: "plus", children: "+ 値上げ" })
+                ] }, "plus-radio"),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      id: "minus",
+                      name: "direction",
+                      value: "minus",
+                      checked: manualUpdateDirection === "minus",
+                      onChange: () => setManualUpdateDirection("minus")
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("label", { htmlFor: "minus", children: "- 値下げ" })
+                ] }, "minus-radio")
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
+              Select,
+              {
+                label: "調整率",
+                options: [
+                  { label: "0.1%", value: "0.1" },
+                  { label: "0.2%", value: "0.2" },
+                  { label: "0.3%", value: "0.3" },
+                  { label: "0.4%", value: "0.4" },
+                  { label: "0.5%", value: "0.5" },
+                  { label: "0.6%", value: "0.6" },
+                  { label: "0.7%", value: "0.7" },
+                  { label: "0.8%", value: "0.8" },
+                  { label: "0.9%", value: "0.9" },
+                  { label: "1.0%", value: "1.0" }
+                ],
+                value: manualUpdatePercentage.toString(),
+                onChange: (value) => setManualUpdatePercentage(parseFloat(value))
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", as: "p", tone: "subdued", children: [
+              "調整例: ",
+              manualUpdateDirection === "plus" ? "+" : "-",
+              manualUpdatePercentage,
+              "% （¥10,000 → ¥",
+              (1e4 * (1 + (manualUpdateDirection === "plus" ? manualUpdatePercentage : -manualUpdatePercentage) / 100)).toLocaleString(),
+              "）"
+            ] }) })
+          ] }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "300", children: [
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                onClick: () => handleManualSelectAll(true),
+                disabled: filteredProducts.length === 0,
+                children: "すべて選択"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                onClick: () => handleManualSelectAll(false),
+                disabled: manualSelectedProducts.length === 0,
+                children: "選択解除"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              Button,
+              {
+                onClick: executeManualPriceUpdate,
+                disabled: manualSelectedProducts.length === 0 || updater.state === "submitting",
+                variant: "primary",
+                tone: "critical",
+                loading: updater.state === "submitting",
+                children: updater.state === "submitting" ? "価格更新中..." : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
+              }
+            )
+          ] }),
+          manualSelectedProducts.length > 0 && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+            /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", as: "p", children: [
+              "選択中の商品 (",
+              manualSelectedProducts.length,
+              "件)"
+            ] }),
+            /* @__PURE__ */ jsx("div", { style: { maxHeight: "150px", overflowY: "auto" }, children: /* @__PURE__ */ jsx(BlockStack, { gap: "100", children: manualSelectedProducts.map((productId, index) => {
+              const product = products.find((p) => p.id === productId);
+              return product ? /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
+                /* @__PURE__ */ jsx(
+                  Checkbox$1,
+                  {
+                    checked: true,
+                    onChange: (checked) => handleManualProductSelect(productId, checked)
+                  }
+                ),
+                /* @__PURE__ */ jsxs("div", { style: { flex: 1 }, children: [
+                  /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: product.title }),
+                  /* @__PURE__ */ jsx(Text, { variant: "caption", tone: "subdued", children: productId })
+                ] })
+              ] }, `manual-${productId}-${index}`) : null;
+            }) }) })
+          ] }) })
         ] }) }) }),
         /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(Card, { children: [
           selectionType === "collections" && ((collections == null ? void 0 : collections.length) ?? 0) === 0 && /* @__PURE__ */ jsx(Banner, { tone: "info", children: "コレクションが見つかりません。" }),
@@ -12814,6 +13666,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
               },
               headings: selectionType === "products" ? [
                 { title: "選択" },
+                { title: "手動更新" },
                 { title: "商品名" },
                 { title: "ステータス" },
                 { title: "価格" },
@@ -12831,10 +13684,35 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                 var _a2;
                 const isSelected = selectedProducts.some((p) => p.id === product.id);
                 const variants = product.variants.edges;
-                const priceRange = variants.length > 1 ? `¥${Math.min(...variants.map((v) => parseFloat(v.node.price)))} - ¥${Math.max(...variants.map((v) => parseFloat(v.node.price)))}` : `¥${((_a2 = variants[0]) == null ? void 0 : _a2.node.price) || 0}`;
+                const now = Date.now();
+                const variantDisplayPrices = variants.map(({ node }) => {
+                  const vid = node.id;
+                  const overlay2 = priceOverlay[vid];
+                  if (overlay2 && overlay2.until > now) {
+                    return { price: overlay2.price, status: " (確定)" };
+                  }
+                  if (optimisticPrices[vid] != null) {
+                    return {
+                      price: optimisticPrices[vid],
+                      status: ` (更新中${refreshCountdown > 0 ? ` - ${refreshCountdown}秒後に確認` : ""})`
+                    };
+                  }
+                  return { price: Math.round(Number(node.price ?? 0)), status: "" };
+                });
+                const prices = variantDisplayPrices.map((v) => v.price);
+                const hasSpecialStatus = variantDisplayPrices.some((v) => v.status !== "");
+                const commonStatus = hasSpecialStatus ? ((_a2 = variantDisplayPrices.find((v) => v.status !== "")) == null ? void 0 : _a2.status) || "" : "";
+                const priceRange = variantDisplayPrices.length > 1 ? `¥${Math.min(...prices)} - ¥${Math.max(...prices)}${commonStatus}` : `¥${prices[0] ?? 0}${commonStatus}`;
+                if (hasSpecialStatus) {
+                  console.log(`🎯 Special price display for ${product.title}:`, {
+                    productId: product.id,
+                    variantDisplayPrices,
+                    finalDisplay: priceRange
+                  });
+                }
                 const metalType = productMetalTypes[product.id];
                 const isSaved = savedIdSet.has(product.id);
-                const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "";
+                const displayType = productMetalTypes[product.id] ?? savedTypeMap[product.id] ?? "none";
                 return /* @__PURE__ */ jsxs(
                   IndexTable.Row,
                   {
@@ -12845,6 +13723,13 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                         {
                           checked: isSelected,
                           onChange: (checked) => handleSelectProduct(product.id, checked)
+                        }
+                      ) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "80px", maxWidth: "80px", children: /* @__PURE__ */ jsx(
+                        Checkbox$1,
+                        {
+                          checked: manualSelectedProducts.includes(product.id),
+                          onChange: (checked) => handleManualProductSelect(product.id, checked)
                         }
                       ) }) }),
                       /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "480px", maxWidth: "720px", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "200", blockAlign: "center", children: [
@@ -12879,7 +13764,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                             label: "金属種別",
                             labelHidden: true,
                             options: [
-                              { label: "金属種別を選択...", value: "", disabled: true },
+                              { label: "金属種別を選択...", value: "none", disabled: true },
                               { label: "🥇 金価格", value: "gold" },
                               { label: "🥈 プラチナ価格", value: "platinum" }
                             ],
@@ -12889,7 +13774,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                             disabled: isSaved && !isSelected
                           }
                         ),
-                        !displayType && isSelected && !isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "critical", children: "※選択が必要です" }) }),
+                        displayType === "none" && isSelected && !isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "critical", children: "※選択が必要です" }) }),
                         isSaved && /* @__PURE__ */ jsx("div", { style: { marginTop: "4px" }, children: /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
                           /* @__PURE__ */ jsxs(Text, { variant: "bodySm", tone: "subdued", children: [
                             "保存済み設定",
@@ -12915,13 +13800,13 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                       ] }) : /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "-" }) }) })
                     ]
                   },
-                  product.id
+                  `product-${product.id}-${index}`
                 );
               }) : (
                 // コレクション表示モード
-                (collections == null ? void 0 : collections.map((collection) => {
+                (collections == null ? void 0 : collections.map((collection, index) => {
                   const isChecked = selectedCollections.includes(collection.id);
-                  const cType = collectionMetalTypes[collection.id] || "";
+                  const cType = collectionMetalTypes[collection.id] || "none";
                   return /* @__PURE__ */ jsxs(
                     IndexTable.Row,
                     {
@@ -12952,7 +13837,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                               children: collection.title
                             }
                           ) }),
-                          isChecked && cType && /* @__PURE__ */ jsx(Badge, { tone: cType === "gold" ? "warning" : "info", size: "small", children: cType === "gold" ? "金" : "Pt" })
+                          isChecked && cType && cType !== "none" && /* @__PURE__ */ jsx(Badge, { tone: cType === "gold" ? "warning" : "info", size: "small", children: cType === "gold" ? "金" : "Pt" })
                         ] }) }) }),
                         /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "120px", maxWidth: "160px", children: /* @__PURE__ */ jsxs(Badge, { tone: "info", children: [
                           collection.productsCount ?? "-",
@@ -12965,7 +13850,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                             label: "金属種別",
                             labelHidden: true,
                             options: [
-                              { label: "金属種別を選択...", value: "", disabled: true },
+                              { label: "金属種別を選択...", value: "none", disabled: true },
                               { label: "🥇 金価格", value: "gold" },
                               { label: "🥈 プラチナ価格", value: "platinum" }
                             ],
@@ -12976,7 +13861,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                         ) : /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "-" }) }) })
                       ]
                     },
-                    collection.id
+                    `collection-${collection.id}-${index}`
                   );
                 })) || []
               )
@@ -13001,12 +13886,12 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
               }
             ],
             large: true,
-            children: /* @__PURE__ */ jsx(Modal.Section, { children: /* @__PURE__ */ jsx(BlockStack, { gap: "400", children: pricePreview.map((product) => /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+            children: /* @__PURE__ */ jsx(Modal.Section, { children: /* @__PURE__ */ jsx(BlockStack, { gap: "400", children: pricePreview.map((product, index) => /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
               /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
                 /* @__PURE__ */ jsx("h4", { children: product.title }),
                 /* @__PURE__ */ jsx(Badge, { tone: product.metalType === "gold" ? "warning" : "info", children: product.metalType === "gold" ? "金価格" : "プラチナ価格" })
               ] }),
-              product.error ? /* @__PURE__ */ jsx(Banner, { tone: "critical", children: product.error }) : product.variants.map((variant) => /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
+              product.error ? /* @__PURE__ */ jsx(Banner, { tone: "critical", children: product.error }) : product.variants.map((variant, vIndex) => /* @__PURE__ */ jsxs(InlineStack, { align: "space-between", children: [
                 /* @__PURE__ */ jsx("span", { children: variant.title || "デフォルト" }),
                 /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
                   /* @__PURE__ */ jsxs("span", { children: [
@@ -13021,8 +13906,8 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                     "円"
                   ] })
                 ] })
-              ] }, variant.id))
-            ] }) }, product.id)) }) })
+              ] }, `variant-${variant.id}-${vIndex}`))
+            ] }) }, `preview-${product.id}-${index}`)) }) })
           }
         ),
         ((_b = updater.data) == null ? void 0 : _b.updateResults) && /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "400", children: [
@@ -13052,9 +13937,9 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
               Banner,
               {
                 tone: result.success ? "success" : "critical",
-                children: result.success ? `Variant ${result.variantId}: ¥${(_a2 = result.oldPrice) == null ? void 0 : _a2.toLocaleString()} → ¥${(_b2 = result.newPrice) == null ? void 0 : _b2.toLocaleString()}` : `Product ${result.productId} / Variant ${result.variantId}: ${result.error}`
+                children: result.success ? `${result.productTitle} ${result.variantTitle ? `(${result.variantTitle})` : ""}: ¥${(_a2 = result.oldPrice) == null ? void 0 : _a2.toLocaleString()} → ¥${(_b2 = result.newPrice) == null ? void 0 : _b2.toLocaleString()} ${result.adjustmentRatio ? `(${result.adjustmentRatio > 0 ? "+" : ""}${(result.adjustmentRatio * 100).toFixed(1)}%)` : ""}` : `Product ${result.productId} / Variant ${result.variantId}: ${result.error}`
               },
-              index
+              `result-${index}-${result.variantId || result.productId}`
             );
           })
         ] }) }) })
@@ -13116,7 +14001,7 @@ function Products() {
                 ] }),
                 "（この変動率で商品価格を自動調整します）"
               ] }) }),
-              /* @__PURE__ */ jsxs("p", { children: [
+              /* @__PURE__ */ jsxs("p", { suppressHydrationWarning: true, children: [
                 "最終更新: ",
                 new Date(goldPrice.lastUpdated).toLocaleString("ja-JP")
               ] })
@@ -13152,20 +14037,22 @@ function Products() {
     }
   );
 }
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
-  loader: loader$3
+  headers,
+  loader: loader$3,
+  shouldRevalidate
 }, Symbol.toStringTag, { value: "Module" }));
 async function loader$2({ request }) {
   const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const shop2 = session.shop;
   const setting = await prisma$1.shopSetting.upsert({
-    where: { shopDomain: shop },
+    where: { shopDomain: shop2 },
     update: {},
     create: {
-      shopDomain: shop,
+      shopDomain: shop2,
       minPricePct: 93,
       autoUpdateEnabled: false
     }
@@ -13174,20 +14061,20 @@ async function loader$2({ request }) {
 }
 async function action({ request }) {
   const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const shop2 = session.shop;
   const form = await request.formData();
   const autoUpdateEnabled = form.get("autoUpdateEnabled") === "true";
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
   const notificationEmail = String(form.get("notificationEmail") || "");
   await prisma$1.shopSetting.upsert({
-    where: { shopDomain: shop },
+    where: { shopDomain: shop2 },
     update: {
       autoUpdateEnabled,
       minPricePct,
       notificationEmail: notificationEmail || null
     },
     create: {
-      shopDomain: shop,
+      shopDomain: shop2,
       autoUpdateEnabled,
       minPricePct,
       notificationEmail: notificationEmail || null
@@ -13403,7 +14290,7 @@ function Settings() {
     }
   );
 }
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -13411,6 +14298,12 @@ const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 }, Symbol.toStringTag, { value: "Module" }));
 const loader$1 = async ({ request }) => {
   var _a;
+  console.log("🔍 DEBUG INFO:", {
+    host: request.headers.get("x-forwarded-host") || request.headers.get("host"),
+    SHOPIFY_APP_URL: process.env.SHOPIFY_APP_URL,
+    NODE_ENV: "production",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
   const { session } = await authenticate.admin(request);
   try {
     const [goldData, platinumData] = await Promise.all([
@@ -13464,12 +14357,17 @@ const loader$1 = async ({ request }) => {
       recentLogs
     });
   } catch (error) {
-    console.error("Dashboard loader error:", error);
+    AppErrorHandler.logError(error, {
+      route: "app._index",
+      shop: session == null ? void 0 : session.shop
+    });
     return json({
       goldPrice: null,
       platinumPrice: null,
       stats: { selectedProducts: 0, totalLogs: 0, lastExecution: null, autoScheduleEnabled: false },
-      recentLogs: []
+      recentLogs: [],
+      error: void 0,
+      fallback: true
     });
   }
 };
@@ -13653,22 +14551,22 @@ function Dashboard() {
     }
   );
 }
-const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
 }, Symbol.toStringTag, { value: "Module" }));
 async function loader({ request }) {
   const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const shop2 = session.shop;
   const [logs, stats] = await Promise.all([
     prisma$1.priceUpdateLog.findMany({
-      where: { shopDomain: shop },
+      where: { shopDomain: shop2 },
       orderBy: { executedAt: "desc" },
       take: 100
     }),
     prisma$1.priceUpdateLog.aggregate({
-      where: { shopDomain: shop },
+      where: { shopDomain: shop2 },
       _count: { id: true },
       _sum: {
         totalProducts: true,
@@ -13871,12 +14769,12 @@ function Logs() {
     }
   );
 }
-const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-DNNwq_w0.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-CVBRsg5v.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BwFMzU7C.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-nbaoxDqu.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-27f49521.js", "version": "27f49521" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-CQuVi9j9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-CVBRsg5v.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BwFMzU7C.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-nbaoxDqu.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-674f10ac.js", "version": "674f10ac" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -13925,13 +14823,21 @@ const routes = {
     caseSensitive: void 0,
     module: route4
   },
+  "routes/api.debug.manual-update": {
+    id: "routes/api.debug.manual-update",
+    parentId: "root",
+    path: "api/debug/manual-update",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route5
+  },
   "routes/api.nextengine.callback": {
     id: "routes/api.nextengine.callback",
     parentId: "root",
     path: "api/nextengine/callback",
     index: void 0,
     caseSensitive: void 0,
-    module: route5
+    module: route6
   },
   "routes/webhooks.shop.redact": {
     id: "routes/webhooks.shop.redact",
@@ -13939,7 +14845,15 @@ const routes = {
     path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
+    module: route7
+  },
+  "routes/api.verify-variants": {
+    id: "routes/api.verify-variants",
+    parentId: "root",
+    path: "api/verify-variants",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route8
   },
   "routes/api.test-email": {
     id: "routes/api.test-email",
@@ -13947,7 +14861,31 @@ const routes = {
     path: "api/test-email",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route9
+  },
+  "routes/api.debug-env": {
+    id: "routes/api.debug-env",
+    parentId: "root",
+    path: "api/debug-env",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route10
+  },
+  "routes/api.variants": {
+    id: "routes/api.variants",
+    parentId: "root",
+    path: "api/variants",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route11
+  },
+  "routes/api.health": {
+    id: "routes/api.health",
+    parentId: "root",
+    path: "api/health",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route12
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -13955,7 +14893,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route13
   },
   "routes/api.cron": {
     id: "routes/api.cron",
@@ -13963,7 +14901,7 @@ const routes = {
     path: "api/cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route9
+    module: route14
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -13971,7 +14909,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route10
+    module: route15
   },
   "routes/_index": {
     id: "routes/_index",
@@ -13979,7 +14917,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route11
+    module: route16
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -13987,7 +14925,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route17
   },
   "routes/app": {
     id: "routes/app",
@@ -13995,7 +14933,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route18
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -14003,7 +14941,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route19
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -14011,7 +14949,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route15
+    module: route20
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -14019,7 +14957,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route16
+    module: route21
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -14027,7 +14965,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route17
+    module: route22
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -14035,7 +14973,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route18
+    module: route23
   }
 };
 export {

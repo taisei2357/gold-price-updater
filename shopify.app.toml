@@ -2,30 +2,30 @@
 
 client_id = "2f40bebdf8ef160d9aa4cf3f915a6a75"
 name = "gold-price-updater-2024"
-handle = "gold-price-updater-2024"
 application_url = "https://gold-price-updater-pb8o.vercel.app"
 embedded = true
+handle = "gold-price-updater-2024"
 
 [build]
-automatically_update_urls_on_dev = false  # CLI使わない運用のためfalse
+automatically_update_urls_on_dev = false
 
 [webhooks]
 api_version = "2025-01"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
-
-  [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = ["https://gold-price-updater-pb8o.vercel.app/auth/callback"]
+redirect_urls = [ "https://gold-price-updater-pb8o.vercel.app/auth/callback" ]
 
 [pos]
 embedded = false
