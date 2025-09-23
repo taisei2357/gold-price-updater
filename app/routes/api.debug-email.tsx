@@ -12,13 +12,17 @@ export const loader: LoaderFunction = async ({ request }) => {
     console.log('SENDGRID_API_KEY exists:', !!process.env.SENDGRID_API_KEY);
     console.log('NOTIFICATION_EMAIL_FROM:', process.env.NOTIFICATION_EMAIL_FROM);
     
-    // テストメール送信を試行
+    // テストメール送信を試行し、詳細結果を取得
     const result = await sendTestEmail(email);
+    
+    console.log('SendGrid test result:', result);
     
     return json({
       success: result.success,
       error: result.error,
+      messageId: result.messageId,
       email,
+      fromAddress: process.env.NOTIFICATION_EMAIL_FROM || 't.takei@irisht.jp',
       environment: {
         hasApiKey: !!process.env.SENDGRID_API_KEY,
         fromEmail: process.env.NOTIFICATION_EMAIL_FROM,
