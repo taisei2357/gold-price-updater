@@ -2,15 +2,22 @@
 
 // SendGrid HTTP APIでメール送信
 async function sendViaSendGrid(to: string, subject: string, html: string, text: string) {
+  const API_KEY = process.env.SENDGRID_API_KEY;
+  const FROM_EMAIL = process.env.NOTIFICATION_EMAIL_FROM || 'noreply@irisht.jp';
+  
+  if (!API_KEY) {
+    throw new Error('SendGrid API Key が設定されていません');
+  }
+  
   const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+      'Authorization': `Bearer ${API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com' },
+      from: { email: FROM_EMAIL, name: 'アイリス金価格自動更新' },
       subject,
       content: [
         { type: 'text/plain', value: text },
@@ -20,8 +27,9 @@ async function sendViaSendGrid(to: string, subject: string, html: string, text: 
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`SendGrid API error: ${response.status} - ${error}`);
+    const errorBody = await response.text();
+    console.error('SendGrid API エラー詳細:', errorBody);
+    throw new Error(`SendGrid API error: ${response.status} - ${errorBody}`);
   }
 
   return { messageId: response.headers.get('x-message-id') || 'sendgrid-sent' };
@@ -138,20 +146,26 @@ ${data.failedCount > 0 ? `\n⚠️ ${data.failedCount}件の商品で更新に�
 詳細な結果は管理画面の「ログ」ページでご確認ください。
     `;
 
-    // メール送信（優先順位: Resend > SendGrid > コンソール出力）
+    // メール送信（優先順位: SendGrid > Resend > コンソール出力）
     let result;
     
-    if (process.env.RESEND_API_KEY) {
-      result = await sendViaResend(toEmail, subject, htmlContent, textContent);
-    } else if (process.env.SENDGRID_API_KEY) {
+    // SendGridを優先使用
+    try {
       result = await sendViaSendGrid(toEmail, subject, htmlContent, textContent);
-    } else {
-      // 開発環境用（コンソール出力のみ）
-      console.log('📧 [開発モード] メール通知:');
-      console.log(`宛先: ${toEmail}`);
-      console.log(`件名: ${subject}`);
-      console.log(`本文:\n${textContent}`);
-      result = { messageId: 'console-output' };
+      console.log('✅ SendGrid経由でメール送信成功');
+    } catch (error) {
+      console.log('⚠️ SendGrid送信失敗、Resendを試行:', (error as Error).message);
+      
+      if (process.env.RESEND_API_KEY) {
+        result = await sendViaResend(toEmail, subject, htmlContent, textContent);
+      } else {
+        // フォールバック（コンソール出力のみ）
+        console.log('📧 [フォールバックモード] メール通知:');
+        console.log(`宛先: ${toEmail}`);
+        console.log(`件名: ${subject}`);
+        console.log(`本文:\n${textContent}`);
+        result = { messageId: 'console-fallback' };
+      }
     }
     
     console.log(`📧 通知メール送信成功: ${toEmail} (MessageID: ${result.messageId})`);
