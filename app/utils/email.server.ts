@@ -3,7 +3,7 @@
 // SendGrid HTTP APIでメール送信
 async function sendViaSendGrid(to: string, subject: string, html: string, text: string) {
   const API_KEY = process.env.SENDGRID_API_KEY;
-  const FROM_EMAIL = process.env.NOTIFICATION_EMAIL_FROM || 'noreply@irisht.jp';
+  const FROM_EMAIL = process.env.NOTIFICATION_EMAIL_FROM || 't.takei@irisht.jp';
   
   if (!API_KEY) {
     throw new Error('SendGrid API Key が設定されていません');
@@ -17,7 +17,7 @@ async function sendViaSendGrid(to: string, subject: string, html: string, text: 
     },
     body: JSON.stringify({
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: FROM_EMAIL, name: 'アイリス金価格自動更新' },
+      from: { email: FROM_EMAIL, name: 'アイリスヘルスケアテクノロジー' },
       subject,
       content: [
         { type: 'text/plain', value: text },
