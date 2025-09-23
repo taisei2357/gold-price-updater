@@ -242,14 +242,23 @@ export default function Settings() {
               <Divider />
               
               <FormLayout>
-                <TextField
-                  label="通知メールアドレス（任意）"
-                  type="email"
-                  value={notificationEmail}
-                  onChange={setNotificationEmail}
-                  placeholder="you@example.com, admin@example.com"
-                  helpText="設定すると自動更新の結果がメールで通知されます。複数のメールアドレスを設定する場合は,（カンマ）で区切ってください。"
-                />
+                <BlockStack gap="300">
+                  <Banner tone="info">
+                    <BlockStack gap="100">
+                      <Text fontWeight="medium">📧 複数メールアドレス対応</Text>
+                      <Text>複数のメールアドレスに通知を送る場合は、カンマ（,）で区切って入力してください。例: admin@example.com, manager@example.com</Text>
+                    </BlockStack>
+                  </Banner>
+                  
+                  <TextField
+                    label="通知メールアドレス（任意）"
+                    type="email"
+                    value={notificationEmail}
+                    onChange={setNotificationEmail}
+                    placeholder="you@example.com, admin@example.com"
+                    helpText="設定すると自動更新の結果がメールで通知されます"
+                  />
+                </BlockStack>
                 
                 {notificationEmail && (
                   <InlineStack gap="200" align="start">
