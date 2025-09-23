@@ -169,32 +169,31 @@ ${data.failedCount > 0 ? `\n⚠️ ${data.failedCount}件の商品で更新に�
     `;
 
     // メール送信（優先順位: SendGrid > Resend > コンソール出力）
-    let result;
     
     // 各メールアドレスに順次送信
     for (const email of emailList) {
       try {
-        let result;
+        let emailResult;
         
         // SendGridを優先使用
         try {
-          result = await sendViaSendGrid(email, subject, htmlContent, textContent);
+          emailResult = await sendViaSendGrid(email, subject, htmlContent, textContent);
           console.log(`✅ SendGrid経由でメール送信成功: ${email}`);
         } catch (error) {
           console.log(`⚠️ SendGrid送信失敗 (${email}), Resendを試行:`, (error as Error).message);
           
           if (process.env.RESEND_API_KEY) {
-            result = await sendViaResend(email, subject, htmlContent, textContent);
+            emailResult = await sendViaResend(email, subject, htmlContent, textContent);
           } else {
             // フォールバック（コンソール出力のみ）
             console.log(`📧 [フォールバックモード] メール通知: ${email}`);
             console.log(`件名: ${subject}`);
-            result = { messageId: 'console-fallback' };
+            emailResult = { messageId: 'console-fallback' };
           }
         }
         
         successCount++;
-        lastMessageId = result.messageId;
+        lastMessageId = emailResult.messageId;
         
         // SendGrid API制限対策（1秒間隔）
         if (emailList.length > 1) {
@@ -209,7 +208,7 @@ ${data.failedCount > 0 ? `\n⚠️ ${data.failedCount}件の商品で更新に�
     }
     
     const allSuccess = successCount === emailList.length;
-    const result = {
+    const finalResult = {
       success: allSuccess,
       messageId: lastMessageId,
       sentCount: successCount,
@@ -218,7 +217,7 @@ ${data.failedCount > 0 ? `\n⚠️ ${data.failedCount}件の商品で更新に�
     
     console.log(`📧 メール送信完了: ${successCount}/${emailList.length}件成功`);
     
-    return result;
+    return finalResult;
 
   } catch (error) {
     console.error('📧 メール送信エラー:', error);
