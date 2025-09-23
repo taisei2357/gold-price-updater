@@ -247,8 +247,8 @@ export default function Settings() {
                   type="email"
                   value={notificationEmail}
                   onChange={setNotificationEmail}
-                  placeholder="you@example.com"
-                  helpText="設定すると自動更新の結果がメールで通知されます"
+                  placeholder="you@example.com, admin@example.com"
+                  helpText="設定すると自動更新の結果がメールで通知されます。複数のメールアドレスを設定する場合は,（カンマ）で区切ってください。"
                 />
                 
                 {notificationEmail && (

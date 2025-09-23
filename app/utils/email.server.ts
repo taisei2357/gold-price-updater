@@ -71,15 +71,37 @@ export interface PriceUpdateEmailData {
   details?: any[];
 }
 
-// 価格更新完了メールを送信
-export async function sendPriceUpdateNotification(
-  toEmail: string, 
-  data: PriceUpdateEmailData
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+// 複数メールアドレスを解析
+function parseEmailAddresses(emailString: string): string[] {
+  if (!emailString) return [];
   
-  if (!toEmail) {
+  return emailString
+    .split(',')
+    .map(email => email.trim())
+    .filter(email => email.length > 0 && email.includes('@'));
+}
+
+// 価格更新完了メールを送信（複数アドレス対応）
+export async function sendPriceUpdateNotification(
+  toEmails: string, 
+  data: PriceUpdateEmailData
+): Promise<{ success: boolean; messageId?: string; error?: string; sentCount?: number }> {
+  
+  if (!toEmails) {
     return { success: false, error: 'メールアドレスが設定されていません' };
   }
+
+  const emailList = parseEmailAddresses(toEmails);
+  
+  if (emailList.length === 0) {
+    return { success: false, error: '有効なメールアドレスが見つかりません' };
+  }
+
+  console.log(`📧 ${emailList.length}件のメールアドレスに送信: ${emailList.join(', ')}`);
+  
+  let successCount = 0;
+  let errors: string[] = [];
+  let lastMessageId = '';
 
   try {
     
@@ -149,28 +171,54 @@ ${data.failedCount > 0 ? `\n⚠️ ${data.failedCount}件の商品で更新に�
     // メール送信（優先順位: SendGrid > Resend > コンソール出力）
     let result;
     
-    // SendGridを優先使用
-    try {
-      result = await sendViaSendGrid(toEmail, subject, htmlContent, textContent);
-      console.log('✅ SendGrid経由でメール送信成功');
-    } catch (error) {
-      console.log('⚠️ SendGrid送信失敗、Resendを試行:', (error as Error).message);
-      
-      if (process.env.RESEND_API_KEY) {
-        result = await sendViaResend(toEmail, subject, htmlContent, textContent);
-      } else {
-        // フォールバック（コンソール出力のみ）
-        console.log('📧 [フォールバックモード] メール通知:');
-        console.log(`宛先: ${toEmail}`);
-        console.log(`件名: ${subject}`);
-        console.log(`本文:\n${textContent}`);
-        result = { messageId: 'console-fallback' };
+    // 各メールアドレスに順次送信
+    for (const email of emailList) {
+      try {
+        let result;
+        
+        // SendGridを優先使用
+        try {
+          result = await sendViaSendGrid(email, subject, htmlContent, textContent);
+          console.log(`✅ SendGrid経由でメール送信成功: ${email}`);
+        } catch (error) {
+          console.log(`⚠️ SendGrid送信失敗 (${email}), Resendを試行:`, (error as Error).message);
+          
+          if (process.env.RESEND_API_KEY) {
+            result = await sendViaResend(email, subject, htmlContent, textContent);
+          } else {
+            // フォールバック（コンソール出力のみ）
+            console.log(`📧 [フォールバックモード] メール通知: ${email}`);
+            console.log(`件名: ${subject}`);
+            result = { messageId: 'console-fallback' };
+          }
+        }
+        
+        successCount++;
+        lastMessageId = result.messageId;
+        
+        // SendGrid API制限対策（1秒間隔）
+        if (emailList.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+      } catch (emailError) {
+        const errorMsg = `${email}: ${(emailError as Error).message}`;
+        console.error(`📧 メール送信エラー: ${errorMsg}`);
+        errors.push(errorMsg);
       }
     }
     
-    console.log(`📧 通知メール送信成功: ${toEmail} (MessageID: ${result.messageId})`);
+    const allSuccess = successCount === emailList.length;
+    const result = {
+      success: allSuccess,
+      messageId: lastMessageId,
+      sentCount: successCount,
+      ...(errors.length > 0 && { error: `一部送信失敗: ${errors.join(', ')}` })
+    };
     
-    return { success: true, messageId: result.messageId };
+    console.log(`📧 メール送信完了: ${successCount}/${emailList.length}件成功`);
+    
+    return result;
 
   } catch (error) {
     console.error('📧 メール送信エラー:', error);
