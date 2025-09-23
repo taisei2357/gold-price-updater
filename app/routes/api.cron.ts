@@ -615,7 +615,7 @@ async function updateShopPrices(shop: string, accessToken: string) {
   }
 }
 
-// 祝日判定機能は削除（相場変動チェックで代替）
+// 祝日判定機能を実装済み（scheduler.server.tsを使用）
 
 // 共通の自動更新ロジック（GET/POST両方から使用）
 async function runAllShops(opts: { force?: boolean } = {}) {
@@ -628,10 +628,23 @@ async function runAllShops(opts: { force?: boolean } = {}) {
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JSTに調整
     const currentHour = jstNow.getHours();
     
-    // 土日のみスキップ（祝日は相場変動チェックで対応）
+    // 土日・祝日スキップ
     const dayOfWeek = jstNow.getDay(); // 0=日曜, 6=土曜
     if (!force && (dayOfWeek === 0 || dayOfWeek === 6)) {
       const message = `${jstNow.toDateString()}は土日のため価格更新をスキップします`;
+      console.log(message);
+      return {
+        message,
+        timestamp: new Date().toISOString(),
+        summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+        shops: []
+      };
+    }
+
+    // 祝日チェック（追加）
+    const { isJapanHolidayJST } = await import('../models/scheduler.server');
+    if (!force && isJapanHolidayJST(jstNow)) {
+      const message = `${jstNow.toDateString()}は日本の祝日のため価格更新をスキップします`;
       console.log(message);
       return {
         message,
