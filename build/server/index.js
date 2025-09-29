@@ -9913,11 +9913,11 @@ const action$a = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$e = () => new Response(null, { status: 405 });
+const loader$i = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$a,
-  loader: loader$e
+  loader: loader$i
 }, Symbol.toStringTag, { value: "Module" }));
 const action$9 = async ({ request }) => {
   const { payload, session, topic, shop: shop2 } = await authenticate.webhook(request);
@@ -9942,7 +9942,7 @@ const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$a,
-  loader: loader$e
+  loader: loader$i
 }, Symbol.toStringTag, { value: "Module" }));
 const action$8 = async ({ request }) => {
   const { shop: shop2, session, topic } = await authenticate.webhook(request);
@@ -10053,7 +10053,7 @@ const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   __proto__: null,
   action: action$7
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$d = async ({ request }) => {
+const loader$h = async ({ request }) => {
   const url = new URL(request.url);
   const uid = url.searchParams.get("uid");
   const state = url.searchParams.get("state");
@@ -10099,86 +10099,23 @@ const loader$d = async ({ request }) => {
 };
 const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$d
-}, Symbol.toStringTag, { value: "Module" }));
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$a,
-  loader: loader$e
-}, Symbol.toStringTag, { value: "Module" }));
-async function action$6({ request }) {
-  var _a, _b;
-  const { admin } = await authenticate.admin(request);
-  const { variantIds, expectedPrices } = await request.json();
-  if (!variantIds || variantIds.length === 0) {
-    return json({ verified: false, error: "No variant IDs provided" });
-  }
-  try {
-    const response = await admin.graphql(`
-      query VerifyVariants($ids: [ID!]!) {
-        nodes(ids: $ids) {
-          ... on ProductVariant {
-            id
-            price
-            updatedAt
-          }
-        }
-      }
-    `, { variables: { ids: variantIds } });
-    const data = await response.json();
-    if (data.errors) {
-      console.error("GraphQL verification errors:", data.errors);
-      return json({ verified: false, error: (_a = data.errors[0]) == null ? void 0 : _a.message });
-    }
-    const variants = ((_b = data.data) == null ? void 0 : _b.nodes) || [];
-    const verified = variants.every((variant) => {
-      if (!variant) return false;
-      const currentPrice = Number(variant.price ?? 0);
-      const expectedPrice = expectedPrices[variant.id];
-      const matches2 = currentPrice === expectedPrice;
-      console.log(`🔍 Verification for ${variant.id}:`, {
-        current: currentPrice,
-        expected: expectedPrice,
-        matches: matches2
-      });
-      return matches2;
-    });
-    return json({
-      verified,
-      variants: variants.map((v) => ({
-        id: v.id,
-        currentPrice: Number(v.price ?? 0),
-        expectedPrice: expectedPrices[v.id],
-        updatedAt: v.updatedAt
-      }))
-    }, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
-    });
-  } catch (error) {
-    console.error("Variant verification error:", error);
-    return json({
-      verified: false,
-      error: error.message
-    }, {
-      status: 500,
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
-    });
-  }
-}
-const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  action: action$6
+  loader: loader$h
 }, Symbol.toStringTag, { value: "Module" }));
 async function sendViaSendGrid(to, subject, html, text) {
+  const API_KEY = process.env.SENDGRID_API_KEY;
+  const FROM_EMAIL = process.env.NOTIFICATION_EMAIL_FROM || "t.takei@irisht.jp";
+  if (!API_KEY) {
+    throw new Error("SendGrid API Key が設定されていません");
+  }
   const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${process.env.SENDGRID_API_KEY}`,
+      "Authorization": `Bearer ${API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: process.env.SENDGRID_FROM_EMAIL || "noreply@example.com" },
+      from: { email: FROM_EMAIL, name: "アイリスヘルスケアテクノロジー" },
       subject,
       content: [
         { type: "text/plain", value: text },
@@ -10187,8 +10124,9 @@ async function sendViaSendGrid(to, subject, html, text) {
     })
   });
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`SendGrid API error: ${response.status} - ${error}`);
+    const errorBody = await response.text();
+    console.error("SendGrid API エラー詳細:", errorBody);
+    throw new Error(`SendGrid API error: ${response.status} - ${errorBody}`);
   }
   return { messageId: response.headers.get("x-message-id") || "sendgrid-sent" };
 }
@@ -10214,10 +10152,22 @@ async function sendViaResend(to, subject, html, text) {
   const result = await response.json();
   return { messageId: result.id };
 }
-async function sendPriceUpdateNotification(toEmail, data) {
-  if (!toEmail) {
+function parseEmailAddresses(emailString) {
+  if (!emailString) return [];
+  return emailString.split(",").map((email) => email.trim()).filter((email) => email.length > 0 && email.includes("@"));
+}
+async function sendPriceUpdateNotification(toEmails, data) {
+  if (!toEmails) {
     return { success: false, error: "メールアドレスが設定されていません" };
   }
+  const emailList = parseEmailAddresses(toEmails);
+  if (emailList.length === 0) {
+    return { success: false, error: "有効なメールアドレスが見つかりません" };
+  }
+  console.log(`📧 ${emailList.length}件のメールアドレスに送信: ${emailList.join(", ")}`);
+  let successCount = 0;
+  let errors = [];
+  let lastMessageId = "";
   try {
     const subject = `[${data.shopDomain}] 価格自動更新完了 - ${data.updatedCount}件更新`;
     const htmlContent = `
@@ -10282,21 +10232,42 @@ ${data.failedCount > 0 ? `
 ` : ""}
 詳細な結果は管理画面の「ログ」ページでご確認ください。
     `;
-    let result;
-    if (process.env.RESEND_API_KEY) {
-      result = await sendViaResend(toEmail, subject, htmlContent, textContent);
-    } else if (process.env.SENDGRID_API_KEY) {
-      result = await sendViaSendGrid(toEmail, subject, htmlContent, textContent);
-    } else {
-      console.log("📧 [開発モード] メール通知:");
-      console.log(`宛先: ${toEmail}`);
-      console.log(`件名: ${subject}`);
-      console.log(`本文:
-${textContent}`);
-      result = { messageId: "console-output" };
+    for (const email of emailList) {
+      try {
+        let emailResult;
+        try {
+          emailResult = await sendViaSendGrid(email, subject, htmlContent, textContent);
+          console.log(`✅ SendGrid経由でメール送信成功: ${email}`);
+        } catch (error) {
+          console.log(`⚠️ SendGrid送信失敗 (${email}), Resendを試行:`, error.message);
+          if (process.env.RESEND_API_KEY) {
+            emailResult = await sendViaResend(email, subject, htmlContent, textContent);
+          } else {
+            console.log(`📧 [フォールバックモード] メール通知: ${email}`);
+            console.log(`件名: ${subject}`);
+            emailResult = { messageId: "console-fallback" };
+          }
+        }
+        successCount++;
+        lastMessageId = emailResult.messageId;
+        if (emailList.length > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1e3));
+        }
+      } catch (emailError) {
+        const errorMsg = `${email}: ${emailError.message}`;
+        console.error(`📧 メール送信エラー: ${errorMsg}`);
+        errors.push(errorMsg);
+      }
     }
-    console.log(`📧 通知メール送信成功: ${toEmail} (MessageID: ${result.messageId})`);
-    return { success: true, messageId: result.messageId };
+    const allSuccess = successCount === emailList.length;
+    const finalResult = {
+      success: allSuccess,
+      messageId: lastMessageId,
+      sentCount: successCount,
+      ...errors.length > 0 && { error: `一部送信失敗: ${errors.join(", ")}` }
+    };
+    console.log(`📧 メール送信完了: ${successCount}/${emailList.length}件成功`);
+    return finalResult;
   } catch (error) {
     console.error("📧 メール送信エラー:", error);
     return {
@@ -10319,26 +10290,369 @@ async function sendTestEmail(toEmail) {
   };
   return await sendPriceUpdateNotification(toEmail, testData);
 }
+const loader$g = async ({ request }) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const shop2 = session.shop;
+    console.log("=== Shop Email Debug ===");
+    console.log("Shop domain:", shop2);
+    const setting = await prisma$1.shopSetting.findUnique({
+      where: { shopDomain: shop2 },
+      select: { notificationEmail: true, autoUpdateEnabled: true, minPricePct: true }
+    });
+    console.log("Shop setting:", setting);
+    const email = setting == null ? void 0 : setting.notificationEmail;
+    console.log("Configured email address:", email);
+    if (!email) {
+      return json({
+        success: false,
+        error: "通知メールアドレスが設定されていません",
+        shop: shop2,
+        setting
+      });
+    }
+    const result = await sendTestEmail(email);
+    console.log("Test email result:", result);
+    return json({
+      success: result.success,
+      error: result.error,
+      messageId: result.messageId,
+      targetEmail: email,
+      shop: shop2,
+      setting,
+      fromAddress: process.env.NOTIFICATION_EMAIL_FROM || "t.takei@irisht.jp"
+    });
+  } catch (error) {
+    console.error("Shop email debug error:", error);
+    return json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+};
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$g
+}, Symbol.toStringTag, { value: "Module" }));
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$a,
+  loader: loader$i
+}, Symbol.toStringTag, { value: "Module" }));
+async function action$6({ request }) {
+  var _a, _b;
+  const { admin } = await authenticate.admin(request);
+  const { variantIds, expectedPrices } = await request.json();
+  if (!variantIds || variantIds.length === 0) {
+    return json({ verified: false, error: "No variant IDs provided" });
+  }
+  try {
+    const response = await admin.graphql(`
+      query VerifyVariants($ids: [ID!]!) {
+        nodes(ids: $ids) {
+          ... on ProductVariant {
+            id
+            price
+            updatedAt
+          }
+        }
+      }
+    `, { variables: { ids: variantIds } });
+    const data = await response.json();
+    if (data.errors) {
+      console.error("GraphQL verification errors:", data.errors);
+      return json({ verified: false, error: (_a = data.errors[0]) == null ? void 0 : _a.message });
+    }
+    const variants = ((_b = data.data) == null ? void 0 : _b.nodes) || [];
+    const verified = variants.every((variant) => {
+      if (!variant) return false;
+      const currentPrice = Number(variant.price ?? 0);
+      const expectedPrice = expectedPrices[variant.id];
+      const matches2 = currentPrice === expectedPrice;
+      console.log(`🔍 Verification for ${variant.id}:`, {
+        current: currentPrice,
+        expected: expectedPrice,
+        matches: matches2
+      });
+      return matches2;
+    });
+    return json({
+      verified,
+      variants: variants.map((v) => ({
+        id: v.id,
+        currentPrice: Number(v.price ?? 0),
+        expectedPrice: expectedPrices[v.id],
+        updatedAt: v.updatedAt
+      }))
+    }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  } catch (error) {
+    console.error("Variant verification error:", error);
+    return json({
+      verified: false,
+      error: error.message
+    }, {
+      status: 500,
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+    });
+  }
+}
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$6
+}, Symbol.toStringTag, { value: "Module" }));
+async function loader$f({ request }) {
+  const html = `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プライバシーポリシー - 金価格自動更新アプリ</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        h3 {
+            color: #7f8c8d;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        ul {
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .contact-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .effective-date {
+            text-align: right;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        .company-name {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        
+        .app-name {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>プライバシーポリシー</h1>
+        <div class="effective-date">施行日：2025年9月20日</div>
+        
+        <p><span class="company-name">アイリスヘルスケアテクノロジー株式会社</span>（以下「当社」といいます。）は、当社が提供するShopifyアプリ<span class="app-name">「金価格自動更新アプリ」</span>（以下「本アプリ」）における、個人情報を含む利用者情報（以下「ユーザー情報」）の取扱いについて、以下のとおりプライバシーポリシー（以下「本ポリシー」）を定めます。</p>
+
+        <h2>1. 適用範囲</h2>
+        <p>本ポリシーは、マーチャント（Shopifyストア運営者）および本アプリを通じて取得・生成されるユーザー情報の取扱いに適用されます。Shopifyプラットフォーム自体のデータ処理は、Shopify社のポリシーに従います。</p>
+
+        <h2>2. 取得する情報</h2>
+        <p>当社は、必要最小限の範囲で以下の情報を取得する場合があります。</p>
+        <ul>
+            <li><strong>ストア情報：</strong>ショップドメイン、ショップ名、ストア設定（本アプリの機能設定・通知先メール等）</li>
+            <li><strong>商品・バリアント情報：</strong>商品／バリアントID、タイトル、価格、SKU、在庫数、コレクションなど</li>
+            <li><strong>操作ログ：</strong>価格更新の実行結果・実行時刻、エラーログ、システム健全性に関する技術情報（IP、User-Agent、リクエスト識別子等）</li>
+            <li><strong>連絡先：</strong>サポート対応や通知機能のために、管理者のメールアドレス等を任意に登録いただく場合があります</li>
+        </ul>
+        <p><strong>重要：</strong>本アプリは保護された顧客データ（Customer PII）にはアクセスしません。顧客氏名、住所、決済情報等は取得しません。</p>
+
+        <h2>3. 取得方法</h2>
+        <ul>
+            <li>Shopify OAuthを通じて、マーチャントの承諾に基づき必要最小限のAPIスコープでデータにアクセスします（例：read_products / write_products）。</li>
+            <li>マーチャントが本アプリの管理画面で入力・保存した情報（通知用メール等）を取得します。</li>
+            <li>金相場等の外部公開情報は、個人を特定しない外部データソースから取得します。</li>
+        </ul>
+
+        <h2>4. 利用目的</h2>
+        <p>当社は取得した情報を以下の目的で利用します。</p>
+        <ul>
+            <li>金・プラチナ等の相場変動に連動した商品価格の自動／手動更新の実行</li>
+            <li>アプリの提供、維持、改善、障害対応、セキュリティ対策</li>
+            <li>マーチャントへの通知（更新結果のサマリー、障害・メンテナンス情報等）</li>
+            <li>法令遵守、利用規約違反対応、紛争対応</li>
+        </ul>
+
+        <h2>5. 第三者提供・委託</h2>
+        <ul>
+            <li>法令に基づく場合を除き、ユーザー情報を第三者に販売・共有しません。</li>
+            <li>サーバー、データベース、メール配信、エラーログ収集等をクラウド事業者に委託する場合があります（例：ホスティング、データベース、メール送信基盤、監視サービス等）。委託先には適切な契約および安全管理措置を求めます。</li>
+        </ul>
+
+        <h2>6. 国外移転</h2>
+        <p>インフラ提供事業者のサーバー所在地により、ユーザー情報が国外（日本以外）で保存・処理される場合があります。適用法令に従い、適切な保護措置を講じます。</p>
+
+        <h2>7. セキュリティ</h2>
+        <ul>
+            <li>アクセス権限の最小化（最小権限のOAuthスコープ）</li>
+            <li>通信の暗号化（HTTPS/TLS）</li>
+            <li>ログの最小限収集と保護</li>
+            <li>不正アクセス、情報漏えい等の予防・是正措置</li>
+        </ul>
+
+        <h2>8. 保存期間</h2>
+        <ul>
+            <li>アプリ提供に必要な期間、または法令で定める期間保存します。</li>
+            <li>マーチャントがアプリをアンインストールした場合、設定情報等は一定期間（例：30日）以内に削除または匿名化します（請求・監査等の法令上必要な記録は除く）。</li>
+        </ul>
+
+        <h2>9. マーチャントの権利</h2>
+        <ul>
+            <li>保有個人データの開示・訂正・削除・利用停止等を、法令の範囲で請求できます。</li>
+            <li>ご請求は「お問い合わせ」窓口までご連絡ください。ご本人または正当な代理人であることを確認の上、適切に対応します。</li>
+        </ul>
+
+        <h2>10. クッキー等について</h2>
+        <ul>
+            <li>本アプリの管理画面では、セッション管理やCSRF対策等、運用上必要なクッキー等を利用する場合があります。</li>
+            <li>Shopifyが設定するクッキー等の取扱いは、Shopify社のポリシーに従います。</li>
+        </ul>
+
+        <h2>11. 法令遵守</h2>
+        <p>当社は、個人情報の保護に関する法律（日本の個人情報保護法）その他関係法令・ガイドラインを遵守します。 EU/EEA等に所在する事業者による利用がある場合、GDPR等の適用ある法令に従い適切に取り扱います。</p>
+
+        <h2>12. 本ポリシーの変更</h2>
+        <p>本ポリシーは、法令やサービス内容の変更に応じて改定することがあります。重要な変更がある場合は、当社サイト等で告知します。</p>
+
+        <h2>13. お問い合わせ窓口</h2>
+        <div class="contact-info">
+            <p>本ポリシーおよびユーザー情報の取扱いに関するご質問・ご請求は、以下までご連絡ください。</p>
+            <ul>
+                <li><strong>事業者名：</strong>アイリスヘルスケアテクノロジー株式会社</li>
+                <li><strong>住所：</strong>〒322-0534 栃木県鹿沼市亀和田町925-20</li>
+                <li><strong>担当部署：</strong>IT部</li>
+                <li><strong>Eメール：</strong>t.takei@irisht.jp</li>
+                <li><strong>電話番号：</strong>090-5797-9752</li>
+                <li><strong>受付時間：</strong>平日10:00–17:00 JST</li>
+            </ul>
+        </div>
+
+        <hr style="margin-top: 40px; margin-bottom: 20px; border: none; border-top: 1px solid #eee;">
+        <p style="text-align: center; color: #666; font-size: 14px;">
+            © 2025 アイリスヘルスケアテクノロジー株式会社. All Rights Reserved.
+        </p>
+    </div>
+</body>
+</html>
+  `;
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8"
+    }
+  });
+}
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$f
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$e = async ({ request }) => {
+  try {
+    const url = new URL(request.url);
+    const email = url.searchParams.get("email") || "t.takei@irisht.jp";
+    console.log("=== Email Debug Test ===");
+    console.log("Target email:", email);
+    console.log("SENDGRID_API_KEY exists:", !!process.env.SENDGRID_API_KEY);
+    console.log("NOTIFICATION_EMAIL_FROM:", process.env.NOTIFICATION_EMAIL_FROM);
+    const result = await sendTestEmail(email);
+    console.log("SendGrid test result:", result);
+    return json({
+      success: result.success,
+      error: result.error,
+      messageId: result.messageId,
+      email,
+      fromAddress: process.env.NOTIFICATION_EMAIL_FROM || "t.takei@irisht.jp",
+      environment: {
+        hasApiKey: !!process.env.SENDGRID_API_KEY,
+        fromEmail: process.env.NOTIFICATION_EMAIL_FROM,
+        nodeEnv: "production"
+      }
+    });
+  } catch (error) {
+    console.error("Debug email error:", error);
+    return json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+};
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$e
+}, Symbol.toStringTag, { value: "Module" }));
 const action$5 = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
     const shop2 = session.shop;
+    console.log("=== Test Email Request ===");
+    console.log("Shop:", shop2);
     const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop2 },
       select: { notificationEmail: true }
     });
+    console.log("Setting found:", setting);
     const email = setting == null ? void 0 : setting.notificationEmail;
+    console.log("Target email from settings:", email);
     if (!email) {
+      console.log("No email configured in settings");
       return json({
         success: false,
         error: "通知メールアドレスが設定されていません"
       });
     }
+    console.log(`Sending test email to: ${email}`);
     const result = await sendTestEmail(email);
+    console.log("Test email result:", result);
     if (result.success) {
       return json({
         success: true,
         email,
+        messageId: result.messageId,
         message: "テストメールを送信しました"
       });
     } else {
@@ -10355,11 +10669,209 @@ const action$5 = async ({ request }) => {
     });
   }
 };
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$5
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$c = async ({ request }) => {
+function PrivacyPolicy() {
+  return /* @__PURE__ */ jsxs("html", { lang: "ja", children: [
+    /* @__PURE__ */ jsxs("head", { children: [
+      /* @__PURE__ */ jsx("meta", { charSet: "UTF-8" }),
+      /* @__PURE__ */ jsx("meta", { name: "viewport", content: "width=device-width, initial-scale=1.0" }),
+      /* @__PURE__ */ jsx("title", { children: "プライバシーポリシー - 金価格自動更新アプリ" }),
+      /* @__PURE__ */ jsx("style", { children: `
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+              color: #333;
+              background-color: #f9f9f9;
+            }
+            
+            .container {
+              background: white;
+              padding: 40px;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            
+            h1 {
+              color: #2c3e50;
+              border-bottom: 3px solid #3498db;
+              padding-bottom: 10px;
+              font-size: 28px;
+            }
+            
+            h2 {
+              color: #34495e;
+              margin-top: 30px;
+              margin-bottom: 15px;
+              font-size: 20px;
+            }
+            
+            h3 {
+              color: #7f8c8d;
+              margin-top: 20px;
+              margin-bottom: 10px;
+            }
+            
+            ul {
+              padding-left: 20px;
+            }
+            
+            li {
+              margin-bottom: 8px;
+            }
+            
+            .contact-info {
+              background-color: #f8f9fa;
+              padding: 20px;
+              border-radius: 5px;
+              border-left: 4px solid #3498db;
+            }
+            
+            .effective-date {
+              text-align: right;
+              color: #666;
+              font-size: 14px;
+              margin-bottom: 30px;
+            }
+            
+            .company-name {
+              font-weight: bold;
+              color: #2980b9;
+            }
+            
+            .app-name {
+              font-weight: bold;
+              color: #e74c3c;
+            }
+          ` })
+    ] }),
+    /* @__PURE__ */ jsx("body", { children: /* @__PURE__ */ jsxs("div", { className: "container", children: [
+      /* @__PURE__ */ jsx("h1", { children: "プライバシーポリシー" }),
+      /* @__PURE__ */ jsx("div", { className: "effective-date", children: "施行日：2025年9月20日" }),
+      /* @__PURE__ */ jsxs("p", { children: [
+        /* @__PURE__ */ jsx("span", { className: "company-name", children: "アイリスヘルスケアテクノロジー株式会社" }),
+        "（以下「当社」といいます。）は、当社が提供するShopifyアプリ",
+        /* @__PURE__ */ jsx("span", { className: "app-name", children: "「金価格自動更新アプリ」" }),
+        "（以下「本アプリ」）における、個人情報を含む利用者情報（以下「ユーザー情報」）の取扱いについて、以下のとおりプライバシーポリシー（以下「本ポリシー」）を定めます。"
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "1. 適用範囲" }),
+      /* @__PURE__ */ jsx("p", { children: "本ポリシーは、マーチャント（Shopifyストア運営者）および本アプリを通じて取得・生成されるユーザー情報の取扱いに適用されます。Shopifyプラットフォーム自体のデータ処理は、Shopify社のポリシーに従います。" }),
+      /* @__PURE__ */ jsx("h2", { children: "2. 取得する情報" }),
+      /* @__PURE__ */ jsx("p", { children: "当社は、必要最小限の範囲で以下の情報を取得する場合があります。" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsxs("li", { children: [
+          /* @__PURE__ */ jsx("strong", { children: "ストア情報：" }),
+          "ショップドメイン、ショップ名、ストア設定（本アプリの機能設定・通知先メール等）"
+        ] }),
+        /* @__PURE__ */ jsxs("li", { children: [
+          /* @__PURE__ */ jsx("strong", { children: "商品・バリアント情報：" }),
+          "商品／バリアントID、タイトル、価格、SKU、在庫数、コレクションなど"
+        ] }),
+        /* @__PURE__ */ jsxs("li", { children: [
+          /* @__PURE__ */ jsx("strong", { children: "操作ログ：" }),
+          "価格更新の実行結果・実行時刻、エラーログ、システム健全性に関する技術情報（IP、User-Agent、リクエスト識別子等）"
+        ] }),
+        /* @__PURE__ */ jsxs("li", { children: [
+          /* @__PURE__ */ jsx("strong", { children: "連絡先：" }),
+          "サポート対応や通知機能のために、管理者のメールアドレス等を任意に登録いただく場合があります"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("p", { children: [
+        /* @__PURE__ */ jsx("strong", { children: "重要：" }),
+        "本アプリは保護された顧客データ（Customer PII）にはアクセスしません。顧客氏名、住所、決済情報等は取得しません。"
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "3. 取得方法" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "Shopify OAuthを通じて、マーチャントの承諾に基づき必要最小限のAPIスコープでデータにアクセスします（例：read_products / write_products）。" }),
+        /* @__PURE__ */ jsx("li", { children: "マーチャントが本アプリの管理画面で入力・保存した情報（通知用メール等）を取得します。" }),
+        /* @__PURE__ */ jsx("li", { children: "金相場等の外部公開情報は、個人を特定しない外部データソースから取得します。" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "4. 利用目的" }),
+      /* @__PURE__ */ jsx("p", { children: "当社は取得した情報を以下の目的で利用します。" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "金・プラチナ等の相場変動に連動した商品価格の自動／手動更新の実行" }),
+        /* @__PURE__ */ jsx("li", { children: "アプリの提供、維持、改善、障害対応、セキュリティ対策" }),
+        /* @__PURE__ */ jsx("li", { children: "マーチャントへの通知（更新結果のサマリー、障害・メンテナンス情報等）" }),
+        /* @__PURE__ */ jsx("li", { children: "法令遵守、利用規約違反対応、紛争対応" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "5. 第三者提供・委託" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "法令に基づく場合を除き、ユーザー情報を第三者に販売・共有しません。" }),
+        /* @__PURE__ */ jsx("li", { children: "サーバー、データベース、メール配信、エラーログ収集等をクラウド事業者に委託する場合があります（例：ホスティング、データベース、メール送信基盤、監視サービス等）。委託先には適切な契約および安全管理措置を求めます。" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "6. 国外移転" }),
+      /* @__PURE__ */ jsx("p", { children: "インフラ提供事業者のサーバー所在地により、ユーザー情報が国外（日本以外）で保存・処理される場合があります。適用法令に従い、適切な保護措置を講じます。" }),
+      /* @__PURE__ */ jsx("h2", { children: "7. セキュリティ" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "アクセス権限の最小化（最小権限のOAuthスコープ）" }),
+        /* @__PURE__ */ jsx("li", { children: "通信の暗号化（HTTPS/TLS）" }),
+        /* @__PURE__ */ jsx("li", { children: "ログの最小限収集と保護" }),
+        /* @__PURE__ */ jsx("li", { children: "不正アクセス、情報漏えい等の予防・是正措置" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "8. 保存期間" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "アプリ提供に必要な期間、または法令で定める期間保存します。" }),
+        /* @__PURE__ */ jsx("li", { children: "マーチャントがアプリをアンインストールした場合、設定情報等は一定期間（例：30日）以内に削除または匿名化します（請求・監査等の法令上必要な記録は除く）。" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "9. マーチャントの権利" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "保有個人データの開示・訂正・削除・利用停止等を、法令の範囲で請求できます。" }),
+        /* @__PURE__ */ jsx("li", { children: "ご請求は「お問い合わせ」窓口までご連絡ください。ご本人または正当な代理人であることを確認の上、適切に対応します。" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "10. クッキー等について" }),
+      /* @__PURE__ */ jsxs("ul", { children: [
+        /* @__PURE__ */ jsx("li", { children: "本アプリの管理画面では、セッション管理やCSRF対策等、運用上必要なクッキー等を利用する場合があります。" }),
+        /* @__PURE__ */ jsx("li", { children: "Shopifyが設定するクッキー等の取扱いは、Shopify社のポリシーに従います。" })
+      ] }),
+      /* @__PURE__ */ jsx("h2", { children: "11. 法令遵守" }),
+      /* @__PURE__ */ jsx("p", { children: "当社は、個人情報の保護に関する法律（日本の個人情報保護法）その他関係法令・ガイドラインを遵守します。 EU/EEA等に所在する事業者による利用がある場合、GDPR等の適用ある法令に従い適切に取り扱います。" }),
+      /* @__PURE__ */ jsx("h2", { children: "12. 本ポリシーの変更" }),
+      /* @__PURE__ */ jsx("p", { children: "本ポリシーは、法令やサービス内容の変更に応じて改定することがあります。重要な変更がある場合は、当社サイト等で告知します。" }),
+      /* @__PURE__ */ jsx("h2", { children: "13. お問い合わせ窓口" }),
+      /* @__PURE__ */ jsxs("div", { className: "contact-info", children: [
+        /* @__PURE__ */ jsx("p", { children: "本ポリシーおよびユーザー情報の取扱いに関するご質問・ご請求は、以下までご連絡ください。" }),
+        /* @__PURE__ */ jsxs("ul", { children: [
+          /* @__PURE__ */ jsxs("li", { children: [
+            /* @__PURE__ */ jsx("strong", { children: "事業者名：" }),
+            "アイリスヘルスケアテクノロジー株式会社"
+          ] }),
+          /* @__PURE__ */ jsxs("li", { children: [
+            /* @__PURE__ */ jsx("strong", { children: "住所：" }),
+            "〒322-0534 栃木県鹿沼市亀和田町925-20"
+          ] }),
+          /* @__PURE__ */ jsxs("li", { children: [
+            /* @__PURE__ */ jsx("strong", { children: "担当部署：" }),
+            "IT部"
+          ] }),
+          /* @__PURE__ */ jsxs("li", { children: [
+            /* @__PURE__ */ jsx("strong", { children: "Eメール：" }),
+            "t.takei@irisht.jp"
+          ] }),
+          /* @__PURE__ */ jsxs("li", { children: [
+            /* @__PURE__ */ jsx("strong", { children: "電話番号：" }),
+            "090-5797-9752"
+          ] }),
+          /* @__PURE__ */ jsxs("li", { children: [
+            /* @__PURE__ */ jsx("strong", { children: "受付時間：" }),
+            "平日10:00–17:00 JST"
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx("hr", { style: { marginTop: "40px", marginBottom: "20px", border: "none", borderTop: "1px solid #eee" } }),
+      /* @__PURE__ */ jsx("p", { style: { textAlign: "center", color: "#666", fontSize: "14px" }, children: "© 2025 アイリスヘルスケアテクノロジー株式会社. All Rights Reserved." })
+    ] }) })
+  ] });
+}
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: PrivacyPolicy
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$d = async ({ request }) => {
   const host = request.headers.get("host");
   const isProduction = (host == null ? void 0 : host.includes("vercel.app")) || (host == null ? void 0 : host.includes("gold-price-updater"));
   if (!isProduction) {
@@ -10394,7 +10906,49 @@ const loader$c = async ({ request }) => {
     }
   });
 };
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$d
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$c = async ({ request }) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const shop2 = session.shop;
+    console.log("=== Database Check ===");
+    console.log("Checking shop:", shop2);
+    const setting = await prisma$1.shopSetting.findUnique({
+      where: { shopDomain: shop2 }
+    });
+    console.log("Complete shop setting:", JSON.stringify(setting, null, 2));
+    const allSettings = await prisma$1.shopSetting.findMany({
+      select: {
+        shopDomain: true,
+        notificationEmail: true,
+        autoUpdateEnabled: true,
+        minPricePct: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    console.log("All shop settings:", JSON.stringify(allSettings, null, 2));
+    return json({
+      success: true,
+      currentShop: shop2,
+      setting,
+      allSettings,
+      hasNotificationEmail: !!(setting == null ? void 0 : setting.notificationEmail),
+      notificationEmail: setting == null ? void 0 : setting.notificationEmail
+    });
+  } catch (error) {
+    console.error("Database check error:", error);
+    return json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+};
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$c
 }, Symbol.toStringTag, { value: "Module" }));
@@ -10454,7 +11008,7 @@ async function loader$b({ request }) {
     });
   }
 }
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$b
 }, Symbol.toStringTag, { value: "Module" }));
@@ -10567,7 +11121,7 @@ const loader$a = async ({ request }) => {
     });
   }
 };
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
@@ -10634,7 +11188,7 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$4,
   default: Auth,
@@ -11335,6 +11889,17 @@ async function runAllShops(opts = {}) {
         shops: []
       };
     }
+    const { isJapanHolidayJST } = await import("./assets/scheduler.server-BN4zBpEV.js");
+    if (!force && isJapanHolidayJST(jstNow)) {
+      const message = `${jstNow.toDateString()}は日本の祝日のため価格更新をスキップします`;
+      console.log(message);
+      return {
+        message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+        shops: []
+      };
+    }
     const targetHour = 10;
     const inWindow = currentHour >= 10 && currentHour <= 11;
     const enabledShops = await prisma$1.shopSetting.findMany({
@@ -11444,7 +12009,7 @@ const action$3 = async ({ request }) => {
     });
   }
 };
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$3,
   loader: loader$8
@@ -11629,7 +12194,7 @@ const action$2 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -11641,7 +12206,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -11650,7 +12215,7 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11678,7 +12243,7 @@ function ErrorBoundary() {
 const headers$1 = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
@@ -11738,7 +12303,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -14037,7 +14602,7 @@ function Products() {
     }
   );
 }
-const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
@@ -14203,17 +14768,23 @@ function Settings() {
           ] }),
           /* @__PURE__ */ jsx(Divider, {}),
           /* @__PURE__ */ jsxs(FormLayout, { children: [
-            /* @__PURE__ */ jsx(
-              TextField,
-              {
-                label: "通知メールアドレス（任意）",
-                type: "email",
-                value: notificationEmail,
-                onChange: setNotificationEmail,
-                placeholder: "you@example.com",
-                helpText: "設定すると自動更新の結果がメールで通知されます"
-              }
-            ),
+            /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+              /* @__PURE__ */ jsx(Banner, { tone: "info", children: /* @__PURE__ */ jsxs(BlockStack, { gap: "100", children: [
+                /* @__PURE__ */ jsx(Text, { fontWeight: "medium", children: "📧 複数メールアドレス対応" }),
+                /* @__PURE__ */ jsx(Text, { children: "複数のメールアドレスに通知を送る場合は、カンマ（,）で区切って入力してください。例: admin@example.com, manager@example.com" })
+              ] }) }),
+              /* @__PURE__ */ jsx(
+                TextField,
+                {
+                  label: "通知メールアドレス（任意）",
+                  type: "email",
+                  value: notificationEmail,
+                  onChange: setNotificationEmail,
+                  placeholder: "you@example.com, admin@example.com",
+                  helpText: "設定すると自動更新の結果がメールで通知されます"
+                }
+              )
+            ] }),
             notificationEmail && /* @__PURE__ */ jsxs(InlineStack, { gap: "200", align: "start", children: [
               /* @__PURE__ */ jsx(
                 Button,
@@ -14290,7 +14861,7 @@ function Settings() {
     }
   );
 }
-const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -14551,7 +15122,7 @@ function Dashboard() {
     }
   );
 }
-const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -14769,12 +15340,12 @@ function Logs() {
     }
   );
 }
-const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-DhrRE1Li.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-CTN0itWq.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-YyjxCrtr.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/styles-BDwA4lvJ.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-Dhth9sU9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/styles-BDwA4lvJ.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-BPOnLFoD.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/banner-context-Bfu3e4If.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-CQuVi9j9.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js", "/assets/context-Dqc0DVKX.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-CVBRsg5v.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/Banner-DRkmBrND.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Divider-DCXs5LYm.js", "/assets/FormLayout-9MUjKHGm.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/context-C9td0CMk.js", "/assets/banner-context-Bfu3e4If.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BwFMzU7C.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Divider-DCXs5LYm.js", "/assets/context-C9td0CMk.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-nbaoxDqu.js", "imports": ["/assets/index-OtPSfN_w.js", "/assets/components-C9-D01ZZ.js", "/assets/Page-DvMnY4Uh.js", "/assets/CheckCircleIcon.svg-BdEOQivI.js", "/assets/Layout-BvDTjT3E.js", "/assets/ClockIcon.svg-Dq65wAvQ.js", "/assets/Select-D-FzUXlB.js", "/assets/context-C9td0CMk.js"], "css": [] } }, "url": "/assets/manifest-674f10ac.js", "version": "674f10ac" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-BHYeCEme.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-32ETzgjh.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-shop-email": { "id": "routes/api.debug-shop-email", "parentId": "root", "path": "api/debug-shop-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-shop-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.privacy-policy": { "id": "routes/api.privacy-policy", "parentId": "root", "path": "api/privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.privacy-policy-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-email": { "id": "routes/api.debug-email", "parentId": "root", "path": "api/debug-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/privacy-policy": { "id": "routes/privacy-policy", "parentId": "root", "path": "privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/privacy-policy-CaYwulL5.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js"], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.check-db": { "id": "routes/api.check-db", "parentId": "root", "path": "api/check-db", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.check-db-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C8Y8ykxp.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/styles-USq40sv4.js", "/assets/components-CVBppnN6.js", "/assets/Page-B7aPegn-.js", "/assets/FormLayout-DrIsrzT7.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CIoUm5Hc.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-peFg41oe.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/Page-B7aPegn-.js", "/assets/Layout-Bmft4j9w.js", "/assets/index-Dfrec1kz.js", "/assets/banner-context-BjQn27ta.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-kszeD6He.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-B7aPegn-.js", "/assets/Layout-Bmft4j9w.js", "/assets/Banner-CMral2PB.js", "/assets/Select-BwPhr51h.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-NuCWTfC6.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-B7aPegn-.js", "/assets/Layout-Bmft4j9w.js", "/assets/Banner-CMral2PB.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Divider-BDpyBtSk.js", "/assets/FormLayout-DrIsrzT7.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/context-JUMp7zSJ.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-c3StGRff.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-B7aPegn-.js", "/assets/Layout-Bmft4j9w.js", "/assets/index-Dfrec1kz.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Divider-BDpyBtSk.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-C5aEe6Vb.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-B7aPegn-.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Layout-Bmft4j9w.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Select-BwPhr51h.js", "/assets/context-JUMp7zSJ.js"], "css": [] } }, "url": "/assets/manifest-764a1164.js", "version": "764a1164" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -14839,13 +15410,21 @@ const routes = {
     caseSensitive: void 0,
     module: route6
   },
+  "routes/api.debug-shop-email": {
+    id: "routes/api.debug-shop-email",
+    parentId: "root",
+    path: "api/debug-shop-email",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route7
+  },
   "routes/webhooks.shop.redact": {
     id: "routes/webhooks.shop.redact",
     parentId: "root",
     path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route8
   },
   "routes/api.verify-variants": {
     id: "routes/api.verify-variants",
@@ -14853,7 +15432,23 @@ const routes = {
     path: "api/verify-variants",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route9
+  },
+  "routes/api.privacy-policy": {
+    id: "routes/api.privacy-policy",
+    parentId: "root",
+    path: "api/privacy-policy",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route10
+  },
+  "routes/api.debug-email": {
+    id: "routes/api.debug-email",
+    parentId: "root",
+    path: "api/debug-email",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route11
   },
   "routes/api.test-email": {
     id: "routes/api.test-email",
@@ -14861,7 +15456,15 @@ const routes = {
     path: "api/test-email",
     index: void 0,
     caseSensitive: void 0,
-    module: route9
+    module: route12
+  },
+  "routes/privacy-policy": {
+    id: "routes/privacy-policy",
+    parentId: "root",
+    path: "privacy-policy",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route13
   },
   "routes/api.debug-env": {
     id: "routes/api.debug-env",
@@ -14869,7 +15472,15 @@ const routes = {
     path: "api/debug-env",
     index: void 0,
     caseSensitive: void 0,
-    module: route10
+    module: route14
+  },
+  "routes/api.check-db": {
+    id: "routes/api.check-db",
+    parentId: "root",
+    path: "api/check-db",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route15
   },
   "routes/api.variants": {
     id: "routes/api.variants",
@@ -14877,7 +15488,7 @@ const routes = {
     path: "api/variants",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route16
   },
   "routes/api.health": {
     id: "routes/api.health",
@@ -14885,7 +15496,7 @@ const routes = {
     path: "api/health",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route17
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -14893,7 +15504,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route18
   },
   "routes/api.cron": {
     id: "routes/api.cron",
@@ -14901,7 +15512,7 @@ const routes = {
     path: "api/cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route19
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -14909,7 +15520,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route15
+    module: route20
   },
   "routes/_index": {
     id: "routes/_index",
@@ -14917,7 +15528,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route16
+    module: route21
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -14925,7 +15536,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route17
+    module: route22
   },
   "routes/app": {
     id: "routes/app",
@@ -14933,7 +15544,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route18
+    module: route23
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -14941,7 +15552,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route19
+    module: route24
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -14949,7 +15560,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route20
+    module: route25
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -14957,7 +15568,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route21
+    module: route26
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -14965,7 +15576,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route22
+    module: route27
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -14973,7 +15584,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route23
+    module: route28
   }
 };
 export {
