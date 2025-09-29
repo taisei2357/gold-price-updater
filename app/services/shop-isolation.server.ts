@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { authenticate } from "../shopify.server";
 import type { Request } from "@remix-run/node";
-
-const prisma = new PrismaClient();
+import prisma from "../db.server";
 
 export interface ShopContext {
   shopDomain: string;
