@@ -627,6 +627,39 @@ async function runAllShops(opts: { force?: boolean } = {}) {
     const now = new Date();
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JSTに調整
     const currentHour = jstNow.getHours();
+
+    // 今日の成功実行チェック（重複防止）
+    if (!force) {
+      const todayJST = jstNow.toISOString().split('T')[0]; // YYYY-MM-DD
+      const todayStart = new Date(`${todayJST}T00:00:00.000Z`);
+      const todayEnd = new Date(`${todayJST}T23:59:59.999Z`);
+      
+      const existingExecution = await prisma.priceUpdateLog.findFirst({
+        where: {
+          success: true,
+          executionType: 'cron',
+          executedAt: {
+            gte: todayStart,
+            lte: todayEnd
+          }
+        },
+        orderBy: { executedAt: 'desc' }
+      });
+
+      if (existingExecution) {
+        const executedAtJST = new Date(existingExecution.executedAt.getTime() + 9 * 60 * 60 * 1000);
+        const message = `今日は既に正常実行済み (${executedAtJST.toISOString()}) - 重複実行をスキップ`;
+        console.log(message);
+        return {
+          message,
+          timestamp: new Date().toISOString(),
+          summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+          shops: [],
+          skipped: true,
+          lastExecution: existingExecution.executedAt.toISOString()
+        };
+      }
+    }
     
     // 土日・祝日スキップ
     const dayOfWeek = jstNow.getDay(); // 0=日曜, 6=土曜

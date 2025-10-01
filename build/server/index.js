@@ -20,7 +20,7 @@ import isEqual from "react-fast-compare";
 import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
 import { NavMenu, TitleBar } from "@shopify/app-bridge-react";
 import { Transition, CSSTransition, TransitionGroup } from "react-transition-group";
-const prisma$4 = global.__prisma ?? new PrismaClient({
+const prisma$1 = global.__prisma ?? new PrismaClient({
   // log: ['query', 'error', 'warn'], // 必要なら一時的に有効化
 });
 const scopeList = (process.env.SCOPES || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -33,7 +33,7 @@ const shopify = shopifyApp({
   appUrl,
   // PartnersのApp URLと完全一致させる
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma$4),
+  sessionStorage: new PrismaSessionStorage(prisma$1),
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
@@ -9913,18 +9913,18 @@ const action$a = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$j = () => new Response(null, { status: 405 });
+const loader$k = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$a,
-  loader: loader$j
+  loader: loader$k
 }, Symbol.toStringTag, { value: "Module" }));
 const action$9 = async ({ request }) => {
   const { payload, session, topic, shop: shop2 } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop2}`);
   const current = payload.current;
   if (session) {
-    await prisma$4.session.update({
+    await prisma$1.session.update({
       where: {
         id: session.id
       },
@@ -9942,19 +9942,19 @@ const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$a,
-  loader: loader$j
+  loader: loader$k
 }, Symbol.toStringTag, { value: "Module" }));
 const action$8 = async ({ request }) => {
   const { shop: shop2, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop2}`);
   try {
-    await prisma$4.$transaction([
+    await prisma$1.$transaction([
       // セッションデータ削除
-      prisma$4.session.deleteMany({ where: { shop: shop2 } }),
+      prisma$1.session.deleteMany({ where: { shop: shop2 } }),
       // 商品選択データ削除
-      prisma$4.selectedProduct.deleteMany({ where: { shopDomain: shop2 } }),
+      prisma$1.selectedProduct.deleteMany({ where: { shopDomain: shop2 } }),
       // ショップ設定削除
-      prisma$4.shopSetting.deleteMany({ where: { shopDomain: shop2 } })
+      prisma$1.shopSetting.deleteMany({ where: { shopDomain: shop2 } })
       // 実行ログは監査のため残す（必要に応じて削除）
       // db.priceUpdateLog.deleteMany({ where: { shopDomain: shop } }),
     ]);
@@ -10053,7 +10053,7 @@ const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   __proto__: null,
   action: action$7
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$i = async ({ request }) => {
+const loader$j = async ({ request }) => {
   const url = new URL(request.url);
   const uid = url.searchParams.get("uid");
   const state = url.searchParams.get("state");
@@ -10099,7 +10099,7 @@ const loader$i = async ({ request }) => {
 };
 const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$i
+  loader: loader$j
 }, Symbol.toStringTag, { value: "Module" }));
 async function sendViaSendGrid(to, subject, html, text) {
   const API_KEY = process.env.SENDGRID_API_KEY;
@@ -10290,13 +10290,13 @@ async function sendTestEmail(toEmail) {
   };
   return await sendPriceUpdateNotification(toEmail, testData);
 }
-const loader$h = async ({ request }) => {
+const loader$i = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
     const shop2 = session.shop;
     console.log("=== Shop Email Debug ===");
     console.log("Shop domain:", shop2);
-    const setting = await prisma$4.shopSetting.findUnique({
+    const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop2 },
       select: { notificationEmail: true, autoUpdateEnabled: true, minPricePct: true }
     });
@@ -10333,12 +10333,12 @@ const loader$h = async ({ request }) => {
 };
 const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$h
+  loader: loader$i
 }, Symbol.toStringTag, { value: "Module" }));
 const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$a,
-  loader: loader$j
+  loader: loader$k
 }, Symbol.toStringTag, { value: "Module" }));
 async function action$6({ request }) {
   var _a, _b;
@@ -10403,7 +10403,7 @@ const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   __proto__: null,
   action: action$6
 }, Symbol.toStringTag, { value: "Module" }));
-async function loader$g({ request }) {
+async function loader$h({ request }) {
   const html = `
 <!DOCTYPE html>
 <html lang="ja">
@@ -10588,14 +10588,13 @@ async function loader$g({ request }) {
 }
 const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$g
+  loader: loader$h
 }, Symbol.toStringTag, { value: "Module" }));
-const prisma$3 = new PrismaClient();
 class UsageLogger {
   // 使用状況ログを記録
   async log(metrics) {
     try {
-      await prisma$3.usageLog.create({
+      await prisma$1.usageLog.create({
         data: {
           shopDomain: metrics.shopDomain,
           actionType: metrics.actionType,
@@ -10620,7 +10619,7 @@ class UsageLogger {
   async logBatch(metrics) {
     if (metrics.length === 0) return;
     try {
-      await prisma$3.usageLog.createMany({
+      await prisma$1.usageLog.createMany({
         data: metrics.map((m) => ({
           shopDomain: m.shopDomain,
           actionType: m.actionType,
@@ -10647,7 +10646,7 @@ class UsageLogger {
     const from = fromDate || new Date(Date.now() - 24 * 60 * 60 * 1e3);
     const to = toDate || /* @__PURE__ */ new Date();
     const [stats, actionStats, hourlyStats] = await Promise.all([
-      prisma$3.usageLog.aggregate({
+      prisma$1.usageLog.aggregate({
         where: {
           shopDomain,
           createdAt: { gte: from, lte: to }
@@ -10663,7 +10662,7 @@ class UsageLogger {
           id: true
         }
       }),
-      prisma$3.usageLog.groupBy({
+      prisma$1.usageLog.groupBy({
         by: ["actionType"],
         where: {
           shopDomain,
@@ -10673,7 +10672,7 @@ class UsageLogger {
           id: true
         }
       }),
-      prisma$3.$queryRaw`
+      prisma$1.$queryRaw`
         SELECT 
           DATE_TRUNC('hour', "createdAt") as hour,
           COUNT(*) as count,
@@ -10686,7 +10685,7 @@ class UsageLogger {
         ORDER BY hour
       `
     ]);
-    const errorCount = await prisma$3.usageLog.count({
+    const errorCount = await prisma$1.usageLog.count({
       where: {
         shopDomain,
         createdAt: { gte: from, lte: to },
@@ -10717,7 +10716,7 @@ class UsageLogger {
     const from = fromDate || new Date(Date.now() - 24 * 60 * 60 * 1e3);
     const to = toDate || /* @__PURE__ */ new Date();
     const [globalStats, topShops, errorStats, performanceData] = await Promise.all([
-      prisma$3.usageLog.aggregate({
+      prisma$1.usageLog.aggregate({
         where: {
           createdAt: { gte: from, lte: to }
         },
@@ -10728,7 +10727,7 @@ class UsageLogger {
           id: true
         }
       }),
-      prisma$3.usageLog.groupBy({
+      prisma$1.usageLog.groupBy({
         by: ["shopDomain"],
         where: {
           createdAt: { gte: from, lte: to }
@@ -10746,7 +10745,7 @@ class UsageLogger {
         },
         take: 10
       }),
-      prisma$3.usageLog.groupBy({
+      prisma$1.usageLog.groupBy({
         by: ["shopDomain"],
         where: {
           createdAt: { gte: from, lte: to },
@@ -10756,7 +10755,7 @@ class UsageLogger {
           id: true
         }
       }),
-      prisma$3.usageLog.groupBy({
+      prisma$1.usageLog.groupBy({
         by: ["actionType"],
         where: {
           createdAt: { gte: from, lte: to },
@@ -10773,14 +10772,14 @@ class UsageLogger {
         take: 5
       })
     ]);
-    const totalShops = await prisma$3.usageLog.findMany({
+    const totalShops = await prisma$1.usageLog.findMany({
       where: {
         createdAt: { gte: from, lte: to }
       },
       select: { shopDomain: true },
       distinct: ["shopDomain"]
     });
-    const responseTimes = await prisma$3.usageLog.findMany({
+    const responseTimes = await prisma$1.usageLog.findMany({
       where: {
         createdAt: { gte: from, lte: to },
         executionTime: { not: null }
@@ -10793,7 +10792,7 @@ class UsageLogger {
     const errorsByShop = await Promise.all(
       topShops.map(async (shop2) => {
         var _a2;
-        const totalActions = await prisma$3.usageLog.count({
+        const totalActions = await prisma$1.usageLog.count({
           where: {
             shopDomain: shop2.shopDomain,
             createdAt: { gte: from, lte: to }
@@ -10833,7 +10832,7 @@ class UsageLogger {
     currentHour.setMinutes(0, 0, 0);
     const nextHour = new Date(currentHour.getTime() + 60 * 60 * 1e3);
     const [currentUsage, resourceLimit] = await Promise.all([
-      prisma$3.usageLog.aggregate({
+      prisma$1.usageLog.aggregate({
         where: {
           shopDomain,
           createdAt: { gte: currentHour, lt: nextHour }
@@ -10846,7 +10845,7 @@ class UsageLogger {
           id: true
         }
       }),
-      prisma$3.shopResourceLimit.findUnique({
+      prisma$1.shopResourceLimit.findUnique({
         where: { shopDomain }
       })
     ]);
@@ -10876,7 +10875,7 @@ class UsageLogger {
   // 古いログをクリーンアップ
   async cleanupOldLogs(daysToKeep = 30) {
     const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1e3);
-    const result = await prisma$3.usageLog.deleteMany({
+    const result = await prisma$1.usageLog.deleteMany({
       where: {
         createdAt: { lt: cutoffDate }
       }
@@ -10885,7 +10884,6 @@ class UsageLogger {
   }
 }
 const usageLogger = new UsageLogger();
-const prisma$2 = new PrismaClient();
 class ShopIsolationManager {
   // 認証された店舗のコンテキストを取得
   async getShopContext(request) {
@@ -10895,7 +10893,7 @@ class ShopIsolationManager {
       if (!(session == null ? void 0 : session.shop)) {
         return null;
       }
-      const shopSetting = await prisma$2.shopSetting.findUnique({
+      const shopSetting = await prisma$1.shopSetting.findUnique({
         where: { shopDomain: session.shop }
       });
       if (!(shopSetting == null ? void 0 : shopSetting.isActive)) {
@@ -10929,7 +10927,7 @@ class ShopIsolationManager {
   }
   // 店舗の機能アクセス権をチェック
   async checkFeatureAccess(shopDomain, feature) {
-    const shopSetting = await prisma$2.shopSetting.findUnique({
+    const shopSetting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain }
     });
     if (!(shopSetting == null ? void 0 : shopSetting.isActive)) {
@@ -10943,7 +10941,7 @@ class ShopIsolationManager {
     try {
       switch (resourceType) {
         case "product":
-          const product = await prisma$2.selectedProduct.findUnique({
+          const product = await prisma$1.selectedProduct.findUnique({
             where: {
               shopDomain_productId: {
                 shopDomain,
@@ -10953,7 +10951,7 @@ class ShopIsolationManager {
           });
           return !!product;
         case "collection":
-          const collection = await prisma$2.selectedCollection.findUnique({
+          const collection = await prisma$1.selectedCollection.findUnique({
             where: {
               shopDomain_collectionId: {
                 shopDomain,
@@ -10975,7 +10973,7 @@ class ShopIsolationManager {
     const deletedRecords = {};
     const errors = [];
     try {
-      await prisma$2.$transaction(async (tx) => {
+      await prisma$1.$transaction(async (tx) => {
         const usageLogs = await tx.usageLog.deleteMany({
           where: { shopDomain }
         });
@@ -11024,12 +11022,12 @@ class ShopIsolationManager {
     const issues = [];
     const recommendations = [];
     try {
-      const orphanedProducts = await prisma$2.selectedProduct.findMany({
+      const orphanedProducts = await prisma$1.selectedProduct.findMany({
         where: {
           shopDomain,
           NOT: {
             shopDomain: {
-              in: await prisma$2.shopSetting.findMany({
+              in: await prisma$1.shopSetting.findMany({
                 where: { isActive: true },
                 select: { shopDomain: true }
               }).then((shops) => shops.map((s) => s.shopDomain))
@@ -11041,7 +11039,7 @@ class ShopIsolationManager {
         issues.push(`Found ${orphanedProducts.length} orphaned products`);
         recommendations.push("Clean up orphaned product references");
       }
-      const duplicateProducts = await prisma$2.$queryRaw`
+      const duplicateProducts = await prisma$1.$queryRaw`
         SELECT "productId", COUNT(*) as count
         FROM "SelectedProduct"
         WHERE "shopDomain" = ${shopDomain}
@@ -11052,11 +11050,11 @@ class ShopIsolationManager {
         issues.push(`Found ${duplicateProducts.length} duplicate product selections`);
         recommendations.push("Remove duplicate product selections");
       }
-      const inconsistentLogs = await prisma$2.priceUpdateLog.findMany({
+      const inconsistentLogs = await prisma$1.priceUpdateLog.findMany({
         where: {
           shopDomain,
           OR: [
-            { updatedCount: { gt: prisma$2.selectedProduct.count({ where: { shopDomain } }) } },
+            { updatedCount: { gt: prisma$1.selectedProduct.count({ where: { shopDomain } }) } },
             { totalProducts: { lt: 0 } },
             { updatedCount: { lt: 0 } }
           ]
@@ -11066,7 +11064,7 @@ class ShopIsolationManager {
         issues.push(`Found ${inconsistentLogs.length} inconsistent price update logs`);
         recommendations.push("Review and clean up price update logs");
       }
-      const oldSessions = await prisma$2.session.findMany({
+      const oldSessions = await prisma$1.session.findMany({
         where: {
           shop: shopDomain,
           expires: { lt: /* @__PURE__ */ new Date() }
@@ -11076,7 +11074,7 @@ class ShopIsolationManager {
         issues.push(`Found ${oldSessions.length} expired sessions`);
         recommendations.push("Clean up expired sessions");
       }
-      const resourceLimit = await prisma$2.shopResourceLimit.findUnique({
+      const resourceLimit = await prisma$1.shopResourceLimit.findUnique({
         where: { shopDomain }
       });
       if (!resourceLimit) {
@@ -11097,7 +11095,7 @@ class ShopIsolationManager {
   async auditCrossShopAccess(shopDomain) {
     const violations = [];
     try {
-      const crossShopUsage = await prisma$2.usageLog.findMany({
+      const crossShopUsage = await prisma$1.usageLog.findMany({
         where: {
           shopDomain,
           resourceId: {
@@ -11121,7 +11119,7 @@ class ShopIsolationManager {
           }
         }
       }
-      const queueContamination = await prisma$2.processingQueue.findMany({
+      const queueContamination = await prisma$1.processingQueue.findMany({
         where: {
           shopDomain: { not: shopDomain },
           payload: { contains: shopDomain }
@@ -11135,7 +11133,7 @@ class ShopIsolationManager {
           severity: "high"
         });
       }
-      const sessionMismatch = await prisma$2.session.findMany({
+      const sessionMismatch = await prisma$1.session.findMany({
         where: {
           shop: { not: shopDomain },
           OR: [
@@ -11173,7 +11171,7 @@ class ShopIsolationManager {
   }
   // 店舗の初期化（新規インストール時）
   async initializeShop(shopDomain, accessToken) {
-    await prisma$2.$transaction(async (tx) => {
+    await prisma$1.$transaction(async (tx) => {
       await tx.shopSetting.upsert({
         where: { shopDomain },
         create: {
@@ -11209,7 +11207,7 @@ class ShopIsolationManager {
   }
   // 店舗の停止（アンインストール時）
   async suspendShop(shopDomain, reason) {
-    await prisma$2.shopSetting.update({
+    await prisma$1.shopSetting.update({
       where: { shopDomain },
       data: {
         isActive: false,
@@ -11217,7 +11215,7 @@ class ShopIsolationManager {
         suspensionReason: reason
       }
     });
-    await prisma$2.processingQueue.updateMany({
+    await prisma$1.processingQueue.updateMany({
       where: {
         shopDomain,
         status: { in: ["pending", "processing", "retrying"] }
@@ -11231,7 +11229,6 @@ class ShopIsolationManager {
   }
 }
 const shopIsolationManager = new ShopIsolationManager();
-const prisma$1 = new PrismaClient();
 class QueueManager {
   constructor() {
     __publicField(this, "workers", /* @__PURE__ */ new Map());
@@ -11447,7 +11444,7 @@ class QueueManager {
   }
 }
 const queueManager = new QueueManager();
-async function loader$f({ request }) {
+async function loader$g({ request }) {
   const shopContext = await shopIsolationManager.getShopContext(request);
   if (!shopContext) {
     throw new Response("Unauthorized", { status: 401 });
@@ -11640,9 +11637,9 @@ function AnalyticsPage() {
 const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AnalyticsPage,
-  loader: loader$f
+  loader: loader$g
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$e = async ({ request }) => {
+const loader$f = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const email = url.searchParams.get("email") || "t.takei@irisht.jp";
@@ -11675,7 +11672,7 @@ const loader$e = async ({ request }) => {
 };
 const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$e
+  loader: loader$f
 }, Symbol.toStringTag, { value: "Module" }));
 const action$5 = async ({ request }) => {
   try {
@@ -11683,7 +11680,7 @@ const action$5 = async ({ request }) => {
     const shop2 = session.shop;
     console.log("=== Test Email Request ===");
     console.log("Shop:", shop2);
-    const setting = await prisma$4.shopSetting.findUnique({
+    const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop2 },
       select: { notificationEmail: true }
     });
@@ -11923,7 +11920,7 @@ const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   __proto__: null,
   default: PrivacyPolicy
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$d = async ({ request }) => {
+const loader$e = async ({ request }) => {
   const host = request.headers.get("host");
   const isProduction = (host == null ? void 0 : host.includes("vercel.app")) || (host == null ? void 0 : host.includes("gold-price-updater"));
   if (!isProduction) {
@@ -11960,6 +11957,50 @@ const loader$d = async ({ request }) => {
 };
 const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  loader: loader$e
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$d = async ({ request }) => {
+  const authHeader = request.headers.get("authorization");
+  const expected = process.env.CRON_SECRET;
+  if (!expected || authHeader !== `Bearer ${expected}`) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const cronUrl = new URL("/api/cron", request.url);
+    const cronRequest = new Request(cronUrl.toString(), {
+      method: "GET",
+      headers: {
+        "authorization": authHeader,
+        "x-vercel-cron": "1"
+        // Vercel cronとして識別
+      }
+    });
+    const { loader: cronLoader } = await Promise.resolve().then(() => route21);
+    const result = await cronLoader({
+      request: cronRequest,
+      params: {},
+      context: {}
+    });
+    const cronResponse = await result.json();
+    return json({
+      testInfo: {
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        jstTime: new Date(Date.now() + 9 * 60 * 60 * 1e3).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+        userAgent: request.headers.get("user-agent"),
+        source: "test-endpoint"
+      },
+      cronResult: cronResponse
+    });
+  } catch (error) {
+    console.error("Test cron execution error:", error);
+    return json({
+      error: error.message,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    }, { status: 500 });
+  }
+};
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
   loader: loader$d
 }, Symbol.toStringTag, { value: "Module" }));
 const loader$c = async ({ request }) => {
@@ -11968,11 +12009,11 @@ const loader$c = async ({ request }) => {
     const shop2 = session.shop;
     console.log("=== Database Check ===");
     console.log("Checking shop:", shop2);
-    const setting = await prisma$4.shopSetting.findUnique({
+    const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop2 }
     });
     console.log("Complete shop setting:", JSON.stringify(setting, null, 2));
-    const allSettings = await prisma$4.shopSetting.findMany({
+    const allSettings = await prisma$1.shopSetting.findMany({
       select: {
         shopDomain: true,
         notificationEmail: true,
@@ -12000,7 +12041,7 @@ const loader$c = async ({ request }) => {
     });
   }
 };
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$c
 }, Symbol.toStringTag, { value: "Module" }));
@@ -12060,7 +12101,7 @@ async function loader$b({ request }) {
     });
   }
 }
-const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$b
 }, Symbol.toStringTag, { value: "Module" }));
@@ -12113,7 +12154,7 @@ const loader$a = async ({ request }) => {
   const checks = {};
   try {
     try {
-      await prisma$4.$queryRaw`SELECT 1`;
+      await prisma$1.$queryRaw`SELECT 1`;
       checks.database = { status: "healthy", latency: `${Date.now() - startTime}ms` };
     } catch (dbError) {
       checks.database = { status: "unhealthy", error: dbError.message };
@@ -12173,7 +12214,7 @@ const loader$a = async ({ request }) => {
     });
   }
 };
-const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
@@ -12240,7 +12281,7 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$4,
   default: Auth,
@@ -12537,7 +12578,7 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
       if (!current) continue;
       try {
         const now = /* @__PURE__ */ new Date();
-        const manualLock = await prisma$4.manualPriceLock.findFirst({
+        const manualLock = await prisma$1.manualPriceLock.findFirst({
           where: {
             shopDomain: shop,
             variantId: variant.id,
@@ -12548,7 +12589,7 @@ async function processProduct(target, ratio, metalType, admin, entries, details,
           console.log(`🔒 Skipping variant ${variant.id} due to manual lock until ${manualLock.until.toISOString()}`);
           continue;
         }
-        await prisma$4.manualPriceLock.deleteMany({
+        await prisma$1.manualPriceLock.deleteMany({
           where: {
             shopDomain: shop,
             variantId: variant.id,
@@ -12605,7 +12646,7 @@ async function updateShopPrices(shop2, accessToken) {
         failed: 0
       };
     }
-    const setting = await prisma$4.shopSetting.findUnique({
+    const setting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop2 }
     });
     minPctSaved = (setting == null ? void 0 : setting.minPricePct) ?? 93;
@@ -12620,7 +12661,7 @@ async function updateShopPrices(shop2, accessToken) {
         failed: 0
       };
     }
-    const targets = await prisma$4.selectedProduct.findMany({
+    const targets = await prisma$1.selectedProduct.findMany({
       where: {
         shopDomain: shop2,
         selected: true
@@ -12671,7 +12712,7 @@ async function updateShopPrices(shop2, accessToken) {
       const goldRatio = ratios.gold;
       const platinumRatio = ratios.platinum;
       if (goldRatio !== null && goldTargets.length > 0) {
-        await prisma$4.priceUpdateLog.create({
+        await prisma$1.priceUpdateLog.create({
           data: {
             shopDomain: shop2,
             executionType: "cron",
@@ -12687,7 +12728,7 @@ async function updateShopPrices(shop2, accessToken) {
         });
       }
       if (platinumRatio !== null && platinumTargets.length > 0) {
-        await prisma$4.priceUpdateLog.create({
+        await prisma$1.priceUpdateLog.create({
           data: {
             shopDomain: shop2,
             executionType: "cron",
@@ -12736,8 +12777,8 @@ async function updateShopPrices(shop2, accessToken) {
         });
         if (res.status === 401 || ((_d = (_c = (_b = (_a = res.body) == null ? void 0 : _a.errors) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("Invalid API key or access token"))) {
           console.error(`🚨 401 Unauthorized detected during price update for shop: ${shop2}`);
-          await prisma$4.session.deleteMany({ where: { shop: shop2 } });
-          await prisma$4.priceUpdateLog.create({
+          await prisma$1.session.deleteMany({ where: { shop: shop2 } });
+          await prisma$1.priceUpdateLog.create({
             data: {
               shopDomain: shop2,
               executionType: "cron",
@@ -12824,7 +12865,7 @@ async function updateShopPrices(shop2, accessToken) {
     const platinumUpdated = platinumDetails.filter((d) => d.success).length;
     const platinumFailed = platinumDetails.filter((d) => !d.success).length;
     if (ratios.gold !== null && (goldTargets.length > 0 || goldEntries.length > 0)) {
-      await prisma$4.priceUpdateLog.create({
+      await prisma$1.priceUpdateLog.create({
         data: {
           shopDomain: shop2,
           executionType: "cron",
@@ -12843,7 +12884,7 @@ async function updateShopPrices(shop2, accessToken) {
       });
     }
     if (ratios.platinum !== null && (platinumTargets.length > 0 || platinumEntries.length > 0)) {
-      await prisma$4.priceUpdateLog.create({
+      await prisma$1.priceUpdateLog.create({
         data: {
           shopDomain: shop2,
           executionType: "cron",
@@ -12861,7 +12902,7 @@ async function updateShopPrices(shop2, accessToken) {
         }
       });
     }
-    const shopSetting = await prisma$4.shopSetting.findUnique({
+    const shopSetting = await prisma$1.shopSetting.findUnique({
       where: { shopDomain: shop2 },
       select: { notificationEmail: true }
     });
@@ -12900,7 +12941,7 @@ async function updateShopPrices(shop2, accessToken) {
     };
   } catch (error) {
     console.error(`${shop2}の処理でエラー:`, error);
-    await prisma$4.priceUpdateLog.create({
+    await prisma$1.priceUpdateLog.create({
       data: {
         shopDomain: shop2,
         executionType: "cron",
@@ -12930,6 +12971,35 @@ async function runAllShops(opts = {}) {
     const now = /* @__PURE__ */ new Date();
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1e3);
     const currentHour = jstNow.getHours();
+    if (!force) {
+      const todayJST = jstNow.toISOString().split("T")[0];
+      const todayStart = /* @__PURE__ */ new Date(`${todayJST}T00:00:00.000Z`);
+      const todayEnd = /* @__PURE__ */ new Date(`${todayJST}T23:59:59.999Z`);
+      const existingExecution = await prisma$1.priceUpdateLog.findFirst({
+        where: {
+          success: true,
+          executionType: "cron",
+          executedAt: {
+            gte: todayStart,
+            lte: todayEnd
+          }
+        },
+        orderBy: { executedAt: "desc" }
+      });
+      if (existingExecution) {
+        const executedAtJST = new Date(existingExecution.executedAt.getTime() + 9 * 60 * 60 * 1e3);
+        const message = `今日は既に正常実行済み (${executedAtJST.toISOString()}) - 重複実行をスキップ`;
+        console.log(message);
+        return {
+          message,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          summary: { totalShops: 0, successShops: 0, totalUpdated: 0, totalFailed: 0 },
+          shops: [],
+          skipped: true,
+          lastExecution: existingExecution.executedAt.toISOString()
+        };
+      }
+    }
     const dayOfWeek = jstNow.getDay();
     if (!force && (dayOfWeek === 0 || dayOfWeek === 6)) {
       const message = `${jstNow.toDateString()}は土日のため価格更新をスキップします`;
@@ -12954,7 +13024,7 @@ async function runAllShops(opts = {}) {
     }
     const targetHour = 10;
     const inWindow = currentHour >= 10 && currentHour <= 11;
-    const enabledShops = await prisma$4.shopSetting.findMany({
+    const enabledShops = await prisma$1.shopSetting.findMany({
       where: {
         autoUpdateEnabled: true,
         // force=trueでない場合は10〜11時台実行
@@ -12975,7 +13045,7 @@ async function runAllShops(opts = {}) {
     console.log(`🕐 JST ${currentHour}:00 (10:00-11:00実行時間帯) - ${enabledShops.length}件のショップで価格更新を開始`);
     const results = [];
     for (const shop2 of enabledShops) {
-      const session = await prisma$4.session.findFirst({
+      const session = await prisma$1.session.findFirst({
         where: {
           shop: shop2.shopDomain,
           isOnline: false
@@ -13037,7 +13107,7 @@ const loader$8 = async ({ request }) => {
     console.error("Cron実行エラー:", e);
     return json({ error: e.message }, { status: 500 });
   } finally {
-    await prisma$4.$disconnect().catch(() => {
+    await prisma$1.$disconnect().catch(() => {
     });
   }
 };
@@ -13057,11 +13127,11 @@ const action$3 = async ({ request }) => {
     console.error("Cron実行エラー:", e);
     return json({ error: e.message }, { status: 500 });
   } finally {
-    await prisma$4.$disconnect().catch(() => {
+    await prisma$1.$disconnect().catch(() => {
     });
   }
 };
-const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$3,
   loader: loader$8
@@ -13246,7 +13316,7 @@ const action$2 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$2,
   loader: loader$7
@@ -13258,7 +13328,7 @@ const loader$6 = async ({ request }) => {
 function App$1() {
   return null;
 }
-const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
   loader: loader$6
@@ -13267,14 +13337,19 @@ const loader$5 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
 const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 const loader$4 = async ({ request }) => {
-  await authenticate.admin(request);
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  try {
+    await authenticate.admin(request);
+    return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  } catch (error) {
+    console.error("Authentication error:", error);
+    throw error;
+  }
 };
 function App() {
   const { apiKey } = useLoaderData();
@@ -13295,7 +13370,7 @@ function ErrorBoundary() {
 const headers$1 = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ErrorBoundary,
   default: App,
@@ -13355,7 +13430,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -13444,9 +13519,9 @@ async function runBulkUpdateBySpec(admin, shop2, opts = {}) {
     fetchMetalPriceData("gold"),
     fetchMetalPriceData("platinum")
   ]);
-  const setting = await prisma$4.shopSetting.findUnique({ where: { shopDomain: shop2 } });
+  const setting = await prisma$1.shopSetting.findUnique({ where: { shopDomain: shop2 } });
   const minPct = minPriceRate ?? (setting == null ? void 0 : setting.minPricePct) ?? 93;
-  const targets = await prisma$4.selectedProduct.findMany({
+  const targets = await prisma$1.selectedProduct.findMany({
     where: {
       shopDomain: shop2,
       selected: true,
@@ -13607,7 +13682,7 @@ async function runBulkUpdateBySpec(admin, shop2, opts = {}) {
   const platinumEntries = entries.filter((e) => e.metalType === "platinum");
   const logPromises = [];
   if (goldEntries.length > 0) {
-    logPromises.push(prisma$4.priceUpdateLog.create({
+    logPromises.push(prisma$1.priceUpdateLog.create({
       data: {
         shopDomain: shop2,
         executionType: "manual",
@@ -13623,7 +13698,7 @@ async function runBulkUpdateBySpec(admin, shop2, opts = {}) {
     }));
   }
   if (platinumEntries.length > 0) {
-    logPromises.push(prisma$4.priceUpdateLog.create({
+    logPromises.push(prisma$1.priceUpdateLog.create({
       data: {
         shopDomain: shop2,
         executionType: "manual",
@@ -13953,21 +14028,21 @@ const loader$3 = async ({ request }) => {
   const forceRefresh = url.searchParams.get("refresh") === "true";
   const [metalPrices, selectedProducts, selectedCollections, shopSetting] = await Promise.all([
     fetchMetalPrices(),
-    prisma$4.selectedProduct.findMany({
+    prisma$1.selectedProduct.findMany({
       where: {
         shopDomain: session.shop,
         selected: true
       },
       select: { productId: true, metalType: true }
     }),
-    prisma$4.selectedCollection.findMany({
+    prisma$1.selectedCollection.findMany({
       where: {
         shopDomain: session.shop,
         selected: true
       },
       select: { collectionId: true, metalType: true }
     }),
-    prisma$4.shopSetting.findUnique({
+    prisma$1.shopSetting.findUnique({
       where: { shopDomain: session.shop }
     })
   ]);
@@ -14017,7 +14092,7 @@ const action$1 = async ({ request }) => {
     );
     const saved = [];
     for (const [productId, metalType] of pairs) {
-      await prisma$4.selectedProduct.upsert({
+      await prisma$1.selectedProduct.upsert({
         where: { shopDomain_productId: { shopDomain: session.shop, productId } },
         update: { metalType, selected: true },
         create: { shopDomain: session.shop, productId, selected: true, metalType }
@@ -14033,7 +14108,7 @@ const action$1 = async ({ request }) => {
   if (action2 === "saveSingleProduct") {
     const productId = formData.get("productId");
     const metalType = formData.get("metalType");
-    await prisma$4.selectedProduct.upsert({
+    await prisma$1.selectedProduct.upsert({
       where: {
         shopDomain_productId: {
           shopDomain: session.shop,
@@ -14059,7 +14134,7 @@ const action$1 = async ({ request }) => {
   }
   if (action2 === "unselectProducts") {
     const productIds = formData.getAll("productId").map(String);
-    await prisma$4.selectedProduct.deleteMany({
+    await prisma$1.selectedProduct.deleteMany({
       where: {
         shopDomain: session.shop,
         productId: { in: productIds }
@@ -14087,7 +14162,7 @@ const action$1 = async ({ request }) => {
         });
       }
       try {
-        const setting = await prisma$4.shopSetting.findUnique({
+        const setting = await prisma$1.shopSetting.findUnique({
           where: { shopDomain: session.shop },
           select: { notificationEmail: true }
         });
@@ -14128,7 +14203,7 @@ const action$1 = async ({ request }) => {
     const collectionId = formData.get("collectionId");
     const metalType = formData.get("metalType") === "platinum" ? "platinum" : "gold";
     try {
-      await prisma$4.selectedCollection.upsert({
+      await prisma$1.selectedCollection.upsert({
         where: { shopDomain_collectionId: { shopDomain: session.shop, collectionId } },
         update: { selected: true, metalType },
         create: { shopDomain: session.shop, collectionId, selected: true, metalType }
@@ -14136,7 +14211,7 @@ const action$1 = async ({ request }) => {
       const productIds = await fetchProductIdsByCollection(admin, collectionId);
       const saved = [];
       for (const productId of productIds) {
-        await prisma$4.selectedProduct.upsert({
+        await prisma$1.selectedProduct.upsert({
           where: { shopDomain_productId: { shopDomain: session.shop, productId } },
           update: { selected: true, metalType },
           create: { shopDomain: session.shop, productId, selected: true, metalType }
@@ -14159,11 +14234,11 @@ const action$1 = async ({ request }) => {
   if (action2 === "unselectCollection") {
     const collectionId = formData.get("collectionId");
     try {
-      await prisma$4.selectedCollection.deleteMany({
+      await prisma$1.selectedCollection.deleteMany({
         where: { shopDomain: session.shop, collectionId }
       });
       const ids = await fetchProductIdsByCollection(admin, collectionId);
-      await prisma$4.selectedProduct.deleteMany({
+      await prisma$1.selectedProduct.deleteMany({
         where: { shopDomain: session.shop, productId: { in: ids } }
       });
       return json({
@@ -14285,13 +14360,13 @@ const action$1 = async ({ request }) => {
               });
               try {
                 const lockUntil = new Date(Date.now() + 6 * 60 * 60 * 1e3);
-                await prisma$4.manualPriceLock.deleteMany({
+                await prisma$1.manualPriceLock.deleteMany({
                   where: {
                     shopDomain: session.shop,
                     variantId: variant.id
                   }
                 });
-                await prisma$4.manualPriceLock.create({
+                await prisma$1.manualPriceLock.create({
                   data: {
                     shopDomain: session.shop,
                     variantId: variant.id,
@@ -15654,7 +15729,7 @@ function Products() {
     }
   );
 }
-const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action: action$1,
   default: Products,
@@ -15665,7 +15740,7 @@ const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 async function loader$2({ request }) {
   const { session } = await authenticate.admin(request);
   const shop2 = session.shop;
-  const setting = await prisma$4.shopSetting.upsert({
+  const setting = await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop2 },
     update: {},
     create: {
@@ -15683,7 +15758,7 @@ async function action({ request }) {
   const autoUpdateEnabled = form.get("autoUpdateEnabled") === "true";
   const minPricePct = Math.max(1, Math.min(100, Number(form.get("minPricePct") || 93)));
   const notificationEmail = String(form.get("notificationEmail") || "");
-  await prisma$4.shopSetting.upsert({
+  await prisma$1.shopSetting.upsert({
     where: { shopDomain: shop2 },
     update: {
       autoUpdateEnabled,
@@ -15913,7 +15988,7 @@ function Settings() {
     }
   );
 }
-const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   action,
   default: Settings,
@@ -15934,15 +16009,15 @@ const loader$1 = async ({ request }) => {
       fetchPlatinumPriceDataTanaka()
     ]);
     const [selectedProducts, recentLogs, shopSetting] = await Promise.all([
-      prisma$4.selectedProduct.count({
+      prisma$1.selectedProduct.count({
         where: { shopDomain: session.shop, selected: true }
       }),
-      prisma$4.priceUpdateLog.findMany({
+      prisma$1.priceUpdateLog.findMany({
         where: { shopDomain: session.shop },
         orderBy: { executedAt: "desc" },
         take: 5
       }),
-      prisma$4.shopSetting.findUnique({
+      prisma$1.shopSetting.findUnique({
         where: { shopDomain: session.shop }
       })
     ]);
@@ -16174,7 +16249,7 @@ function Dashboard() {
     }
   );
 }
-const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -16183,12 +16258,12 @@ async function loader({ request }) {
   const { session } = await authenticate.admin(request);
   const shop2 = session.shop;
   const [logs, stats] = await Promise.all([
-    prisma$4.priceUpdateLog.findMany({
+    prisma$1.priceUpdateLog.findMany({
       where: { shopDomain: shop2 },
       orderBy: { executedAt: "desc" },
       take: 100
     }),
-    prisma$4.priceUpdateLog.aggregate({
+    prisma$1.priceUpdateLog.aggregate({
       where: { shopDomain: shop2 },
       _count: { id: true },
       _sum: {
@@ -16392,12 +16467,12 @@ function Logs() {
     }
   );
 }
-const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-BHYeCEme.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-32ETzgjh.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-shop-email": { "id": "routes/api.debug-shop-email", "parentId": "root", "path": "api/debug-shop-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-shop-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.privacy-policy": { "id": "routes/api.privacy-policy", "parentId": "root", "path": "api/privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.privacy-policy-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/admin.analytics": { "id": "routes/admin.analytics", "parentId": "root", "path": "admin/analytics", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/admin.analytics-DF8eQd2A.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/DataTable-CrjXtjjS.js", "/assets/index-Dfrec1kz.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js"], "css": [] }, "routes/api.debug-email": { "id": "routes/api.debug-email", "parentId": "root", "path": "api/debug-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/privacy-policy": { "id": "routes/privacy-policy", "parentId": "root", "path": "privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/privacy-policy-CaYwulL5.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js"], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.check-db": { "id": "routes/api.check-db", "parentId": "root", "path": "api/check-db", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.check-db-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-gzyT1kYd.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/styles-USq40sv4.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/FormLayout-CVgQRxb8.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CIoUm5Hc.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-Edxnq1kp.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/index-Dfrec1kz.js", "/assets/banner-context-BjQn27ta.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BhBJUbZy.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/Banner-DWoduFFk.js", "/assets/Select-CzcThcG5.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js", "/assets/context-BG6bh-td.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BllzFhYE.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/Banner-DWoduFFk.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Divider-BDpyBtSk.js", "/assets/FormLayout-CVgQRxb8.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/context-JUMp7zSJ.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BWlMq811.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/index-Dfrec1kz.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Divider-BDpyBtSk.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-C7lskCUw.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Layout-TUPT4spf.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Select-CzcThcG5.js", "/assets/DataTable-CrjXtjjS.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js"], "css": [] } }, "url": "/assets/manifest-d5a46407.js", "version": "d5a46407" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-BHYeCEme.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-32ETzgjh.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-shop-email": { "id": "routes/api.debug-shop-email", "parentId": "root", "path": "api/debug-shop-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-shop-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.privacy-policy": { "id": "routes/api.privacy-policy", "parentId": "root", "path": "api/privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.privacy-policy-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/admin.analytics": { "id": "routes/admin.analytics", "parentId": "root", "path": "admin/analytics", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/admin.analytics-DF8eQd2A.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/DataTable-CrjXtjjS.js", "/assets/index-Dfrec1kz.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js"], "css": [] }, "routes/api.debug-email": { "id": "routes/api.debug-email", "parentId": "root", "path": "api/debug-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/privacy-policy": { "id": "routes/privacy-policy", "parentId": "root", "path": "privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/privacy-policy-CaYwulL5.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js"], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-cron": { "id": "routes/api.test-cron", "parentId": "root", "path": "api/test-cron", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.check-db": { "id": "routes/api.check-db", "parentId": "root", "path": "api/check-db", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.check-db-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-gzyT1kYd.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/styles-USq40sv4.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/FormLayout-CVgQRxb8.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CIoUm5Hc.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-Edxnq1kp.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/index-Dfrec1kz.js", "/assets/banner-context-BjQn27ta.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BhBJUbZy.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/Banner-DWoduFFk.js", "/assets/Select-CzcThcG5.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js", "/assets/context-BG6bh-td.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BllzFhYE.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/Banner-DWoduFFk.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Divider-BDpyBtSk.js", "/assets/FormLayout-CVgQRxb8.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/context-JUMp7zSJ.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BWlMq811.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/index-Dfrec1kz.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Divider-BDpyBtSk.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-C7lskCUw.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Layout-TUPT4spf.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Select-CzcThcG5.js", "/assets/DataTable-CrjXtjjS.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js"], "css": [] } }, "url": "/assets/manifest-2cc63bfa.js", "version": "2cc63bfa" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -16534,13 +16609,21 @@ const routes = {
     caseSensitive: void 0,
     module: route15
   },
+  "routes/api.test-cron": {
+    id: "routes/api.test-cron",
+    parentId: "root",
+    path: "api/test-cron",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route16
+  },
   "routes/api.check-db": {
     id: "routes/api.check-db",
     parentId: "root",
     path: "api/check-db",
     index: void 0,
     caseSensitive: void 0,
-    module: route16
+    module: route17
   },
   "routes/api.variants": {
     id: "routes/api.variants",
@@ -16548,7 +16631,7 @@ const routes = {
     path: "api/variants",
     index: void 0,
     caseSensitive: void 0,
-    module: route17
+    module: route18
   },
   "routes/api.health": {
     id: "routes/api.health",
@@ -16556,7 +16639,7 @@ const routes = {
     path: "api/health",
     index: void 0,
     caseSensitive: void 0,
-    module: route18
+    module: route19
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -16564,7 +16647,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route19
+    module: route20
   },
   "routes/api.cron": {
     id: "routes/api.cron",
@@ -16572,7 +16655,7 @@ const routes = {
     path: "api/cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route20
+    module: route21
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -16580,7 +16663,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route21
+    module: route22
   },
   "routes/_index": {
     id: "routes/_index",
@@ -16588,7 +16671,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route22
+    module: route23
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -16596,7 +16679,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route23
+    module: route24
   },
   "routes/app": {
     id: "routes/app",
@@ -16604,7 +16687,7 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route24
+    module: route25
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -16612,7 +16695,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route25
+    module: route26
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -16620,7 +16703,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route26
+    module: route27
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -16628,7 +16711,7 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route27
+    module: route28
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -16636,7 +16719,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route28
+    module: route29
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -16644,7 +16727,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route29
+    module: route30
   }
 };
 export {
