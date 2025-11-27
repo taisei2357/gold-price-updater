@@ -917,6 +917,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [manualUpdateDirection, setManualUpdateDirection] = useState('plus'); // 'plus' or 'minus'
   const [manualUpdatePercentage, setManualUpdatePercentage] = useState(0.1); // 0.1-1.0%
   const [manualSelectedProducts, setManualSelectedProducts] = useState([]); // 手動更新用の選択商品
+  const [successMessage, setSuccessMessage] = useState(''); // 成功メッセージ
   
   // 楽観的更新用のstate
   const [optimisticPrices, setOptimisticPrices] = useState({}); // { productId: newPrice }
@@ -1018,6 +1019,22 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       // 手動更新完了後の処理
       if (updater.data.updateResults && updater.data.summary) {
         console.log("✅ Manual update completed:", updater.data);
+        
+        // 成功メッセージを表示
+        const { summary } = updater.data;
+        const successCount = summary.successCount || 0;
+        const failureCount = summary.failureCount || 0;
+        const totalCount = successCount + failureCount;
+        
+        if (successCount > 0) {
+          const message = failureCount > 0 
+            ? `価格更新完了: ${successCount}/${totalCount}件成功`
+            : `価格更新完了: ${successCount}件の商品価格を更新しました`;
+          setSuccessMessage(message);
+          
+          // 5秒後にメッセージを自動で消す
+          setTimeout(() => setSuccessMessage(''), 5000);
+        }
         
         // 確定価格でオーバーレイを更新（楽観的更新 → 確定価格）
         const confirmedPrices = {};
@@ -1921,6 +1938,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 <h3>手動価格更新</h3>
                 <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
               </InlineStack>
+              
+              {/* 成功メッセージ */}
+              {successMessage && (
+                <Banner tone="success" onDismiss={() => setSuccessMessage('')}>
+                  {successMessage}
+                </Banner>
+              )}
               
               <InlineStack gap="400" wrap>
                 {/* ±選択 */}
