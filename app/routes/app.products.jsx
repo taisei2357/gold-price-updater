@@ -1022,9 +1022,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       hasSummary: !!(updater.data?.summary)
     });
     
-    // updaterが"idle"になった時にローディングを終了
-    if (updater.state === "idle" && isManualUpdating) {
-      console.log("✅ Clearing manual updating state and timeout");
+    // 手動更新完了の判定: データがあって結果があればローディングを終了
+    if (isManualUpdating && updater.data?.updateResults && updater.data?.summary) {
+      console.log("✅ Clearing manual updating state and timeout due to completion");
       setIsManualUpdating(false);
       
       // タイムアウトをクリア
@@ -1034,7 +1034,19 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
       }
     }
     
-    if (updater.state === "idle" && updater.data) {
+    // updaterが"idle"になった時にもローディングを終了（フェイルセーフ）
+    if (updater.state === "idle" && isManualUpdating) {
+      console.log("✅ Clearing manual updating state due to idle state");
+      setIsManualUpdating(false);
+      
+      // タイムアウトをクリア
+      if (window.manualUpdateTimeoutId) {
+        clearTimeout(window.manualUpdateTimeoutId);
+        window.manualUpdateTimeoutId = null;
+      }
+    }
+    
+    if (updater.data) {
       // 手動更新完了後の処理
       if (updater.data.updateResults && updater.data.summary) {
         console.log("✅ Manual update completed:", updater.data);
