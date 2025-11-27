@@ -1014,68 +1014,67 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 更新完了時の後処理
   useEffect(() => {
-    console.log("🔍 Updater state changed:", { state: updater.state, data: updater.data });
+    console.log("🔍 Updater state changed:", { state: updater.state, data: updater.data, isManualUpdating });
     
-    if (updater.state === "idle") {
-      // 手動更新の場合は常にローディング状態をクリア
-      if (isManualUpdating) {
-        setIsManualUpdating(false);
-      }
-      
-      if (updater.data) {
-        // 手動更新完了後の処理
-        if (updater.data.updateResults && updater.data.summary) {
-          console.log("✅ Manual update completed:", updater.data);
+    // updaterが"idle"になった時にローディングを終了
+    if (updater.state === "idle" && isManualUpdating) {
+      console.log("✅ Clearing manual updating state");
+      setIsManualUpdating(false);
+    }
+    
+    if (updater.state === "idle" && updater.data) {
+      // 手動更新完了後の処理
+      if (updater.data.updateResults && updater.data.summary) {
+        console.log("✅ Manual update completed:", updater.data);
+        
+        // 成功メッセージを表示
+        const { summary } = updater.data;
+        const successCount = summary.successCount || 0;
+        const failureCount = summary.failureCount || 0;
+        const totalCount = successCount + failureCount;
+        
+        if (successCount > 0) {
+          const message = failureCount > 0 
+            ? `価格更新完了: ${successCount}/${totalCount}件成功`
+            : `価格更新完了: ${successCount}件の商品価格を更新しました`;
+          setSuccessMessage(message);
           
-          // 成功メッセージを表示
-          const { summary } = updater.data;
-          const successCount = summary.successCount || 0;
-          const failureCount = summary.failureCount || 0;
-          const totalCount = successCount + failureCount;
-          
-          if (successCount > 0) {
-            const message = failureCount > 0 
-              ? `価格更新完了: ${successCount}/${totalCount}件成功`
-              : `価格更新完了: ${successCount}件の商品価格を更新しました`;
-            setSuccessMessage(message);
-            
-            // 5秒後にメッセージを自動で消す
-            setTimeout(() => setSuccessMessage(''), 5000);
-          }
-          
-          // 確定価格でオーバーレイを更新（楽観的更新 → 確定価格）
-          const confirmedPrices = {};
-          updater.data.updateResults.forEach(result => {
-            if (result.success && result.confirmedPrice !== undefined) {
-              confirmedPrices[result.variantId] = result.confirmedPrice;
-            }
-          });
-          
-          if (Object.keys(confirmedPrices).length > 0) {
-            console.log("🎯 Applying confirmed prices from server:", confirmedPrices);
-            // 楽観的更新を確定価格で上書き
-            setOptimisticPrices(prev => ({ ...prev, ...confirmedPrices }));
-            
-            // TTL付きオーバーレイに3分間保護する
-            const now = Date.now();
-            const overlayUpdates = Object.fromEntries(
-              Object.entries(confirmedPrices).map(([variantId, price]) => [
-                variantId,
-                { price, until: now + 3 * 60 * 1000 } // 3分間は戻させない
-              ])
-            );
-            setPriceOverlay(prev => ({ ...prev, ...overlayUpdates }));
-          }
-          
-          // 選択をクリア
-          setManualSelectedProducts([]);
-        }
-        // エラーケースのハンドリング
-        else if (updater.data.error) {
-          console.error("❌ Manual update error:", updater.data.error);
-          setSuccessMessage(`エラー: ${updater.data.error}`);
+          // 5秒後にメッセージを自動で消す
           setTimeout(() => setSuccessMessage(''), 5000);
         }
+        
+        // 確定価格でオーバーレイを更新（楽観的更新 → 確定価格）
+        const confirmedPrices = {};
+        updater.data.updateResults.forEach(result => {
+          if (result.success && result.confirmedPrice !== undefined) {
+            confirmedPrices[result.variantId] = result.confirmedPrice;
+          }
+        });
+        
+        if (Object.keys(confirmedPrices).length > 0) {
+          console.log("🎯 Applying confirmed prices from server:", confirmedPrices);
+          // 楽観的更新を確定価格で上書き
+          setOptimisticPrices(prev => ({ ...prev, ...confirmedPrices }));
+          
+          // TTL付きオーバーレイに3分間保護する
+          const now = Date.now();
+          const overlayUpdates = Object.fromEntries(
+            Object.entries(confirmedPrices).map(([variantId, price]) => [
+              variantId,
+              { price, until: now + 3 * 60 * 1000 } // 3分間は戻させない
+            ])
+          );
+          setPriceOverlay(prev => ({ ...prev, ...overlayUpdates }));
+        }
+        
+        // 選択をクリア
+        setManualSelectedProducts([]);
+      }
+      // エラーケースのハンドリング
+      else if (updater.data.error) {
+        console.error("❌ Manual update error:", updater.data.error);
+        setSuccessMessage(`エラー: ${updater.data.error}`);
+        setTimeout(() => setSuccessMessage(''), 5000);
       }
     }
   }, [updater.state, updater.data, isManualUpdating]);
@@ -1566,7 +1565,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         setRefreshCountdown(0);
       }
     }, 1000);
-  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, filteredProducts, revalidator]);
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, filteredProducts, revalidator, setIsManualUpdating]);
 
 
   return (
