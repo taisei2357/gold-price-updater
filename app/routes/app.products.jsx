@@ -1014,12 +1014,24 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
 
   // 更新完了時の後処理
   useEffect(() => {
-    console.log("🔍 Updater state changed:", { state: updater.state, data: updater.data, isManualUpdating });
+    console.log("🔍 Updater state changed:", { 
+      state: updater.state, 
+      dataExists: !!updater.data, 
+      isManualUpdating,
+      hasUpdateResults: !!(updater.data?.updateResults),
+      hasSummary: !!(updater.data?.summary)
+    });
     
     // updaterが"idle"になった時にローディングを終了
     if (updater.state === "idle" && isManualUpdating) {
-      console.log("✅ Clearing manual updating state");
+      console.log("✅ Clearing manual updating state and timeout");
       setIsManualUpdating(false);
+      
+      // タイムアウトをクリア
+      if (window.manualUpdateTimeoutId) {
+        clearTimeout(window.manualUpdateTimeoutId);
+        window.manualUpdateTimeoutId = null;
+      }
     }
     
     if (updater.state === "idle" && updater.data) {
@@ -1478,8 +1490,18 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const executeManualPriceUpdate = useCallback(() => {
     if (manualSelectedProducts.length === 0) return;
     
+    console.log("🔄 executeManualPriceUpdate called, setting isManualUpdating to true");
     // ローディング状態を開始
     setIsManualUpdating(true);
+    
+    // フェイルセーフ: 30秒後に強制的にローディングを停止
+    const timeoutId = setTimeout(() => {
+      console.warn("⚠️ Manual update timeout - forcing loading to stop");
+      setIsManualUpdating(false);
+    }, 30000);
+    
+    // タイムアウトIDを保存して、正常完了時にクリア
+    window.manualUpdateTimeoutId = timeoutId;
     
     const adjustmentRatio = manualUpdateDirection === 'plus' 
       ? manualUpdatePercentage / 100 
@@ -2036,7 +2058,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   選択解除
                 </Button>
                 <Button 
-                  onClick={executeManualPriceUpdate}
+                  onClick={() => {
+                    console.log("🔘 Manual update button clicked", { isManualUpdating, selectedCount: manualSelectedProducts.length });
+                    executeManualPriceUpdate();
+                  }}
                   disabled={manualSelectedProducts.length === 0 || isManualUpdating}
                   variant="primary"
                   tone="critical"
