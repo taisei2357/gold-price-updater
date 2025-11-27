@@ -733,6 +733,11 @@ export const action = async ({ request }) => {
               price: newPrice.toString()
             };
             console.log(`📝 GraphQL input data:`, inputData);
+            
+            // タイムアウト処理付きでGraphQL APIを実行
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒タイムアウト
+            
             const updateResponse = await admin.graphql(
               `#graphql
                 mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
@@ -746,11 +751,18 @@ export const action = async ({ request }) => {
                 variables: {
                   productId: productId,
                   variants: [{ id: variant.id, price: newPrice.toString() }]
-                }
+                },
+                signal: controller.signal
               }
             );
-
+            
+            clearTimeout(timeoutId);
             console.log(`📡 GraphQL response status: ${updateResponse.status} ${updateResponse.statusText}`);
+            
+            if (!updateResponse.ok) {
+              throw new Error(`GraphQL request failed with status ${updateResponse.status}: ${updateResponse.statusText}`);
+            }
+            
             const updateData = await updateResponse.json();
             
             console.log(`🔄 GraphQL update response for ${variant.id}:`, updateData);
@@ -809,11 +821,22 @@ export const action = async ({ request }) => {
             }
           } catch (variantError) {
             console.error(`❌ GraphQL update error for variant ${variant.id}:`, variantError);
+            let errorMessage = `価格更新エラー: ${variantError.message}`;
+            
+            // タイムアウトエラーの場合
+            if (variantError.name === 'AbortError') {
+              errorMessage = 'リクエストがタイムアウトしました (30秒)';
+            }
+            // ネットワークエラーの場合
+            else if (variantError.message.includes('fetch')) {
+              errorMessage = 'ネットワークエラーが発生しました';
+            }
+            
             updateResults.push({
               productId,
               variantId: variant.id,
               success: false,
-              error: `価格更新エラー: ${variantError.message}`
+              error: errorMessage
             });
           }
         }
