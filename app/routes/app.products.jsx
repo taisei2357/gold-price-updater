@@ -2024,9 +2024,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   disabled={manualSelectedProducts.length === 0 || updater.state === "submitting"}
                   variant="primary"
                   tone="critical"
-                  loading={updater.state === "submitting"}
+                  loading={updater.state === "submitting" && manualSelectedProducts.length > 0}
                 >
-                  {updater.state === "submitting" 
+                  {updater.state === "submitting" && manualSelectedProducts.length > 0
                     ? "価格更新中..." 
                     : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
                   }
