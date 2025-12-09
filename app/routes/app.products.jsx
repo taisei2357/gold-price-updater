@@ -2142,7 +2142,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     }
                   }}
                   headings={selectionType === 'products' ? [
-                    { title: '選択' },
+                    { title: '自動更新' },
                     { title: '手動更新' },
                     { title: '商品名' },
                     { title: 'ステータス' },
@@ -2150,7 +2150,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     { title: 'バリエーション' },
                     { title: '連動設定' }
                   ] : [
-                    { title: '選択' },
+                    { title: '自動更新' },
                     { title: 'コレクション名' },
                     { title: '商品数' },
                     { title: 'ハンドル' },
