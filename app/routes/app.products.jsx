@@ -2027,24 +2027,25 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   </InlineStack>
                 </div>
                 
-                {/* パーセンテージ選択 */}
+                {/* パーセンテージ入力 */}
                 <div style={{ minWidth: '150px' }}>
-                  <Select
+                  <TextField
                     label="調整率"
-                    options={[
-                      { label: "0.1%", value: "0.1" },
-                      { label: "0.2%", value: "0.2" },
-                      { label: "0.3%", value: "0.3" },
-                      { label: "0.4%", value: "0.4" },
-                      { label: "0.5%", value: "0.5" },
-                      { label: "0.6%", value: "0.6" },
-                      { label: "0.7%", value: "0.7" },
-                      { label: "0.8%", value: "0.8" },
-                      { label: "0.9%", value: "0.9" },
-                      { label: "1.0%", value: "1.0" }
-                    ]}
                     value={manualUpdatePercentage.toString()}
-                    onChange={(value) => setManualUpdatePercentage(parseFloat(value))}
+                    onChange={(value) => {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
+                        setManualUpdatePercentage(numValue);
+                      } else if (value === '' || value === '0') {
+                        setManualUpdatePercentage(0);
+                      }
+                    }}
+                    type="number"
+                    suffix="%"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    helpText="0〜10%の範囲で入力"
                   />
                 </div>
                 
