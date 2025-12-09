@@ -2189,8 +2189,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     const commonStatus = hasSpecialStatus ? variantDisplayPrices.find(v => v.status !== '')?.status || '' : '';
                     
                     const priceRange = variantDisplayPrices.length > 1
-                      ? `¥${Math.min(...prices)} - ¥${Math.max(...prices)}${commonStatus}`
-                      : `¥${prices[0] ?? 0}${commonStatus}`;
+                      ? `¥${Math.min(...prices).toLocaleString()} - ¥${Math.max(...prices).toLocaleString()}${commonStatus}`
+                      : `¥${(prices[0] ?? 0).toLocaleString()}${commonStatus}`;
                     
                     // デバッグログ
                     if (hasSpecialStatus) {
