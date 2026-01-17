@@ -1704,7 +1704,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   <div style={{
                     padding: '16px', 
                     background: 'white', 
-                    border: '1px solid #f59e0b',
+                    border: '1px solid #ffd700',
                     borderRadius: '8px'
                   }}>
                     <BlockStack gap="300">
@@ -1713,7 +1713,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           <div style={{
                             width: '32px',
                             height: '32px',
-                            background: '#f59e0b',
+                            background: 'linear-gradient(135deg, #ffd700 0%, #ffb300 100%)',
                             borderRadius: '6px',
                             display: 'flex',
                             alignItems: 'center',
@@ -1722,10 +1722,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             fontWeight: '700',
                             color: 'white'
                           }}>
-                            AU
+                            K
                           </div>
                           <Text variant="headingMd">
-                            金価格
+                            純金価格
                           </Text>
                           <Text variant="bodySm" tone="subdued">
                             田中貴金属工業
@@ -1764,10 +1764,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           </Text>
                         </div>
                         <div style={{
-                          background: '#fef3c7',
+                          background: '#fef9c3',
                           padding: '8px 12px',
                           borderRadius: '6px',
-                          border: '1px solid #f59e0b'
+                          border: '1px solid #ffd700'
                         }}>
                           <Text variant="bodyXs" tone="subdued">
                             調整率
@@ -1830,7 +1830,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             Pt
                           </div>
                           <Text variant="headingMd">
-                            プラチナ価格
+                            純プラチナ価格
                           </Text>
                           <Text variant="bodySm" tone="subdued">
                             田中貴金属工業

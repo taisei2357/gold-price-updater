@@ -126,7 +126,7 @@ export default function Dashboard() {
               <div style={{
                 padding: '24px', 
                 background: 'white', 
-                border: '2px solid #f59e0b',
+                border: '2px solid #ffd700',
                 borderRadius: '8px'
               }}>
                 <InlineStack align="space-between" blockAlign="center">
@@ -135,7 +135,7 @@ export default function Dashboard() {
                       <div style={{
                         width: '40px',
                         height: '40px',
-                        background: '#f59e0b',
+                        background: 'linear-gradient(135deg, #ffd700 0%, #ffb300 100%)',
                         borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
@@ -144,11 +144,11 @@ export default function Dashboard() {
                         fontWeight: '700',
                         color: 'white'
                       }}>
-                        AU
+                        K
                       </div>
                       <BlockStack gap="100">
                         <Text variant="headingLg" as="h2">
-                          金価格
+                          純金価格
                         </Text>
                         <Text variant="bodySm" tone="subdued">
                           田中貴金属工業
@@ -243,7 +243,7 @@ export default function Dashboard() {
                       </div>
                       <BlockStack gap="100">
                         <Text variant="headingLg" as="h2">
-                          プラチナ価格
+                          純プラチナ価格
                         </Text>
                         <Text variant="bodySm" tone="subdued">
                           田中貴金属工業
