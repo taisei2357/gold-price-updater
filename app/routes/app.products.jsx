@@ -94,6 +94,14 @@ function filterProducts(products, searchTerm, filterType = "all") {
     filtered = products.filter(product => 
       product.title.includes("K18") || product.title.includes("18金")
     );
+  } else if (filterType === "in_stock") {
+    filtered = products.filter(product => 
+      (product.totalInventory || 0) > 0
+    );
+  } else if (filterType === "out_of_stock") {
+    filtered = products.filter(product => 
+      (product.totalInventory || 0) === 0
+    );
   }
   
   // 検索条件でフィルタ
@@ -282,6 +290,8 @@ async function fetchAllProducts(admin) {
                 title
                 handle
                 status
+                productType
+                totalInventory
                 variants(first: 250) {
                   edges {
                     node {
@@ -1808,7 +1818,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         label="商品フィルター"
                         options={[
                           {label: "すべての商品", value: "all"},
-                          {label: "K18商品のみ", value: "k18"}
+                          {label: "K18商品のみ", value: "k18"},
+                          {label: "在庫有商品のみ", value: "in_stock"},
+                          {label: "在庫無商品のみ", value: "out_of_stock"}
                         ]}
                         value={filterType}
                         onChange={setFilterType}
@@ -2127,7 +2139,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
               overflowX: 'auto',
               overflowAnchor: 'none'
             }}>
-              <div style={{ minWidth: 1680 }}>
+              <div style={{ minWidth: 2140 }}>
                 <IndexTable
                   resourceName={{ 
                     singular: selectionType === 'products' ? '商品' : 'コレクション', 
@@ -2149,6 +2161,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     { title: 'ステータス' },
                     { title: '価格' },
                     { title: 'バリエーション' },
+                    { title: '在庫数' },
+                    { title: '商品タイプ' },
                     { title: '連動設定' }
                   ] : [
                     { title: '自動更新' },
@@ -2289,6 +2303,35 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         <IndexTable.Cell>
                           <Box minWidth="100px" maxWidth="140px">
                             <Text variant="bodySm">{variants.length}</Text>
+                          </Box>
+                        </IndexTable.Cell>
+                        
+                        {/* 在庫数 */}
+                        <IndexTable.Cell>
+                          <Box minWidth="120px" maxWidth="140px">
+                            <InlineStack gap="100" blockAlign="center">
+                              <Text variant="bodySm" fontWeight="medium">
+                                {product.totalInventory || 0}
+                              </Text>
+                              {product.totalInventory > 0 ? (
+                                <Badge status="success" size="small">在庫有</Badge>
+                              ) : (
+                                <Badge status="critical" size="small">在庫無</Badge>
+                              )}
+                            </InlineStack>
+                          </Box>
+                        </IndexTable.Cell>
+                        
+                        {/* 商品タイプ */}
+                        <IndexTable.Cell>
+                          <Box minWidth="140px" maxWidth="180px">
+                            {product.productType ? (
+                              <Badge tone="info" size="small">
+                                {product.productType}
+                              </Badge>
+                            ) : (
+                              <Text variant="bodySm" tone="subdued">未分類</Text>
+                            )}
                           </Box>
                         </IndexTable.Cell>
                         

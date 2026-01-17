@@ -423,6 +423,62 @@ export class ShopIsolationManager {
     });
   }
 
+  // 店舗のプランタイプを更新（Billing用）
+  async updateShopPlan(shopDomain: string, planType: 'free' | 'basic' | 'premium' | 'enterprise'): Promise<void> {
+    const features = this.getFeaturesForPlan(planType);
+    
+    await prisma.shopSetting.upsert({
+      where: { shopDomain },
+      create: {
+        shopDomain,
+        planType,
+        featuresEnabled: JSON.stringify(features),
+        isActive: true,
+        maxConcurrentTasks: this.getMaxTasksForPlan(planType),
+        priorityLevel: this.getPriorityForPlan(planType),
+      },
+      update: {
+        planType,
+        featuresEnabled: JSON.stringify(features),
+        maxConcurrentTasks: this.getMaxTasksForPlan(planType),
+        priorityLevel: this.getPriorityForPlan(planType),
+      },
+    });
+  }
+
+  // プラン別機能設定
+  private getFeaturesForPlan(planType: string) {
+    switch (planType) {
+      case 'premium':
+      case 'enterprise':
+        return { advanced_pricing: true, bulk_operations: true, analytics: true };
+      case 'basic':
+        return { basic_pricing: true, email_notifications: true };
+      default:
+        return { basic_pricing: true };
+    }
+  }
+
+  // プラン別タスク制限
+  private getMaxTasksForPlan(planType: string): number {
+    switch (planType) {
+      case 'enterprise': return 20;
+      case 'premium': return 15;
+      case 'basic': return 8;
+      default: return 3;
+    }
+  }
+
+  // プラン別優先度
+  private getPriorityForPlan(planType: string): number {
+    switch (planType) {
+      case 'enterprise': return 1;
+      case 'premium': return 3;
+      case 'basic': return 5;
+      default: return 8;
+    }
+  }
+
   // 店舗の停止（アンインストール時）
   async suspendShop(shopDomain: string, reason: string): Promise<void> {
     await prisma.shopSetting.update({

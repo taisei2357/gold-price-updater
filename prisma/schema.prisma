@@ -26,32 +26,23 @@ model Session {
 }
 
 model SelectedProduct {
-  id         String     @id @default(cuid())
-  shopDomain String
-  productId  String
-  selected   Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  metalType  MetalType? @default(gold)
-  // データ分離強化
-  lastSyncAt DateTime?
-  syncStatus SyncStatus @default(pending)
-  errorCount Int       @default(0)
-  isLocked   Boolean   @default(false)
+  id          String     @id @default(cuid())
+  shopDomain  String
+  productId   String
+  selected    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  metalType   MetalType? @default(gold)
+  errorCount  Int        @default(0)
+  isLocked    Boolean    @default(false)
+  lastSyncAt  DateTime?
   lockedUntil DateTime?
+  syncStatus  SyncStatus @default(pending)
 
   @@unique([shopDomain, productId])
   @@index([shopDomain, metalType])
   @@index([shopDomain, syncStatus])
   @@index([shopDomain, isLocked])
-}
-
-enum SyncStatus {
-  pending
-  syncing
-  synced
-  error
-  skipped
 }
 
 model ShopSetting {
@@ -62,43 +53,32 @@ model ShopSetting {
   notificationEmail   String?
   consecutiveFailures Int       @default(0)
   lastFailureAt       DateTime?
-  // 店舗分離強化
-  planType           PlanType   @default(free)
-  isActive           Boolean    @default(true)
-  suspendedAt        DateTime?
-  suspensionReason   String?
-  // 処理制限設定
-  maxConcurrentTasks Int       @default(5)
-  priorityLevel      Int       @default(5)
-  // 機能制限
-  featuresEnabled    String    @default("basic") // JSON形式で機能フラグ保存
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  featuresEnabled     String    @default("basic")
+  isActive            Boolean   @default(true)
+  maxConcurrentTasks  Int       @default(5)
+  planType            PlanType  @default(free)
+  priorityLevel       Int       @default(5)
+  suspendedAt         DateTime?
+  suspensionReason    String?
 
   @@index([shopDomain, isActive])
   @@index([planType, isActive])
 }
 
-enum PlanType {
-  free
-  basic
-  premium
-  enterprise
-}
-
 model SelectedCollection {
-  id           String    @id @default(cuid())
+  id           String     @id @default(cuid())
   shopDomain   String
   collectionId String
-  selected     Boolean   @default(true)
-  metalType    MetalType @default(gold)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  // データ分離強化
+  selected     Boolean    @default(true)
+  metalType    MetalType  @default(gold)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  errorCount   Int        @default(0)
   lastSyncAt   DateTime?
+  productCount Int        @default(0)
   syncStatus   SyncStatus @default(pending)
-  productCount Int       @default(0)
-  errorCount   Int       @default(0)
 
   @@unique([shopDomain, collectionId])
   @@index([shopDomain])
@@ -107,24 +87,23 @@ model SelectedCollection {
 }
 
 model PriceUpdateLog {
-  id            String        @id @default(cuid())
-  shopDomain    String
-  executionType ExecutionType
-  priceRatio    Float?
-  minPricePct   Int
-  totalProducts Int           @default(0)
-  updatedCount  Int           @default(0)
-  failedCount   Int           @default(0)
-  success       Boolean
-  errorMessage  String?
-  executedAt    DateTime      @default(now())
-  details       String?
-  metalType     MetalType?    @default(gold)
-  // 処理時間とリソース使用量を追加
+  id              String        @id @default(cuid())
+  shopDomain      String
+  executionType   ExecutionType
+  priceRatio      Float?
+  minPricePct     Int
+  totalProducts   Int           @default(0)
+  updatedCount    Int           @default(0)
+  failedCount     Int           @default(0)
+  success         Boolean
+  errorMessage    String?
+  executedAt      DateTime      @default(now())
+  details         String?
+  metalType       MetalType?    @default(gold)
+  apiCallsUsed    Int           @default(0)
   executionTimeMs Int?
-  apiCallsUsed    Int          @default(0)
-  queueWaitTimeMs Int?
   memoryUsageMb   Float?
+  queueWaitTimeMs Int?
 
   @@index([shopDomain, metalType, executedAt])
   @@index([shopDomain, executedAt])
@@ -141,70 +120,82 @@ model ManualPriceLock {
   @@index([shopDomain, until])
 }
 
-enum ExecutionType {
-  cron
-  manual
-  webhook
-}
-
-// 店舗別処理キューイングシステム
 model ProcessingQueue {
-  id         String      @id @default(cuid())
-  shopDomain String
-  taskType   TaskType
-  priority   Int         @default(5)  // 1(高) - 10(低)
-  status     QueueStatus @default(pending)
-  payload    String      // JSON形式でタスクデータを保存
-  attempts   Int         @default(0)
-  maxAttempts Int        @default(3)
-  scheduledAt DateTime   @default(now())
-  startedAt   DateTime?
-  completedAt DateTime?
+  id           String      @id @default(cuid())
+  shopDomain   String
+  taskType     TaskType
+  priority     Int         @default(5)
+  status       QueueStatus @default(pending)
+  payload      String
+  attempts     Int         @default(0)
+  maxAttempts  Int         @default(3)
+  scheduledAt  DateTime    @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
   errorMessage String?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([shopDomain, status, scheduledAt])
   @@index([status, priority, scheduledAt])
 }
 
-// 詳細な使用状況ログシステム
 model UsageLog {
-  id             String      @id @default(cuid())
+  id             String       @id @default(cuid())
   shopDomain     String
   actionType     ActionType
   resourceType   ResourceType
-  resourceId     String?     // 商品ID、コレクションIDなど
-  requestDetails String?     // リクエスト詳細（JSON）
-  responseStatus Int?        // HTTPステータスコード
-  executionTime  Int?        // 実行時間（ミリ秒）
-  apiCalls       Int         @default(0)  // APIコール回数
-  dataSize       Int?        // データサイズ（バイト）
+  resourceId     String?
+  requestDetails String?
+  responseStatus Int?
+  executionTime  Int?
+  apiCalls       Int          @default(0)
+  dataSize       Int?
   userAgent      String?
   ipAddress      String?
   sessionId      String?
-  errorDetails   String?     // エラー詳細
-  createdAt      DateTime    @default(now())
+  errorDetails   String?
+  createdAt      DateTime     @default(now())
 
   @@index([shopDomain, actionType, createdAt])
   @@index([shopDomain, createdAt])
   @@index([actionType, createdAt])
 }
 
-// 店舗別リソース制限
 model ShopResourceLimit {
-  id                String   @id @default(cuid())
-  shopDomain        String   @unique
-  maxProductsPerHour Int     @default(1000)
-  maxApiCallsPerHour Int     @default(100)
-  maxQueueSize      Int      @default(50)
-  currentHourUsage  Int      @default(0)
-  lastResetAt       DateTime @default(now())
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  shopDomain         String   @unique
+  maxProductsPerHour Int      @default(1000)
+  maxApiCallsPerHour Int      @default(100)
+  maxQueueSize       Int      @default(50)
+  currentHourUsage   Int      @default(0)
+  lastResetAt        DateTime @default(now())
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([shopDomain, lastResetAt])
+}
+
+enum SyncStatus {
+  pending
+  syncing
+  synced
+  error
+  skipped
+}
+
+enum PlanType {
+  free
+  basic
+  premium
+  enterprise
+}
+
+enum ExecutionType {
+  cron
+  manual
+  webhook
 }
 
 enum TaskType {
