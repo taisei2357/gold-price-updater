@@ -69,14 +69,14 @@ export async function action({ request }) {
     }
   });
 
+  const updatedSetting = await prisma.shopSetting.findUnique({
+    where: { shopDomain: shop }
+  });
+
   return json({ 
     success: true, 
     message: "設定が正常に保存されました",
-    setting: {
-      autoUpdateEnabled,
-      minPricePct,
-      notificationEmail: notificationEmail || null
-    }
+    setting: updatedSetting
   });
 }
 
@@ -94,10 +94,23 @@ export default function Settings() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showEmailTestMessage, setShowEmailTestMessage] = useState(false);
   
+  // loaderデータが変更されたときにstateを更新（リロード対応）
+  useEffect(() => {
+    setAutoUpdateEnabled(setting.autoUpdateEnabled);
+    setMinPricePct(setting.minPricePct.toString());
+    setNotificationEmail(setting.notificationEmail || "");
+  }, [setting.autoUpdateEnabled, setting.minPricePct, setting.notificationEmail]);
+  
   // 保存成功時の処理
   useEffect(() => {
     if (fetcher.data?.success) {
       setShowSuccessMessage(true);
+      // 保存されたデータでstateを更新
+      if (fetcher.data.setting) {
+        setAutoUpdateEnabled(fetcher.data.setting.autoUpdateEnabled);
+        setMinPricePct(fetcher.data.setting.minPricePct.toString());
+        setNotificationEmail(fetcher.data.setting.notificationEmail || "");
+      }
       // 3秒後にメッセージを非表示
       const timer = setTimeout(() => setShowSuccessMessage(false), 3000);
       return () => clearTimeout(timer);
