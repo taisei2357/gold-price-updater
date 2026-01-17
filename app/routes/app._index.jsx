@@ -123,57 +123,104 @@ export default function Dashboard() {
           <Layout.Section>
             {/* 金価格 */}
             <Card>
-              <div style={{padding: '24px', background: '#fbbf24', borderRadius: '8px'}}>
-              <InlineStack align="space-between" blockAlign="center">
-                <BlockStack gap="300">
-                  <InlineStack gap="200" blockAlign="center">
-                    <span style={{ fontSize: '24px', marginRight: '8px' }}>🥇</span>
-                    <Text variant="headingLg" as="h2" tone="text-inverse">
-                      田中貴金属 金価格
-                    </Text>
-                  </InlineStack>
+              <div style={{
+                padding: '32px', 
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(245, 158, 11, 0.2)'
+              }}>
+                <InlineStack align="space-between" blockAlign="center">
+                  <BlockStack gap="400">
+                    <InlineStack gap="300" blockAlign="center">
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px'
+                      }}>
+                        AU
+                      </div>
+                      <BlockStack gap="100">
+                        <Text variant="headingLg" as="h2" tone="text-inverse">
+                          金価格
+                        </Text>
+                        <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                          田中貴金属工業
+                        </Text>
+                      </BlockStack>
+                    </InlineStack>
+                    
+                    {goldPrice ? (
+                      <>
+                        <Text variant="heading2xl" as="p" tone="text-inverse" style={{
+                          fontWeight: '700',
+                          letterSpacing: '-0.5px'
+                        }}>
+                          {goldPrice.retailPriceFormatted}
+                        </Text>
+                        <InlineStack gap="200" blockAlign="center">
+                          <div style={{
+                            background: goldPrice.changeDirection === 'up' ? 'rgba(248, 113, 113, 0.9)' : 
+                                      goldPrice.changeDirection === 'down' ? 'rgba(34, 197, 94, 0.9)' : 
+                                      'rgba(148, 163, 184, 0.9)',
+                            color: 'white',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600'
+                          }}>
+                            {goldPrice.changeDirection === 'up' ? '↗️' : goldPrice.changeDirection === 'down' ? '↘️' : '➡️'} {goldPrice.change}
+                          </div>
+                          <div style={{
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600'
+                          }}>
+                            調整率 {goldPrice.percentage}%
+                          </div>
+                        </InlineStack>
+                      </>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                      }}>
+                        <Text variant="bodyLg" tone="text-inverse">
+                          📡 価格情報を取得中...
+                        </Text>
+                      </div>
+                    )}
+                  </BlockStack>
                   
-                  {goldPrice ? (
-                    <>
-                      <Text variant="heading2xl" as="p" tone="text-inverse">
-                        {goldPrice.retailPriceFormatted}
+                  <BlockStack gap="200" align="end">
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      textAlign: 'center',
+                      minWidth: '120px'
+                    }}>
+                      <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                        最終更新
                       </Text>
-                      <InlineStack gap="300" blockAlign="center">
-                        <Badge 
-                          tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
-                          size="large"
-                        >
-                          小売 前日比: {goldPrice.change}
-                        </Badge>
-                        <Badge tone="base" size="large">
-                          調整率: {goldPrice.percentage}%
-                        </Badge>
-                      </InlineStack>
-                      <InlineStack gap="300" blockAlign="center">
-                        <Badge tone="base" size="medium">
-                          買取: {goldPrice.buyPriceFormatted || '取得失敗'}
-                        </Badge>
-                        <Badge tone="info" size="medium">
-                          買取 前日比: {goldPrice.buyChangePercent || '0.00%'}
-                        </Badge>
-                      </InlineStack>
-                    </>
-                  ) : (
-                    <Text variant="headingLg" tone="text-inverse">
-                      価格情報取得中...
-                    </Text>
-                  )}
-                </BlockStack>
-                
-                <BlockStack gap="200" align="end">
-                  <Text variant="bodySm" tone="text-inverse">
-                    最終更新
-                  </Text>
-                  <Text variant="bodyMd" tone="text-inverse">
-                    {goldPrice ? new Date(goldPrice.lastUpdated).toLocaleString('ja-JP') : '--'}
-                  </Text>
-                </BlockStack>
-              </InlineStack>
+                      <Text variant="bodyMd" tone="text-inverse" style={{fontWeight: '500', marginTop: '4px'}}>
+                        {goldPrice ? new Date(goldPrice.lastUpdated).toLocaleTimeString('ja-JP', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '--:--'}
+                      </Text>
+                    </div>
+                  </BlockStack>
+                </InlineStack>
               </div>
             </Card>
           </Layout.Section>
@@ -181,57 +228,105 @@ export default function Dashboard() {
           <Layout.Section>
             {/* プラチナ価格 */}
             <Card>
-              <div style={{padding: '24px', background: '#94a3b8', borderRadius: '8px'}}>
-              <InlineStack align="space-between" blockAlign="center">
-                <BlockStack gap="300">
-                  <InlineStack gap="200" blockAlign="center">
-                    <span style={{ fontSize: '24px', marginRight: '8px' }}>🥈</span>
-                    <Text variant="headingLg" as="h2" tone="text-inverse">
-                      田中貴金属 プラチナ価格
-                    </Text>
-                  </InlineStack>
+              <div style={{
+                padding: '32px', 
+                background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)', 
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(100, 116, 139, 0.2)'
+              }}>
+                <InlineStack align="space-between" blockAlign="center">
+                  <BlockStack gap="400">
+                    <InlineStack gap="300" blockAlign="center">
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        fontWeight: '700'
+                      }}>
+                        Pt
+                      </div>
+                      <BlockStack gap="100">
+                        <Text variant="headingLg" as="h2" tone="text-inverse">
+                          プラチナ価格
+                        </Text>
+                        <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                          田中貴金属工業
+                        </Text>
+                      </BlockStack>
+                    </InlineStack>
+                    
+                    {platinumPrice ? (
+                      <>
+                        <Text variant="heading2xl" as="p" tone="text-inverse" style={{
+                          fontWeight: '700',
+                          letterSpacing: '-0.5px'
+                        }}>
+                          {platinumPrice.retailPriceFormatted}
+                        </Text>
+                        <InlineStack gap="200" blockAlign="center">
+                          <div style={{
+                            background: platinumPrice.changeDirection === 'up' ? 'rgba(248, 113, 113, 0.9)' : 
+                                      platinumPrice.changeDirection === 'down' ? 'rgba(34, 197, 94, 0.9)' : 
+                                      'rgba(148, 163, 184, 0.9)',
+                            color: 'white',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600'
+                          }}>
+                            {platinumPrice.changeDirection === 'up' ? '↗️' : platinumPrice.changeDirection === 'down' ? '↘️' : '➡️'} {platinumPrice.change}
+                          </div>
+                          <div style={{
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600'
+                          }}>
+                            調整率 {platinumPrice.percentage}%
+                          </div>
+                        </InlineStack>
+                      </>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                      }}>
+                        <Text variant="bodyLg" tone="text-inverse">
+                          📡 価格情報を取得中...
+                        </Text>
+                      </div>
+                    )}
+                  </BlockStack>
                   
-                  {platinumPrice ? (
-                    <>
-                      <Text variant="heading2xl" as="p" tone="text-inverse">
-                        {platinumPrice.retailPriceFormatted}
+                  <BlockStack gap="200" align="end">
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      textAlign: 'center',
+                      minWidth: '120px'
+                    }}>
+                      <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                        最終更新
                       </Text>
-                      <InlineStack gap="300" blockAlign="center">
-                        <Badge 
-                          tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}
-                          size="large"
-                        >
-                          小売 前日比: {platinumPrice.change}
-                        </Badge>
-                        <Badge tone="base" size="large">
-                          調整率: {platinumPrice.percentage}%
-                        </Badge>
-                      </InlineStack>
-                      <InlineStack gap="300" blockAlign="center">
-                        <Badge tone="base" size="medium">
-                          買取: {platinumPrice.buyPriceFormatted || '取得失敗'}
-                        </Badge>
-                        <Badge tone="info" size="medium">
-                          買取 前日比: {platinumPrice.buyChangePercent || '0.00%'}
-                        </Badge>
-                      </InlineStack>
-                    </>
-                  ) : (
-                    <Text variant="headingLg" tone="text-inverse">
-                      価格情報取得中...
-                    </Text>
-                  )}
-                </BlockStack>
-                
-                <BlockStack gap="200" align="end">
-                  <Text variant="bodySm" tone="text-inverse">
-                    最終更新
-                  </Text>
-                  <Text variant="bodyMd" tone="text-inverse">
-                    {platinumPrice ? new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP') : '--'}
-                  </Text>
-                </BlockStack>
-              </InlineStack>
+                      <Text variant="bodyMd" tone="text-inverse" style={{fontWeight: '500', marginTop: '4px'}}>
+                        {platinumPrice ? new Date(platinumPrice.lastUpdated).toLocaleTimeString('ja-JP', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '--:--'}
+                      </Text>
+                    </div>
+                  </BlockStack>
+                </InlineStack>
               </div>
             </Card>
           </Layout.Section>

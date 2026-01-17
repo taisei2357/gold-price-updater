@@ -1701,48 +1701,115 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
             <Layout.Section>
               {goldPrice && (
                 <Card>
-                  <div style={{padding: '16px', background: '#fbbf24', borderRadius: '8px'}}>
+                  <div style={{
+                    padding: '20px', 
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 16px rgba(245, 158, 11, 0.15)'
+                  }}>
                     <BlockStack gap="300">
-                      <InlineStack align="space-between">
+                      <InlineStack align="space-between" blockAlign="center">
                         <InlineStack gap="200" blockAlign="center">
-                          <span style={{ fontSize: '20px' }}>🥇</span>
-                          <h3 style={{color: 'white'}}>田中貴金属 金価格情報</h3>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '16px',
+                            fontWeight: '700',
+                            color: 'white'
+                          }}>
+                            AU
+                          </div>
+                          <Text variant="headingMd" tone="text-inverse">
+                            金価格
+                          </Text>
+                          <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                            田中貴金属工業
+                          </Text>
                         </InlineStack>
-                        <Badge tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                          {goldPrice.changeDirection === 'up' ? '上昇' : goldPrice.changeDirection === 'down' ? '下落' : '変動なし'}
-                        </Badge>
-                      </InlineStack>
-                      
-                      <InlineStack gap="400" wrap>
-                        <div key="gold-retail">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭小売価格（税込）</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.retailPriceFormatted}</h4>
-                        </div>
-                        <div key="gold-change">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>小売価格前日比</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.change}</h4>
-                        </div>
-                        <div key="gold-buy">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭買取価格（税込）</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.buyPriceFormatted || '取得失敗'}</h4>
-                        </div>
-                        <div key="gold-buy-change">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>買取価格前日比</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.buyChangePercent || '0.00%'}</h4>
-                        </div>
-                        <div key="gold-ratio">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>価格調整率</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{goldPrice.percentage}%</h4>
+                        <div style={{
+                          background: goldPrice.changeDirection === 'up' ? 'rgba(248, 113, 113, 0.9)' : 
+                                    goldPrice.changeDirection === 'down' ? 'rgba(34, 197, 94, 0.9)' : 
+                                    'rgba(148, 163, 184, 0.9)',
+                          color: 'white',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          {goldPrice.changeDirection === 'up' ? '↗️ 上昇' : goldPrice.changeDirection === 'down' ? '↘️ 下落' : '➡️ 変動なし'}
                         </div>
                       </InlineStack>
                       
-                      <div style={{marginTop: '12px'}}>
-                        <p style={{color: 'white', margin: 0, fontSize: '11px'}}>
-                          出典: <a href="https://gold.tanaka.co.jp/commodity/souba/" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'underline'}}>田中貴金属工業株式会社</a>
-                        </p>
+                      <InlineStack gap="200" wrap>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          minWidth: '110px'
+                        }}>
+                          <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.8}}>
+                            小売価格
+                          </Text>
+                          <Text variant="bodyMd" tone="text-inverse" style={{
+                            fontWeight: '700',
+                            marginTop: '2px'
+                          }}>
+                            {goldPrice.retailPriceFormatted}
+                          </Text>
+                        </div>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          minWidth: '90px'
+                        }}>
+                          <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.8}}>
+                            前日比
+                          </Text>
+                          <Text variant="bodyMd" tone="text-inverse" style={{
+                            fontWeight: '700',
+                            marginTop: '2px'
+                          }}>
+                            {goldPrice.change}
+                          </Text>
+                        </div>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          minWidth: '80px',
+                          border: '1px solid rgba(255, 255, 255, 0.3)'
+                        }}>
+                          <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.8}}>
+                            調整率
+                          </Text>
+                          <Text variant="bodyMd" tone="text-inverse" style={{
+                            fontWeight: '700',
+                            marginTop: '2px'
+                          }}>
+                            {goldPrice.percentage}%
+                          </Text>
+                        </div>
+                      </InlineStack>
+                      
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        marginTop: '8px'
+                      }}>
+                        <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.7}}>
+                          最終更新: {new Date(goldPrice.lastUpdated).toLocaleTimeString('ja-JP', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
                       </div>
-                      
-                      <p style={{color: 'white', margin: 0, fontSize: '12px'}} suppressHydrationWarning>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                     </BlockStack>
                   </div>
                 </Card>
@@ -1758,48 +1825,115 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
             <Layout.Section>
               {platinumPrice && (
                 <Card>
-                  <div style={{padding: '16px', background: '#94a3b8', borderRadius: '8px'}}>
+                  <div style={{
+                    padding: '20px', 
+                    background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)', 
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 16px rgba(100, 116, 139, 0.15)'
+                  }}>
                     <BlockStack gap="300">
-                      <InlineStack align="space-between">
+                      <InlineStack align="space-between" blockAlign="center">
                         <InlineStack gap="200" blockAlign="center">
-                          <span style={{ fontSize: '20px' }}>🥈</span>
-                          <h3 style={{color: 'white'}}>田中貴金属 プラチナ価格情報</h3>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: '700',
+                            color: 'white'
+                          }}>
+                            Pt
+                          </div>
+                          <Text variant="headingMd" tone="text-inverse">
+                            プラチナ価格
+                          </Text>
+                          <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                            田中貴金属工業
+                          </Text>
                         </InlineStack>
-                        <Badge tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                          {platinumPrice.changeDirection === 'up' ? '上昇' : platinumPrice.changeDirection === 'down' ? '下落' : '変動なし'}
-                        </Badge>
-                      </InlineStack>
-                      
-                      <InlineStack gap="400" wrap>
-                        <div key="platinum-retail">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭小売価格（税込）</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.retailPriceFormatted}</h4>
-                        </div>
-                        <div key="platinum-change">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>小売価格前日比</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.change}</h4>
-                        </div>
-                        <div key="platinum-buy">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>店頭買取価格（税込）</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.buyPriceFormatted || '取得失敗'}</h4>
-                        </div>
-                        <div key="platinum-buy-change">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>買取価格前日比</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.buyChangePercent || '0.00%'}</h4>
-                        </div>
-                        <div key="platinum-ratio">
-                          <p style={{color: 'white', margin: 0, fontSize: '12px'}}>価格調整率</p>
-                          <h4 style={{color: 'white', margin: '4px 0'}}>{platinumPrice.percentage}%</h4>
+                        <div style={{
+                          background: platinumPrice.changeDirection === 'up' ? 'rgba(248, 113, 113, 0.9)' : 
+                                    platinumPrice.changeDirection === 'down' ? 'rgba(34, 197, 94, 0.9)' : 
+                                    'rgba(148, 163, 184, 0.9)',
+                          color: 'white',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          {platinumPrice.changeDirection === 'up' ? '↗️ 上昇' : platinumPrice.changeDirection === 'down' ? '↘️ 下落' : '➡️ 変動なし'}
                         </div>
                       </InlineStack>
                       
-                      <div style={{marginTop: '12px'}}>
-                        <p style={{color: 'white', margin: 0, fontSize: '11px'}}>
-                          出典: <a href="https://gold.tanaka.co.jp/commodity/souba/d-platinum.php" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'underline'}}>田中貴金属工業株式会社</a>
-                        </p>
+                      <InlineStack gap="200" wrap>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          minWidth: '110px'
+                        }}>
+                          <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.8}}>
+                            小売価格
+                          </Text>
+                          <Text variant="bodyMd" tone="text-inverse" style={{
+                            fontWeight: '700',
+                            marginTop: '2px'
+                          }}>
+                            {platinumPrice.retailPriceFormatted}
+                          </Text>
+                        </div>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          minWidth: '90px'
+                        }}>
+                          <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.8}}>
+                            前日比
+                          </Text>
+                          <Text variant="bodyMd" tone="text-inverse" style={{
+                            fontWeight: '700',
+                            marginTop: '2px'
+                          }}>
+                            {platinumPrice.change}
+                          </Text>
+                        </div>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          minWidth: '80px',
+                          border: '1px solid rgba(255, 255, 255, 0.3)'
+                        }}>
+                          <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.8}}>
+                            調整率
+                          </Text>
+                          <Text variant="bodyMd" tone="text-inverse" style={{
+                            fontWeight: '700',
+                            marginTop: '2px'
+                          }}>
+                            {platinumPrice.percentage}%
+                          </Text>
+                        </div>
+                      </InlineStack>
+                      
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        marginTop: '8px'
+                      }}>
+                        <Text variant="bodyXs" tone="text-inverse" style={{opacity: 0.7}}>
+                          最終更新: {new Date(platinumPrice.lastUpdated).toLocaleTimeString('ja-JP', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
                       </div>
-                      
-                      <p style={{color: 'white', margin: 0, fontSize: '12px'}} suppressHydrationWarning>最終更新: {new Date(platinumPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                     </BlockStack>
                   </div>
                 </Card>
