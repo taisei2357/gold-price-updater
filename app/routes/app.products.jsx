@@ -2236,41 +2236,33 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       handleSelectAll(false);
                     }
                   }}
+                  sortable={selectionType === 'products' ? [false, false, true, true, false, false, true, true, true, false] : [false, false, false, false, false]}
+                  sortDirection={sortDirection}
+                  sortColumnIndex={sortColumn ? {
+                    'name': 2,
+                    'status': 3,
+                    'inventory': 6,
+                    'productType': 7,
+                    'createdAt': 8
+                  }[sortColumn] : undefined}
+                  onSort={(headingIndex, direction) => {
+                    const columnMap = ['', '', 'name', 'status', '', '', 'inventory', 'productType', 'createdAt', ''];
+                    const column = columnMap[headingIndex];
+                    if (column) {
+                      setSortColumn(column);
+                      setSortDirection(direction);
+                    }
+                  }}
                   headings={selectionType === 'products' ? [
                     { title: '自動更新' },
                     { title: '手動更新' },
-                    { 
-                      title: '商品名',
-                      sortable: true,
-                      onSort: () => handleSort('name'),
-                      sortDirection: sortColumn === 'name' ? sortDirection : 'none'
-                    },
-                    { 
-                      title: 'ステータス',
-                      sortable: true,
-                      onSort: () => handleSort('status'),
-                      sortDirection: sortColumn === 'status' ? sortDirection : 'none'
-                    },
+                    { title: '商品名' },
+                    { title: 'ステータス' },
                     { title: '価格' },
                     { title: 'バリエーション' },
-                    { 
-                      title: '在庫数',
-                      sortable: true,
-                      onSort: () => handleSort('inventory'),
-                      sortDirection: sortColumn === 'inventory' ? sortDirection : 'none'
-                    },
-                    { 
-                      title: '商品タイプ',
-                      sortable: true,
-                      onSort: () => handleSort('productType'),
-                      sortDirection: sortColumn === 'productType' ? sortDirection : 'none'
-                    },
-                    { 
-                      title: '作成日',
-                      sortable: true,
-                      onSort: () => handleSort('createdAt'),
-                      sortDirection: sortColumn === 'createdAt' ? sortDirection : 'none'
-                    },
+                    { title: '在庫数' },
+                    { title: '商品タイプ' },
+                    { title: '作成日' },
                     { title: '連動設定' }
                   ] : [
                     { title: '自動更新' },
