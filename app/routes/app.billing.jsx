@@ -2,7 +2,6 @@ import { useLoaderData, Form } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
 import { Card, Page, Text, Button, Banner, Layout } from "@shopify/polaris";
 import { billingManager, BILLING_PLANS } from "../services/billing.server";
-import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
   const subscriptionStatus = await billingManager.getSubscriptionStatus(request);

@@ -13,7 +13,7 @@ import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prism
 import { PrismaClient } from "@prisma/client";
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, PureComponent, useCallback, useMemo, forwardRef, Component, memo, useId, useImperativeHandle, createElement, isValidElement, Children, createRef, useReducer, Suspense } from "react";
 import { themes, breakpointsAliases, themeNameDefault, createThemeClassName, themeDefault, getMediaConditions, themeNames } from "@shopify/polaris-tokens";
-import { createHmac, timingSafeEqual } from "crypto";
+import crypto, { createHmac, timingSafeEqual } from "crypto";
 import { SelectIcon, ChevronDownIcon, ChevronUpIcon, AlertCircleIcon, XCircleIcon, SearchIcon, MenuHorizontalIcon, MinusIcon, InfoIcon, AlertDiamondIcon, AlertTriangleIcon, CheckIcon, XIcon, ArrowLeftIcon, SortDescendingIcon, SortAscendingIcon, ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CheckCircleIcon, SettingsIcon, NotificationIcon, ClockIcon, ProductIcon } from "@shopify/polaris-icons";
 import { createPortal } from "react-dom";
 import isEqual from "react-fast-compare";
@@ -9904,7 +9904,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App$2,
   links: links$2
 }, Symbol.toStringTag, { value: "Module" }));
-const action$a = async ({ request }) => {
+const action$f = async ({ request }) => {
   const raw = await request.text();
   const hmac = request.headers.get("x-shopify-hmac-sha256") ?? "";
   const digest = createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(raw, "utf8").digest("base64");
@@ -9913,13 +9913,13 @@ const action$a = async ({ request }) => {
   console.log("Customer data request received:", JSON.parse(raw));
   return new Response("ok", { status: 200 });
 };
-const loader$k = () => new Response(null, { status: 405 });
+const loader$m = () => new Response(null, { status: 405 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$a,
-  loader: loader$k
+  action: action$f,
+  loader: loader$m
 }, Symbol.toStringTag, { value: "Module" }));
-const action$9 = async ({ request }) => {
+const action$e = async ({ request }) => {
   const { payload, session, topic, shop: shop2 } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop2}`);
   const current = payload.current;
@@ -9937,14 +9937,14 @@ const action$9 = async ({ request }) => {
 };
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$9
+  action: action$e
 }, Symbol.toStringTag, { value: "Module" }));
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$a,
-  loader: loader$k
+  action: action$f,
+  loader: loader$m
 }, Symbol.toStringTag, { value: "Module" }));
-const action$8 = async ({ request }) => {
+const action$d = async ({ request }) => {
   const { shop: shop2, session, topic } = await authenticate.webhook(request);
   console.log(`Received ${topic} webhook for ${shop2}`);
   try {
@@ -9966,9 +9966,45 @@ const action$8 = async ({ request }) => {
 };
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$8
+  action: action$d
 }, Symbol.toStringTag, { value: "Module" }));
-const action$7 = async ({ request }) => {
+async function GET() {
+  const FREE_SHOPS2 = [
+    process.env.COMPANY_SHOP_DOMAIN || "your-company.myshopify.com",
+    process.env.COMPANY_DEV_SHOP || "your-company-dev.myshopify.com",
+    process.env.COMPANY_STAGING_SHOP || "your-company-staging.myshopify.com",
+    "irisht-gold.myshopify.com"
+  ].filter(Boolean);
+  const testCases = [
+    {
+      shop: "irisht-gold.myshopify.com",
+      expected: "FREE",
+      actual: FREE_SHOPS2.includes("irisht-gold.myshopify.com") ? "FREE" : "CHARGED"
+    },
+    {
+      shop: "random-customer.myshopify.com",
+      expected: "CHARGED",
+      actual: FREE_SHOPS2.includes("random-customer.myshopify.com") ? "FREE" : "CHARGED"
+    }
+  ];
+  const safetyReport = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    freeShopsList: FREE_SHOPS2,
+    testResults: testCases,
+    safetyStatus: testCases.every((test) => test.expected === test.actual) ? "✅ SAFE" : "❌ UNSAFE",
+    guarantees: {
+      "irisht-gold.myshopify.com": FREE_SHOPS2.includes("irisht-gold.myshopify.com") ? "100% NO BILLING" : "⚠️ WILL BE CHARGED",
+      billingAPIWillBeCalled: FREE_SHOPS2.includes("irisht-gold.myshopify.com") ? "NO - SKIPPED" : "YES - CHARGED",
+      moneyCharged: FREE_SHOPS2.includes("irisht-gold.myshopify.com") ? "$0.00" : "$29.99+"
+    }
+  };
+  return json(safetyReport);
+}
+const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  GET
+}, Symbol.toStringTag, { value: "Module" }));
+const action$c = async ({ request }) => {
   var _a, _b;
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
@@ -10049,11 +10085,11 @@ const action$7 = async ({ request }) => {
   }
   return json({ error: "Invalid action" });
 };
-const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$7
+  action: action$c
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$j = async ({ request }) => {
+const loader$l = async ({ request }) => {
   const url = new URL(request.url);
   const uid = url.searchParams.get("uid");
   const state = url.searchParams.get("state");
@@ -10097,9 +10133,9 @@ const loader$j = async ({ request }) => {
   }
   return json({ error: "missing_uid_or_code", received: Object.fromEntries(url.searchParams.entries()) }, { status: 400 });
 };
-const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$j
+  loader: loader$l
 }, Symbol.toStringTag, { value: "Module" }));
 async function sendViaSendGrid(to, subject, html, text) {
   const API_KEY = process.env.SENDGRID_API_KEY;
@@ -10290,7 +10326,7 @@ async function sendTestEmail(toEmail) {
   };
   return await sendPriceUpdateNotification(toEmail, testData);
 }
-const loader$i = async ({ request }) => {
+const loader$k = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
     const shop2 = session.shop;
@@ -10331,16 +10367,16 @@ const loader$i = async ({ request }) => {
     });
   }
 };
-const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  loader: loader$i
-}, Symbol.toStringTag, { value: "Module" }));
 const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$a,
   loader: loader$k
 }, Symbol.toStringTag, { value: "Module" }));
-async function action$6({ request }) {
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$f,
+  loader: loader$m
+}, Symbol.toStringTag, { value: "Module" }));
+async function action$b({ request }) {
   var _a, _b;
   const { admin } = await authenticate.admin(request);
   const { variantIds, expectedPrices } = await request.json();
@@ -10399,11 +10435,11 @@ async function action$6({ request }) {
     });
   }
 }
-const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$6
+  action: action$b
 }, Symbol.toStringTag, { value: "Module" }));
-async function loader$h({ request }) {
+async function loader$j({ request }) {
   const html = `
 <!DOCTYPE html>
 <html lang="ja">
@@ -10586,9 +10622,9 @@ async function loader$h({ request }) {
     }
   });
 }
-const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$h
+  loader: loader$j
 }, Symbol.toStringTag, { value: "Module" }));
 class UsageLogger {
   // 使用状況ログを記録
@@ -11205,6 +11241,65 @@ class ShopIsolationManager {
       });
     });
   }
+  // 店舗のプランタイプを更新（Billing用）
+  async updateShopPlan(shopDomain, planType) {
+    const features = this.getFeaturesForPlan(planType);
+    await prisma$1.shopSetting.upsert({
+      where: { shopDomain },
+      create: {
+        shopDomain,
+        planType,
+        featuresEnabled: JSON.stringify(features),
+        isActive: true,
+        maxConcurrentTasks: this.getMaxTasksForPlan(planType),
+        priorityLevel: this.getPriorityForPlan(planType)
+      },
+      update: {
+        planType,
+        featuresEnabled: JSON.stringify(features),
+        maxConcurrentTasks: this.getMaxTasksForPlan(planType),
+        priorityLevel: this.getPriorityForPlan(planType)
+      }
+    });
+  }
+  // プラン別機能設定
+  getFeaturesForPlan(planType) {
+    switch (planType) {
+      case "premium":
+      case "enterprise":
+        return { advanced_pricing: true, bulk_operations: true, analytics: true };
+      case "basic":
+        return { basic_pricing: true, email_notifications: true };
+      default:
+        return { basic_pricing: true };
+    }
+  }
+  // プラン別タスク制限
+  getMaxTasksForPlan(planType) {
+    switch (planType) {
+      case "enterprise":
+        return 20;
+      case "premium":
+        return 15;
+      case "basic":
+        return 8;
+      default:
+        return 3;
+    }
+  }
+  // プラン別優先度
+  getPriorityForPlan(planType) {
+    switch (planType) {
+      case "enterprise":
+        return 1;
+      case "premium":
+        return 3;
+      case "basic":
+        return 5;
+      default:
+        return 8;
+    }
+  }
   // 店舗の停止（アンインストール時）
   async suspendShop(shopDomain, reason) {
     await prisma$1.shopSetting.update({
@@ -11444,7 +11539,7 @@ class QueueManager {
   }
 }
 const queueManager = new QueueManager();
-async function loader$g({ request }) {
+async function loader$i({ request }) {
   const shopContext = await shopIsolationManager.getShopContext(request);
   if (!shopContext) {
     throw new Response("Unauthorized", { status: 401 });
@@ -11634,12 +11729,12 @@ function AnalyticsPage() {
     }
   );
 }
-const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AnalyticsPage,
-  loader: loader$g
+  loader: loader$i
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$f = async ({ request }) => {
+const loader$h = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const email = url.searchParams.get("email") || "t.takei@irisht.jp";
@@ -11670,11 +11765,11 @@ const loader$f = async ({ request }) => {
     });
   }
 };
-const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$f
+  loader: loader$h
 }, Symbol.toStringTag, { value: "Module" }));
-const action$5 = async ({ request }) => {
+const action$a = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
     const shop2 = session.shop;
@@ -11718,9 +11813,9 @@ const action$5 = async ({ request }) => {
     });
   }
 };
-const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$5
+  action: action$a
 }, Symbol.toStringTag, { value: "Module" }));
 function PrivacyPolicy() {
   return /* @__PURE__ */ jsxs("html", { lang: "ja", children: [
@@ -11916,11 +12011,11 @@ function PrivacyPolicy() {
     ] }) })
   ] });
 }
-const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: PrivacyPolicy
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$e = async ({ request }) => {
+const loader$g = async ({ request }) => {
   const host = request.headers.get("host");
   const isProduction = (host == null ? void 0 : host.includes("vercel.app")) || (host == null ? void 0 : host.includes("gold-price-updater"));
   if (!isProduction) {
@@ -11955,11 +12050,11 @@ const loader$e = async ({ request }) => {
     }
   });
 };
-const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$e
+  loader: loader$g
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$d = async ({ request }) => {
+const loader$f = async ({ request }) => {
   const authHeader = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
   if (!expected || authHeader !== `Bearer ${expected}`) {
@@ -11975,7 +12070,7 @@ const loader$d = async ({ request }) => {
         // Vercel cronとして識別
       }
     });
-    const { loader: cronLoader } = await Promise.resolve().then(() => route21);
+    const { loader: cronLoader } = await Promise.resolve().then(() => route26);
     const result = await cronLoader({
       request: cronRequest,
       params: {},
@@ -11999,11 +12094,166 @@ const loader$d = async ({ request }) => {
     }, { status: 500 });
   }
 };
-const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$d
+  loader: loader$f
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$c = async ({ request }) => {
+const action$9 = async ({ request }) => {
+  var _a;
+  const body = await request.text();
+  const hmac = request.headers.get("x-shopify-hmac-sha256");
+  const topic = request.headers.get("x-shopify-topic");
+  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+  console.log("GDPR webhook received:", {
+    topic,
+    hasHmac: !!hmac,
+    hasSecret: !!webhookSecret,
+    bodyLength: body.length
+  });
+  if (!hmac || !webhookSecret) {
+    console.error("Missing HMAC or webhook secret", { hmac: !!hmac, webhookSecret: !!webhookSecret });
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const calculatedHmac = crypto.createHmac("sha256", webhookSecret).update(body, "utf8").digest("base64");
+  console.log("HMAC verification:", {
+    received: hmac,
+    calculated: calculatedHmac,
+    match: hmac === calculatedHmac
+  });
+  if (hmac !== calculatedHmac) {
+    console.error("HMAC verification failed", {
+      received: hmac,
+      calculated: calculatedHmac,
+      webhookSecret: (webhookSecret == null ? void 0 : webhookSecret.substring(0, 10)) + "..."
+    });
+    return new Response("Unauthorized", { status: 401 });
+  }
+  try {
+    const payload = JSON.parse(body);
+    console.log(`GDPR webhook received - Topic: ${topic}`, payload);
+    switch (topic) {
+      case "customers/data_request":
+        console.log("Processing customer data request:", payload);
+        break;
+      case "customers/redact":
+        console.log("Processing customer redact request:", payload);
+        const customerId = (_a = payload.customer) == null ? void 0 : _a.id;
+        const shopDomain = payload.shop_domain;
+        if (customerId) {
+          console.log(`Redacting customer data for customer ${customerId} from shop ${shopDomain}`);
+        }
+        break;
+      case "shop/redact":
+        console.log("Processing shop redact request:", payload);
+        const shopId = payload.shop_id;
+        const shopDomainRedact = payload.shop_domain;
+        if (shopId) {
+          console.log(`Redacting shop data for shop ${shopDomainRedact} (ID: ${shopId})`);
+        }
+        break;
+      default:
+        console.log(`Unknown GDPR topic: ${topic}`);
+    }
+    return new Response("OK", { status: 200 });
+  } catch (error) {
+    console.error("Error processing GDPR webhook:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+};
+const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$9
+}, Symbol.toStringTag, { value: "Module" }));
+const action$8 = async ({ request }) => {
+  const body = await request.text();
+  const hmac = request.headers.get("x-shopify-hmac-sha256");
+  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+  if (!hmac || !webhookSecret) {
+    console.error("Missing HMAC or webhook secret");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const calculatedHmac = crypto.createHmac("sha256", webhookSecret).update(body, "utf8").digest("base64");
+  if (hmac !== calculatedHmac) {
+    console.error("HMAC verification failed");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  try {
+    const payload = JSON.parse(body);
+    console.log("Customer data request received:", payload);
+    return new Response("OK", { status: 200 });
+  } catch (error) {
+    console.error("Error processing customer data request:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+};
+const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$8
+}, Symbol.toStringTag, { value: "Module" }));
+const action$7 = async ({ request }) => {
+  var _a;
+  const body = await request.text();
+  const hmac = request.headers.get("x-shopify-hmac-sha256");
+  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+  if (!hmac || !webhookSecret) {
+    console.error("Missing HMAC or webhook secret");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const calculatedHmac = crypto.createHmac("sha256", webhookSecret).update(body, "utf8").digest("base64");
+  if (hmac !== calculatedHmac) {
+    console.error("HMAC verification failed");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  try {
+    const payload = JSON.parse(body);
+    console.log("Customer redact request received:", payload);
+    const customerId = (_a = payload.customer) == null ? void 0 : _a.id;
+    const shopDomain = payload.shop_domain;
+    if (customerId) {
+      console.log(`Redacting customer data for customer ${customerId} from shop ${shopDomain}`);
+    }
+    return new Response("OK", { status: 200 });
+  } catch (error) {
+    console.error("Error processing customer redact request:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+};
+const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$7
+}, Symbol.toStringTag, { value: "Module" }));
+const action$6 = async ({ request }) => {
+  const body = await request.text();
+  const hmac = request.headers.get("x-shopify-hmac-sha256");
+  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+  if (!hmac || !webhookSecret) {
+    console.error("Missing HMAC or webhook secret");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const calculatedHmac = crypto.createHmac("sha256", webhookSecret).update(body, "utf8").digest("base64");
+  if (hmac !== calculatedHmac) {
+    console.error("HMAC verification failed");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  try {
+    const payload = JSON.parse(body);
+    console.log("Shop redact request received:", payload);
+    const shopDomain = payload.shop_domain;
+    const shopId = payload.shop_id;
+    if (shopId) {
+      console.log(`Redacting shop data for shop ${shopDomain} (ID: ${shopId})`);
+    }
+    return new Response("OK", { status: 200 });
+  } catch (error) {
+    console.error("Error processing shop redact request:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+};
+const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$6
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$e = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
     const shop2 = session.shop;
@@ -12041,11 +12291,11 @@ const loader$c = async ({ request }) => {
     });
   }
 };
-const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$c
+  loader: loader$e
 }, Symbol.toStringTag, { value: "Module" }));
-async function loader$b({ request }) {
+async function loader$d({ request }) {
   var _a, _b;
   const { admin } = await authenticate.admin(request);
   const url = new URL(request.url);
@@ -12101,9 +12351,9 @@ async function loader$b({ request }) {
     });
   }
 }
-const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$b
+  loader: loader$d
 }, Symbol.toStringTag, { value: "Module" }));
 class AppErrorHandler {
   static logError(error, context, requestId) {
@@ -12148,7 +12398,7 @@ class AppErrorHandler {
   }
 }
 __publicField(AppErrorHandler, "logs", []);
-const loader$a = async ({ request }) => {
+const loader$c = async ({ request }) => {
   var _a;
   const startTime = Date.now();
   const checks = {};
@@ -12214,9 +12464,9 @@ const loader$a = async ({ request }) => {
     });
   }
 };
-const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$a
+  loader: loader$c
 }, Symbol.toStringTag, { value: "Module" }));
 const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
 const polarisTranslations = {
@@ -12231,10 +12481,10 @@ function loginErrorMessage(loginErrors) {
   return {};
 }
 const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$9 = async () => {
+const loader$b = async () => {
   return json({ errors: {}, polarisTranslations });
 };
-const action$4 = async ({ request }) => {
+const action$5 = async ({ request }) => {
   const formData = await request.formData();
   const rawShop = (formData.get("shop") || "").toString();
   const shop2 = normalizeShop(rawShop);
@@ -12281,12 +12531,12 @@ function Auth() {
     /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
   ] }) }) }) }) });
 }
-const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$4,
+  action: action$5,
   default: Auth,
   links: links$1,
-  loader: loader$9
+  loader: loader$b
 }, Symbol.toStringTag, { value: "Module" }));
 let _goldCache = null;
 let _platinumCache = null;
@@ -13094,7 +13344,7 @@ async function runAllShops(opts = {}) {
     };
   }
 }
-const loader$8 = async ({ request }) => {
+const loader$a = async ({ request }) => {
   const deny = verifyCronAuth(request);
   if (deny) return deny;
   try {
@@ -13111,7 +13361,7 @@ const loader$8 = async ({ request }) => {
     });
   }
 };
-const action$3 = async ({ request }) => {
+const action$4 = async ({ request }) => {
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
@@ -13131,10 +13381,10 @@ const action$3 = async ({ request }) => {
     });
   }
 };
-const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$3,
-  loader: loader$8
+  action: action$4,
+  loader: loader$a
 }, Symbol.toStringTag, { value: "Module" }));
 const prisma = new PrismaClient();
 async function fetchGoldChangeRatioTanaka() {
@@ -13193,7 +13443,7 @@ async function fetchGoldChangeRatioTanaka() {
     };
   }
 }
-const loader$7 = async ({ request }) => {
+const loader$9 = async ({ request }) => {
   const url = new URL(request.url);
   const test = url.searchParams.get("test");
   if (test === "gold-price") {
@@ -13284,7 +13534,7 @@ const loader$7 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const action$2 = async ({ request }) => {
+const action$3 = async ({ request }) => {
   const formData = await request.formData();
   const action2 = formData.get("action");
   if (action2 === "test-cron") {
@@ -13316,33 +13566,33 @@ const action$2 = async ({ request }) => {
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 };
-const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$2,
-  loader: loader$7
+  action: action$3,
+  loader: loader$9
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$6 = async ({ request }) => {
+const loader$8 = async ({ request }) => {
   const url = new URL(request.url);
   return redirect("/app" + url.search);
 };
 function App$1() {
   return null;
 }
-const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: App$1,
-  loader: loader$6
+  loader: loader$8
 }, Symbol.toStringTag, { value: "Module" }));
-const loader$5 = async ({ request }) => {
+const loader$7 = async ({ request }) => {
   await authenticate.admin(request);
   return null;
 };
-const route24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loader: loader$5
+  loader: loader$7
 }, Symbol.toStringTag, { value: "Module" }));
 const links = () => [{ rel: "stylesheet", href: polarisStyles }];
-const loader$4 = async ({ request }) => {
+const loader$6 = async ({ request }) => {
   try {
     await authenticate.admin(request);
     return { apiKey: process.env.SHOPIFY_API_KEY || "" };
@@ -13364,19 +13614,187 @@ function App() {
     /* @__PURE__ */ jsx(Outlet, {})
   ] });
 }
-function ErrorBoundary() {
+function ErrorBoundary$2() {
   return boundary.error(useRouteError());
 }
 const headers$1 = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  ErrorBoundary,
+  ErrorBoundary: ErrorBoundary$2,
   default: App,
   headers: headers$1,
   links,
-  loader: loader$4
+  loader: loader$6
+}, Symbol.toStringTag, { value: "Module" }));
+const FREE_SHOPS = [
+  process.env.COMPANY_SHOP_DOMAIN || "your-company.myshopify.com",
+  process.env.COMPANY_DEV_SHOP || "your-company-dev.myshopify.com",
+  process.env.COMPANY_STAGING_SHOP || "your-company-staging.myshopify.com",
+  // 直接指定も可能
+  "irisht-gold.myshopify.com"
+].filter(Boolean);
+const BILLING_PLANS = {
+  BASIC: {
+    id: "basic_plan",
+    name: "Basic Plan",
+    price: 29.99,
+    interval: "EVERY_30_DAYS",
+    features: ["price_update", "email_notifications"]
+  },
+  PREMIUM: {
+    id: "premium_plan",
+    name: "Premium Plan",
+    price: 99.99,
+    interval: "EVERY_30_DAYS",
+    features: ["advanced_pricing", "bulk_operations", "analytics"]
+  }
+};
+class BillingManager {
+  /**
+   * 🔥 重要：特定ショップの課金をスキップする判定
+   */
+  shouldSkipBilling(shop2) {
+    const isFreeShop = FREE_SHOPS.includes(shop2);
+    console.log(`[BILLING CHECK]`);
+    console.log(`Shop: ${shop2}`);
+    console.log(`Free shops list: ${JSON.stringify(FREE_SHOPS)}`);
+    console.log(`Is free shop: ${isFreeShop}`);
+    console.log(`Will skip billing: ${isFreeShop ? "YES" : "NO"}`);
+    return isFreeShop;
+  }
+  /**
+   * 課金が必要かチェック（認証後に呼ぶ）
+   */
+  async requireSubscription(request, planType = "BASIC") {
+    const { session, billing } = await authenticate.admin(request);
+    if (!(session == null ? void 0 : session.shop)) {
+      throw new Error("No shop session");
+    }
+    if (this.shouldSkipBilling(session.shop)) {
+      console.log(`🎉 Billing skipped for company shop: ${session.shop}`);
+      await shopIsolationManager.updateShopPlan(session.shop, "premium");
+      return {
+        billingRequired: false,
+        subscription: null,
+        reason: "Company shop - free access"
+      };
+    }
+    const plan = BILLING_PLANS[planType];
+    try {
+      const subscription = await billing.require({
+        plans: [plan],
+        isTest: false
+      });
+      return {
+        billingRequired: true,
+        subscription,
+        reason: "Subscription required"
+      };
+    } catch (error) {
+      throw new Error(`Billing check failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+  /**
+   * 現在のサブスクリプション状況を確認
+   */
+  async getSubscriptionStatus(request) {
+    const { session, billing } = await authenticate.admin(request);
+    if (!(session == null ? void 0 : session.shop)) {
+      return null;
+    }
+    if (this.shouldSkipBilling(session.shop)) {
+      return {
+        shop: session.shop,
+        plan: "premium",
+        status: "active",
+        isFree: true,
+        reason: "Company shop"
+      };
+    }
+    try {
+      const subscriptions = await billing.check();
+      return {
+        shop: session.shop,
+        subscriptions,
+        isFree: false
+      };
+    } catch (error) {
+      console.error("Billing check failed:", error);
+      return null;
+    }
+  }
+  /**
+   * 課金が必要な機能へのアクセス前チェック
+   */
+  async checkFeatureAccess(request, feature) {
+    const { session } = await authenticate.admin(request);
+    if (!(session == null ? void 0 : session.shop)) {
+      return false;
+    }
+    if (this.shouldSkipBilling(session.shop)) {
+      return true;
+    }
+    const shopContext = await shopIsolationManager.getShopContext(request);
+    if (!shopContext) {
+      return false;
+    }
+    return shopContext.features.includes(feature);
+  }
+}
+const billingManager = new BillingManager();
+const loader$5 = async ({ request }) => {
+  try {
+    const billingResult = await billingManager.requireSubscription(request, "PREMIUM");
+    const subscriptionStatus = await billingManager.getSubscriptionStatus(request);
+    return json({
+      billingResult,
+      subscriptionStatus,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  } catch (error) {
+    throw new Response("Subscription required", {
+      status: 402,
+      headers: {
+        "Location": "/app/billing"
+      }
+    });
+  }
+};
+function PremiumFeatures() {
+  const { billingResult, subscriptionStatus } = useLoaderData();
+  return /* @__PURE__ */ jsxs(Page, { title: "Premium Features", children: [
+    (subscriptionStatus == null ? void 0 : subscriptionStatus.isFree) && /* @__PURE__ */ jsx(Banner, { status: "success", children: /* @__PURE__ */ jsxs("p", { children: [
+      /* @__PURE__ */ jsx("strong", { children: "Company Account" }),
+      " - You have free access to all premium features!",
+      subscriptionStatus.reason && ` (${subscriptionStatus.reason})`
+    ] }) }),
+    !(subscriptionStatus == null ? void 0 : subscriptionStatus.isFree) && billingResult.subscription && /* @__PURE__ */ jsx(Banner, { status: "info", children: /* @__PURE__ */ jsx("p", { children: "Premium subscription active. Thank you for your support!" }) }),
+    /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs("div", { style: { padding: "20px" }, children: [
+      /* @__PURE__ */ jsx(Text, { variant: "headingLg", children: "Premium Analytics" }),
+      /* @__PURE__ */ jsx(Text, { children: "Advanced price tracking and analytics features." }),
+      /* @__PURE__ */ jsxs("div", { style: { marginTop: "20px" }, children: [
+        /* @__PURE__ */ jsx("p", { children: "📊 Advanced price history charts" }),
+        /* @__PURE__ */ jsx("p", { children: "📈 Profit margin analysis" }),
+        /* @__PURE__ */ jsx("p", { children: "🎯 Custom pricing rules" }),
+        /* @__PURE__ */ jsx("p", { children: "📧 Advanced email notifications" })
+      ] })
+    ] }) }),
+    false
+  ] });
+}
+function ErrorBoundary$1({ error }) {
+  return /* @__PURE__ */ jsx(Page, { title: "Access Denied", children: /* @__PURE__ */ jsxs(Banner, { status: "critical", children: [
+    /* @__PURE__ */ jsx("p", { children: "Premium subscription required to access this feature." }),
+    /* @__PURE__ */ jsx(Button, { primary: true, url: "/app/billing", children: "Subscribe Now" })
+  ] }) });
+}
+const route31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  ErrorBoundary: ErrorBoundary$1,
+  default: PremiumFeatures,
+  loader: loader$5
 }, Symbol.toStringTag, { value: "Module" }));
 function AdditionalPage() {
   return /* @__PURE__ */ jsxs(Page, { children: [
@@ -13430,7 +13848,7 @@ function Code({ children }) {
     borderRadius: "12px"
   }, children: /* @__PURE__ */ jsx("code", { children }) });
 }
-const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: AdditionalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -13778,6 +14196,14 @@ function filterProducts(products, searchTerm, filterType = "all") {
     filtered = products.filter(
       (product) => product.title.includes("K18") || product.title.includes("18金")
     );
+  } else if (filterType === "in_stock") {
+    filtered = products.filter(
+      (product) => (product.totalInventory || 0) > 0
+    );
+  } else if (filterType === "out_of_stock") {
+    filtered = products.filter(
+      (product) => (product.totalInventory || 0) === 0
+    );
   }
   if (searchTerm) {
     filtered = filtered.filter(
@@ -13935,6 +14361,8 @@ async function fetchAllProducts(admin) {
                 title
                 handle
                 status
+                productType
+                totalInventory
                 variants(first: 250) {
                   edges {
                     node {
@@ -14022,7 +14450,7 @@ async function fetchMetalPrices() {
     return { gold: null, platinum: null };
   }
 }
-const loader$3 = async ({ request }) => {
+const loader$4 = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const url = new URL(request.url);
   const forceRefresh = url.searchParams.get("refresh") === "true";
@@ -14079,7 +14507,7 @@ const loader$3 = async ({ request }) => {
     }
   });
 };
-const action$1 = async ({ request }) => {
+const action$2 = async ({ request }) => {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
@@ -14316,6 +14744,8 @@ const action$1 = async ({ request }) => {
               price: newPrice.toString()
             };
             console.log(`📝 GraphQL input data:`, inputData);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3e4);
             const updateResponse = await admin.graphql(
               `#graphql
                 mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
@@ -14329,10 +14759,15 @@ const action$1 = async ({ request }) => {
                 variables: {
                   productId,
                   variants: [{ id: variant.id, price: newPrice.toString() }]
-                }
+                },
+                signal: controller.signal
               }
             );
+            clearTimeout(timeoutId);
             console.log(`📡 GraphQL response status: ${updateResponse.status} ${updateResponse.statusText}`);
+            if (!updateResponse.ok) {
+              throw new Error(`GraphQL request failed with status ${updateResponse.status}: ${updateResponse.statusText}`);
+            }
             const updateData = await updateResponse.json();
             console.log(`🔄 GraphQL update response for ${variant.id}:`, updateData);
             if (((_h = (_g = (_f = updateData.data) == null ? void 0 : _f.productVariantsBulkUpdate) == null ? void 0 : _g.userErrors) == null ? void 0 : _h.length) > 0) {
@@ -14380,11 +14815,17 @@ const action$1 = async ({ request }) => {
             }
           } catch (variantError) {
             console.error(`❌ GraphQL update error for variant ${variant.id}:`, variantError);
+            let errorMessage = `価格更新エラー: ${variantError.message}`;
+            if (variantError.name === "AbortError") {
+              errorMessage = "リクエストがタイムアウトしました (30秒)";
+            } else if (variantError.message.includes("fetch")) {
+              errorMessage = "ネットワークエラーが発生しました";
+            }
             updateResults.push({
               productId,
               variantId: variant.id,
               success: false,
-              error: `価格更新エラー: ${variantError.message}`
+              error: errorMessage
             });
           }
         }
@@ -14452,6 +14893,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [manualUpdateDirection, setManualUpdateDirection] = useState("plus");
   const [manualUpdatePercentage, setManualUpdatePercentage] = useState(0.1);
   const [manualSelectedProducts, setManualSelectedProducts] = useState([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isManualUpdating, setIsManualUpdating] = useState(false);
   const [optimisticPrices, setOptimisticPrices] = useState({});
   const [refreshCountdown, setRefreshCountdown] = useState(0);
   const [priceOverlay, setPriceOverlay] = useState({});
@@ -14498,10 +14941,42 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     }
   }, [products, selectedProductIds, forceRefresh, cacheTimestamp]);
   useEffect(() => {
-    console.log("🔍 Updater state changed:", { state: updater.state, data: updater.data });
-    if (updater.state === "idle" && updater.data) {
+    var _a2, _b2, _c, _d;
+    console.log("🔍 Updater state changed:", {
+      state: updater.state,
+      dataExists: !!updater.data,
+      isManualUpdating,
+      hasUpdateResults: !!((_a2 = updater.data) == null ? void 0 : _a2.updateResults),
+      hasSummary: !!((_b2 = updater.data) == null ? void 0 : _b2.summary)
+    });
+    if (isManualUpdating && ((_c = updater.data) == null ? void 0 : _c.updateResults) && ((_d = updater.data) == null ? void 0 : _d.summary)) {
+      console.log("✅ Clearing manual updating state and timeout due to completion");
+      setIsManualUpdating(false);
+      if (window.manualUpdateTimeoutId) {
+        clearTimeout(window.manualUpdateTimeoutId);
+        window.manualUpdateTimeoutId = null;
+      }
+    }
+    if (updater.state === "idle" && isManualUpdating) {
+      console.log("✅ Clearing manual updating state due to idle state");
+      setIsManualUpdating(false);
+      if (window.manualUpdateTimeoutId) {
+        clearTimeout(window.manualUpdateTimeoutId);
+        window.manualUpdateTimeoutId = null;
+      }
+    }
+    if (updater.data) {
       if (updater.data.updateResults && updater.data.summary) {
         console.log("✅ Manual update completed:", updater.data);
+        const { summary } = updater.data;
+        const successCount = summary.successCount || 0;
+        const failureCount = summary.failureCount || 0;
+        const totalCount = successCount + failureCount;
+        if (successCount > 0) {
+          const message = failureCount > 0 ? `価格更新完了: ${successCount}/${totalCount}件成功` : `価格更新完了: ${successCount}件の商品価格を更新しました`;
+          setSuccessMessage(message);
+          setTimeout(() => setSuccessMessage(""), 5e3);
+        }
         const confirmedPrices = {};
         updater.data.updateResults.forEach((result) => {
           if (result.success && result.confirmedPrice !== void 0) {
@@ -14522,9 +14997,13 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           setPriceOverlay((prev) => ({ ...prev, ...overlayUpdates }));
         }
         setManualSelectedProducts([]);
+      } else if (updater.data.error) {
+        console.error("❌ Manual update error:", updater.data.error);
+        setSuccessMessage(`エラー: ${updater.data.error}`);
+        setTimeout(() => setSuccessMessage(""), 5e3);
       }
     }
-  }, [updater.state, updater.data]);
+  }, [updater.state, updater.data, isManualUpdating]);
   useEffect(() => {
     const id = setInterval(() => {
       const now = Date.now();
@@ -14826,6 +15305,13 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
   }, [filteredProducts]);
   const executeManualPriceUpdate = useCallback(() => {
     if (manualSelectedProducts.length === 0) return;
+    console.log("🔄 executeManualPriceUpdate called, setting isManualUpdating to true");
+    setIsManualUpdating(true);
+    const timeoutId = setTimeout(() => {
+      console.warn("⚠️ Manual update timeout - forcing loading to stop");
+      setIsManualUpdating(false);
+    }, 3e4);
+    window.manualUpdateTimeoutId = timeoutId;
     const adjustmentRatio = manualUpdateDirection === "plus" ? manualUpdatePercentage / 100 : -(manualUpdatePercentage / 100);
     console.log("🚀 Starting manual price update:", { manualSelectedProducts, adjustmentRatio });
     const optimisticUpdates = {};
@@ -14894,7 +15380,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
         setRefreshCountdown(0);
       }
     }, 1e3);
-  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, filteredProducts, revalidator]);
+  }, [manualSelectedProducts, manualUpdateDirection, manualUpdatePercentage, updater, filteredProducts, revalidator, setIsManualUpdating]);
   return /* @__PURE__ */ jsx(
     Page,
     {
@@ -15061,7 +15547,9 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                   label: "商品フィルター",
                   options: [
                     { label: "すべての商品", value: "all" },
-                    { label: "K18商品のみ", value: "k18" }
+                    { label: "K18商品のみ", value: "k18" },
+                    { label: "在庫有商品のみ", value: "in_stock" },
+                    { label: "在庫無商品のみ", value: "out_of_stock" }
                   ],
                   value: filterType,
                   onChange: setFilterType
@@ -15218,6 +15706,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             /* @__PURE__ */ jsx("h3", { children: "手動価格更新" }),
             /* @__PURE__ */ jsx(Badge, { tone: "info", children: "金・プラチナ価格に関係なく手動で価格を調整" })
           ] }),
+          successMessage && /* @__PURE__ */ jsx(Banner, { tone: "success", onDismiss: () => setSuccessMessage(""), children: successMessage }),
           /* @__PURE__ */ jsxs(InlineStack, { gap: "400", wrap: true, children: [
             /* @__PURE__ */ jsxs("div", { style: { minWidth: "120px" }, children: [
               /* @__PURE__ */ jsx(Text, { variant: "bodyMd", as: "p", children: "価格調整方向" }),
@@ -15253,23 +15742,24 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
               ] })
             ] }),
             /* @__PURE__ */ jsx("div", { style: { minWidth: "150px" }, children: /* @__PURE__ */ jsx(
-              Select,
+              TextField,
               {
                 label: "調整率",
-                options: [
-                  { label: "0.1%", value: "0.1" },
-                  { label: "0.2%", value: "0.2" },
-                  { label: "0.3%", value: "0.3" },
-                  { label: "0.4%", value: "0.4" },
-                  { label: "0.5%", value: "0.5" },
-                  { label: "0.6%", value: "0.6" },
-                  { label: "0.7%", value: "0.7" },
-                  { label: "0.8%", value: "0.8" },
-                  { label: "0.9%", value: "0.9" },
-                  { label: "1.0%", value: "1.0" }
-                ],
                 value: manualUpdatePercentage.toString(),
-                onChange: (value) => setManualUpdatePercentage(parseFloat(value))
+                onChange: (value) => {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
+                    setManualUpdatePercentage(numValue);
+                  } else if (value === "" || value === "0") {
+                    setManualUpdatePercentage(0);
+                  }
+                },
+                type: "number",
+                suffix: "%",
+                min: 0,
+                max: 10,
+                step: 0.1,
+                helpText: "0〜10%の範囲で入力"
               }
             ) }),
             /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs(Text, { variant: "bodyMd", as: "p", tone: "subdued", children: [
@@ -15301,12 +15791,15 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             /* @__PURE__ */ jsx(
               Button,
               {
-                onClick: executeManualPriceUpdate,
-                disabled: manualSelectedProducts.length === 0 || updater.state === "submitting",
+                onClick: () => {
+                  console.log("🔘 Manual update button clicked", { isManualUpdating, selectedCount: manualSelectedProducts.length });
+                  executeManualPriceUpdate();
+                },
+                disabled: manualSelectedProducts.length === 0 || isManualUpdating,
                 variant: "primary",
                 tone: "critical",
-                loading: updater.state === "submitting",
-                children: updater.state === "submitting" ? "価格更新中..." : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
+                loading: isManualUpdating,
+                children: isManualUpdating ? "価格更新中..." : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
               }
             )
           ] }),
@@ -15340,7 +15833,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
             width: "100%",
             overflowX: "auto",
             overflowAnchor: "none"
-          }, children: /* @__PURE__ */ jsx("div", { style: { minWidth: 1680 }, children: /* @__PURE__ */ jsx(
+          }, children: /* @__PURE__ */ jsx("div", { style: { minWidth: 2140 }, children: /* @__PURE__ */ jsx(
             IndexTable,
             {
               resourceName: {
@@ -15357,15 +15850,17 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                 }
               },
               headings: selectionType === "products" ? [
-                { title: "選択" },
+                { title: "自動更新" },
                 { title: "手動更新" },
                 { title: "商品名" },
                 { title: "ステータス" },
                 { title: "価格" },
                 { title: "バリエーション" },
+                { title: "在庫数" },
+                { title: "商品タイプ" },
                 { title: "連動設定" }
               ] : [
-                { title: "選択" },
+                { title: "自動更新" },
                 { title: "コレクション名" },
                 { title: "商品数" },
                 { title: "ハンドル" },
@@ -15394,7 +15889,7 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                 const prices = variantDisplayPrices.map((v) => v.price);
                 const hasSpecialStatus = variantDisplayPrices.some((v) => v.status !== "");
                 const commonStatus = hasSpecialStatus ? ((_a2 = variantDisplayPrices.find((v) => v.status !== "")) == null ? void 0 : _a2.status) || "" : "";
-                const priceRange = variantDisplayPrices.length > 1 ? `¥${Math.min(...prices)} - ¥${Math.max(...prices)}${commonStatus}` : `¥${prices[0] ?? 0}${commonStatus}`;
+                const priceRange = variantDisplayPrices.length > 1 ? `¥${Math.min(...prices).toLocaleString()} - ¥${Math.max(...prices).toLocaleString()}${commonStatus}` : `¥${(prices[0] ?? 0).toLocaleString()}${commonStatus}`;
                 if (hasSpecialStatus) {
                   console.log(`🎯 Special price display for ${product.title}:`, {
                     productId: product.id,
@@ -15449,6 +15944,11 @@ ${unsetProducts.map((p) => p.title).join("\n")}`);
                       /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "100px", maxWidth: "120px", children: /* @__PURE__ */ jsx(Badge, { status: product.status === "ACTIVE" ? "success" : "critical", children: product.status }) }) }),
                       /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "140px", maxWidth: "200px", children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: priceRange }) }) }),
                       /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "100px", maxWidth: "140px", children: /* @__PURE__ */ jsx(Text, { variant: "bodySm", children: variants.length }) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "120px", maxWidth: "140px", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "100", blockAlign: "center", children: [
+                        /* @__PURE__ */ jsx(Text, { variant: "bodySm", fontWeight: "medium", children: product.totalInventory || 0 }),
+                        product.totalInventory > 0 ? /* @__PURE__ */ jsx(Badge, { status: "success", size: "small", children: "在庫有" }) : /* @__PURE__ */ jsx(Badge, { status: "critical", size: "small", children: "在庫無" })
+                      ] }) }) }),
+                      /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "140px", maxWidth: "180px", children: product.productType ? /* @__PURE__ */ jsx(Badge, { tone: "info", size: "small", children: product.productType }) : /* @__PURE__ */ jsx(Text, { variant: "bodySm", tone: "subdued", children: "未分類" }) }) }),
                       /* @__PURE__ */ jsx(IndexTable.Cell, { children: /* @__PURE__ */ jsx(Box, { minWidth: "360px", maxWidth: "420px", children: isSelected || isSaved ? /* @__PURE__ */ jsxs("div", { children: [
                         /* @__PURE__ */ jsx(
                           Select,
@@ -15729,15 +16229,15 @@ function Products() {
     }
   );
 }
-const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route33 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action: action$1,
+  action: action$2,
   default: Products,
   headers,
-  loader: loader$3,
+  loader: loader$4,
   shouldRevalidate
 }, Symbol.toStringTag, { value: "Module" }));
-async function loader$2({ request }) {
+async function loader$3({ request }) {
   const { session } = await authenticate.admin(request);
   const shop2 = session.shop;
   const setting = await prisma$1.shopSetting.upsert({
@@ -15751,7 +16251,7 @@ async function loader$2({ request }) {
   });
   return json({ setting });
 }
-async function action({ request }) {
+async function action$1({ request }) {
   const { session } = await authenticate.admin(request);
   const shop2 = session.shop;
   const form = await request.formData();
@@ -15988,10 +16488,91 @@ function Settings() {
     }
   );
 }
-const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route34 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  action,
+  action: action$1,
   default: Settings,
+  loader: loader$3
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$2 = async ({ request }) => {
+  const subscriptionStatus = await billingManager.getSubscriptionStatus(request);
+  return json({
+    subscriptionStatus,
+    plans: BILLING_PLANS
+  });
+};
+const action = async ({ request }) => {
+  const formData = await request.formData();
+  const planType = formData.get("planType");
+  if (!planType || !BILLING_PLANS[planType]) {
+    return json({ error: "Invalid plan selected" }, { status: 400 });
+  }
+  try {
+    await billingManager.requireSubscription(request, planType);
+    return redirect("/app");
+  } catch (error) {
+    return json(
+      { error: `Billing failed: ${error.message}` },
+      { status: 500 }
+    );
+  }
+};
+function Billing() {
+  const { subscriptionStatus, plans } = useLoaderData();
+  return /* @__PURE__ */ jsx(Page, { title: "Billing & Subscription", children: /* @__PURE__ */ jsx(Layout, { children: /* @__PURE__ */ jsxs(Layout.Section, { children: [
+    (subscriptionStatus == null ? void 0 : subscriptionStatus.isFree) && /* @__PURE__ */ jsxs(Banner, { status: "success", children: [
+      /* @__PURE__ */ jsx(Text, { variant: "headingMd", children: "Company Account - Free Access" }),
+      /* @__PURE__ */ jsx("p", { children: "As the company account, you have complimentary access to all premium features. No subscription required!" }),
+      /* @__PURE__ */ jsxs("p", { children: [
+        /* @__PURE__ */ jsx("strong", { children: "Current Plan:" }),
+        " Premium (Company)"
+      ] })
+    ] }),
+    !(subscriptionStatus == null ? void 0 : subscriptionStatus.isFree) && /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs("div", { style: { padding: "20px" }, children: [
+        /* @__PURE__ */ jsx(Text, { variant: "headingLg", children: "Choose Your Plan" }),
+        /* @__PURE__ */ jsx("p", { children: "Select a plan that fits your business needs." })
+      ] }) }),
+      /* @__PURE__ */ jsx("div", { style: { display: "grid", gap: "20px", marginTop: "20px" }, children: Object.entries(plans).map(([key, plan]) => /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs("div", { style: { padding: "20px" }, children: [
+        /* @__PURE__ */ jsx(Text, { variant: "headingMd", children: plan.name }),
+        /* @__PURE__ */ jsxs(Text, { variant: "headingXl", children: [
+          "$",
+          plan.price,
+          "/month"
+        ] }),
+        /* @__PURE__ */ jsxs("div", { style: { marginTop: "15px" }, children: [
+          /* @__PURE__ */ jsx(Text, { variant: "bodyMd", children: "Features included:" }),
+          /* @__PURE__ */ jsx("ul", { style: { marginTop: "10px" }, children: plan.features.map((feature) => /* @__PURE__ */ jsx("li", { children: feature.replace(/_/g, " ") }, feature)) })
+        ] }),
+        /* @__PURE__ */ jsxs(Form, { method: "post", style: { marginTop: "20px" }, children: [
+          /* @__PURE__ */ jsx("input", { type: "hidden", name: "planType", value: key }),
+          /* @__PURE__ */ jsxs(Button, { primary: true, submit: true, children: [
+            "Subscribe to ",
+            plan.name
+          ] })
+        ] })
+      ] }) }, key)) })
+    ] }),
+    subscriptionStatus && /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs("div", { style: { padding: "20px" }, children: [
+      /* @__PURE__ */ jsx(Text, { variant: "headingMd", children: "Current Status" }),
+      /* @__PURE__ */ jsx("pre", { style: { fontSize: "12px", marginTop: "10px" }, children: JSON.stringify(subscriptionStatus, null, 2) })
+    ] }) })
+  ] }) }) });
+}
+function ErrorBoundary({ error }) {
+  return /* @__PURE__ */ jsx(Page, { title: "Billing Error", children: /* @__PURE__ */ jsxs(Banner, { status: "critical", children: [
+    /* @__PURE__ */ jsxs("p", { children: [
+      "Failed to load billing information: ",
+      error.message
+    ] }),
+    /* @__PURE__ */ jsx(Button, { primary: true, url: "/app", children: "Back to App" })
+  ] }) });
+}
+const route35 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  ErrorBoundary,
+  action,
+  default: Billing,
   loader: loader$2
 }, Symbol.toStringTag, { value: "Module" }));
 const loader$1 = async ({ request }) => {
@@ -16249,7 +16830,7 @@ function Dashboard() {
     }
   );
 }
-const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route36 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard,
   loader: loader$1
@@ -16467,12 +17048,12 @@ function Logs() {
     }
   );
 }
-const route30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route37 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Logs,
   loader
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-BHYeCEme.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-32ETzgjh.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-shop-email": { "id": "routes/api.debug-shop-email", "parentId": "root", "path": "api/debug-shop-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-shop-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.privacy-policy": { "id": "routes/api.privacy-policy", "parentId": "root", "path": "api/privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.privacy-policy-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/admin.analytics": { "id": "routes/admin.analytics", "parentId": "root", "path": "admin/analytics", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/admin.analytics-DF8eQd2A.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/DataTable-CrjXtjjS.js", "/assets/index-Dfrec1kz.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js"], "css": [] }, "routes/api.debug-email": { "id": "routes/api.debug-email", "parentId": "root", "path": "api/debug-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/privacy-policy": { "id": "routes/privacy-policy", "parentId": "root", "path": "privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/privacy-policy-CaYwulL5.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js"], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-cron": { "id": "routes/api.test-cron", "parentId": "root", "path": "api/test-cron", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.check-db": { "id": "routes/api.check-db", "parentId": "root", "path": "api/check-db", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.check-db-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-gzyT1kYd.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/styles-USq40sv4.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/FormLayout-CVgQRxb8.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-CIoUm5Hc.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-USq40sv4.js", "/assets/context-JUMp7zSJ.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-Edxnq1kp.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/index-Dfrec1kz.js", "/assets/banner-context-BjQn27ta.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-BhBJUbZy.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/Banner-DWoduFFk.js", "/assets/Select-CzcThcG5.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js", "/assets/context-BG6bh-td.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-BllzFhYE.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/Banner-DWoduFFk.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Divider-BDpyBtSk.js", "/assets/FormLayout-CVgQRxb8.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/context-JUMp7zSJ.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-BWlMq811.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/Layout-TUPT4spf.js", "/assets/index-Dfrec1kz.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Divider-BDpyBtSk.js", "/assets/context-JUMp7zSJ.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-C7lskCUw.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-BFDl36QU.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Layout-TUPT4spf.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Select-CzcThcG5.js", "/assets/DataTable-CrjXtjjS.js", "/assets/context-JUMp7zSJ.js", "/assets/Sticky-DoFvUJj_.js"], "css": [] } }, "url": "/assets/manifest-2cc63bfa.js", "version": "2cc63bfa" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-BHYeCEme.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-BjEyWTmg.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-rWkNR0v0.js", "/assets/context-29fBFT2m.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/webhooks.customers.data_request": { "id": "routes/webhooks.customers.data_request", "parentId": "root", "path": "webhooks/customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.customers.redact": { "id": "routes/webhooks.customers.redact", "parentId": "root", "path": "webhooks/customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.billing-safety-test": { "id": "routes/api.billing-safety-test", "parentId": "root", "path": "api/billing-safety-test", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.billing-safety-test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug.manual-update": { "id": "routes/api.debug.manual-update", "parentId": "root", "path": "api/debug/manual-update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug.manual-update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.nextengine.callback": { "id": "routes/api.nextengine.callback", "parentId": "root", "path": "api/nextengine/callback", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.nextengine.callback-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.debug-shop-email": { "id": "routes/api.debug-shop-email", "parentId": "root", "path": "api/debug-shop-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-shop-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.shop.redact": { "id": "routes/webhooks.shop.redact", "parentId": "root", "path": "webhooks/shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.verify-variants": { "id": "routes/api.verify-variants", "parentId": "root", "path": "api/verify-variants", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.verify-variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.privacy-policy": { "id": "routes/api.privacy-policy", "parentId": "root", "path": "api/privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.privacy-policy-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/admin.analytics": { "id": "routes/admin.analytics", "parentId": "root", "path": "admin/analytics", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/admin.analytics-BbRQrLpo.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/DataTable-BG_VjlY8.js", "/assets/index-Dfrec1kz.js", "/assets/context-29fBFT2m.js", "/assets/Sticky-BqjPAraD.js"], "css": [] }, "routes/api.debug-email": { "id": "routes/api.debug-email", "parentId": "root", "path": "api/debug-email", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-email": { "id": "routes/api.test-email", "parentId": "root", "path": "api/test-email", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-email-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/privacy-policy": { "id": "routes/privacy-policy", "parentId": "root", "path": "privacy-policy", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/privacy-policy-CaYwulL5.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js"], "css": [] }, "routes/api.debug-env": { "id": "routes/api.debug-env", "parentId": "root", "path": "api/debug-env", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.debug-env-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test-cron": { "id": "routes/api.test-cron", "parentId": "root", "path": "api/test-cron", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.gdpr": { "id": "routes/webhooks.gdpr", "parentId": "root", "path": "webhooks/gdpr", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.gdpr-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.gdpr.customers.data_request": { "id": "routes/webhooks.gdpr.customers.data_request", "parentId": "routes/webhooks.gdpr", "path": "customers/data_request", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.gdpr.customers.data_request-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.gdpr.customers.redact": { "id": "routes/webhooks.gdpr.customers.redact", "parentId": "routes/webhooks.gdpr", "path": "customers/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.gdpr.customers.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.gdpr.shop.redact": { "id": "routes/webhooks.gdpr.shop.redact", "parentId": "routes/webhooks.gdpr", "path": "shop/redact", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.gdpr.shop.redact-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.check-db": { "id": "routes/api.check-db", "parentId": "root", "path": "api/check-db", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.check-db-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.variants": { "id": "routes/api.variants", "parentId": "root", "path": "api/variants", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.variants-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.health": { "id": "routes/api.health", "parentId": "root", "path": "api/health", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.health-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-COZLwldP.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/styles-rWkNR0v0.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/FormLayout-BhOoOq4Q.js", "/assets/context-29fBFT2m.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/api.cron": { "id": "routes/api.cron", "parentId": "root", "path": "api/cron", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.cron-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/api.test": { "id": "routes/api.test", "parentId": "root", "path": "api/test", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/api.test-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C6d-v1ok.js", "imports": [], "css": [] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-B7-sEn0s.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/styles-rWkNR0v0.js", "/assets/context-29fBFT2m.js", "/assets/context-BG6bh-td.js"], "css": [] }, "routes/app.premium-features": { "id": "routes/app.premium-features", "parentId": "routes/app", "path": "premium-features", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app.premium-features-C2Bog7zZ.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/Banner-BEWRRN1e.js", "/assets/index-Dfrec1kz.js", "/assets/context-29fBFT2m.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.additional": { "id": "routes/app.additional", "parentId": "routes/app", "path": "additional", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.additional-DUQcgc1T.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/Page-By7YmrAR.js", "/assets/Layout-Zx8E5R0_.js", "/assets/index-Dfrec1kz.js", "/assets/banner-context-BjQn27ta.js", "/assets/context-29fBFT2m.js"], "css": [] }, "routes/app.products": { "id": "routes/app.products", "parentId": "routes/app", "path": "products", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.products-ZalGKP7m.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/Layout-Zx8E5R0_.js", "/assets/Banner-BEWRRN1e.js", "/assets/Select-BJRtj8og.js", "/assets/Checkbox-CxbnksAj.js", "/assets/context-29fBFT2m.js", "/assets/Sticky-BqjPAraD.js", "/assets/context-BG6bh-td.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.settings": { "id": "routes/app.settings", "parentId": "routes/app", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.settings-D1CjsrhB.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/Layout-Zx8E5R0_.js", "/assets/Banner-BEWRRN1e.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Divider-BDpyBtSk.js", "/assets/FormLayout-BhOoOq4Q.js", "/assets/Checkbox-CxbnksAj.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/context-29fBFT2m.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app.billing": { "id": "routes/app.billing", "parentId": "routes/app", "path": "billing", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app.billing-B4h_x3W-.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/Layout-Zx8E5R0_.js", "/assets/Banner-BEWRRN1e.js", "/assets/index-Dfrec1kz.js", "/assets/context-29fBFT2m.js", "/assets/banner-context-BjQn27ta.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-CnFnhYGE.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/Layout-Zx8E5R0_.js", "/assets/index-Dfrec1kz.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Divider-BDpyBtSk.js", "/assets/context-29fBFT2m.js"], "css": [] }, "routes/app.logs": { "id": "routes/app.logs", "parentId": "routes/app", "path": "logs", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app.logs-HmTdNuZQ.js", "imports": ["/assets/jsx-runtime-0DLF9kdB.js", "/assets/index-Dfrec1kz.js", "/assets/components-CVBppnN6.js", "/assets/Page-By7YmrAR.js", "/assets/CheckCircleIcon.svg-ChzQI1l8.js", "/assets/Layout-Zx8E5R0_.js", "/assets/ClockIcon.svg-Ba3plxxK.js", "/assets/Select-BJRtj8og.js", "/assets/DataTable-BG_VjlY8.js", "/assets/context-29fBFT2m.js", "/assets/Sticky-BqjPAraD.js"], "css": [] } }, "url": "/assets/manifest-e98dbe18.js", "version": "e98dbe18" };
 const mode = "production";
 const assetsBuildDirectory = "build/client";
 const basename = "/";
@@ -16521,13 +17102,21 @@ const routes = {
     caseSensitive: void 0,
     module: route4
   },
+  "routes/api.billing-safety-test": {
+    id: "routes/api.billing-safety-test",
+    parentId: "root",
+    path: "api/billing-safety-test",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route5
+  },
   "routes/api.debug.manual-update": {
     id: "routes/api.debug.manual-update",
     parentId: "root",
     path: "api/debug/manual-update",
     index: void 0,
     caseSensitive: void 0,
-    module: route5
+    module: route6
   },
   "routes/api.nextengine.callback": {
     id: "routes/api.nextengine.callback",
@@ -16535,7 +17124,7 @@ const routes = {
     path: "api/nextengine/callback",
     index: void 0,
     caseSensitive: void 0,
-    module: route6
+    module: route7
   },
   "routes/api.debug-shop-email": {
     id: "routes/api.debug-shop-email",
@@ -16543,7 +17132,7 @@ const routes = {
     path: "api/debug-shop-email",
     index: void 0,
     caseSensitive: void 0,
-    module: route7
+    module: route8
   },
   "routes/webhooks.shop.redact": {
     id: "routes/webhooks.shop.redact",
@@ -16551,7 +17140,7 @@ const routes = {
     path: "webhooks/shop/redact",
     index: void 0,
     caseSensitive: void 0,
-    module: route8
+    module: route9
   },
   "routes/api.verify-variants": {
     id: "routes/api.verify-variants",
@@ -16559,7 +17148,7 @@ const routes = {
     path: "api/verify-variants",
     index: void 0,
     caseSensitive: void 0,
-    module: route9
+    module: route10
   },
   "routes/api.privacy-policy": {
     id: "routes/api.privacy-policy",
@@ -16567,7 +17156,7 @@ const routes = {
     path: "api/privacy-policy",
     index: void 0,
     caseSensitive: void 0,
-    module: route10
+    module: route11
   },
   "routes/admin.analytics": {
     id: "routes/admin.analytics",
@@ -16575,7 +17164,7 @@ const routes = {
     path: "admin/analytics",
     index: void 0,
     caseSensitive: void 0,
-    module: route11
+    module: route12
   },
   "routes/api.debug-email": {
     id: "routes/api.debug-email",
@@ -16583,7 +17172,7 @@ const routes = {
     path: "api/debug-email",
     index: void 0,
     caseSensitive: void 0,
-    module: route12
+    module: route13
   },
   "routes/api.test-email": {
     id: "routes/api.test-email",
@@ -16591,7 +17180,7 @@ const routes = {
     path: "api/test-email",
     index: void 0,
     caseSensitive: void 0,
-    module: route13
+    module: route14
   },
   "routes/privacy-policy": {
     id: "routes/privacy-policy",
@@ -16599,7 +17188,7 @@ const routes = {
     path: "privacy-policy",
     index: void 0,
     caseSensitive: void 0,
-    module: route14
+    module: route15
   },
   "routes/api.debug-env": {
     id: "routes/api.debug-env",
@@ -16607,7 +17196,7 @@ const routes = {
     path: "api/debug-env",
     index: void 0,
     caseSensitive: void 0,
-    module: route15
+    module: route16
   },
   "routes/api.test-cron": {
     id: "routes/api.test-cron",
@@ -16615,7 +17204,39 @@ const routes = {
     path: "api/test-cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route16
+    module: route17
+  },
+  "routes/webhooks.gdpr": {
+    id: "routes/webhooks.gdpr",
+    parentId: "root",
+    path: "webhooks/gdpr",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route18
+  },
+  "routes/webhooks.gdpr.customers.data_request": {
+    id: "routes/webhooks.gdpr.customers.data_request",
+    parentId: "routes/webhooks.gdpr",
+    path: "customers/data_request",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route19
+  },
+  "routes/webhooks.gdpr.customers.redact": {
+    id: "routes/webhooks.gdpr.customers.redact",
+    parentId: "routes/webhooks.gdpr",
+    path: "customers/redact",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route20
+  },
+  "routes/webhooks.gdpr.shop.redact": {
+    id: "routes/webhooks.gdpr.shop.redact",
+    parentId: "routes/webhooks.gdpr",
+    path: "shop/redact",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route21
   },
   "routes/api.check-db": {
     id: "routes/api.check-db",
@@ -16623,7 +17244,7 @@ const routes = {
     path: "api/check-db",
     index: void 0,
     caseSensitive: void 0,
-    module: route17
+    module: route22
   },
   "routes/api.variants": {
     id: "routes/api.variants",
@@ -16631,7 +17252,7 @@ const routes = {
     path: "api/variants",
     index: void 0,
     caseSensitive: void 0,
-    module: route18
+    module: route23
   },
   "routes/api.health": {
     id: "routes/api.health",
@@ -16639,7 +17260,7 @@ const routes = {
     path: "api/health",
     index: void 0,
     caseSensitive: void 0,
-    module: route19
+    module: route24
   },
   "routes/auth.login": {
     id: "routes/auth.login",
@@ -16647,7 +17268,7 @@ const routes = {
     path: "auth/login",
     index: void 0,
     caseSensitive: void 0,
-    module: route20
+    module: route25
   },
   "routes/api.cron": {
     id: "routes/api.cron",
@@ -16655,7 +17276,7 @@ const routes = {
     path: "api/cron",
     index: void 0,
     caseSensitive: void 0,
-    module: route21
+    module: route26
   },
   "routes/api.test": {
     id: "routes/api.test",
@@ -16663,7 +17284,7 @@ const routes = {
     path: "api/test",
     index: void 0,
     caseSensitive: void 0,
-    module: route22
+    module: route27
   },
   "routes/_index": {
     id: "routes/_index",
@@ -16671,7 +17292,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route23
+    module: route28
   },
   "routes/auth.$": {
     id: "routes/auth.$",
@@ -16679,7 +17300,7 @@ const routes = {
     path: "auth/*",
     index: void 0,
     caseSensitive: void 0,
-    module: route24
+    module: route29
   },
   "routes/app": {
     id: "routes/app",
@@ -16687,7 +17308,15 @@ const routes = {
     path: "app",
     index: void 0,
     caseSensitive: void 0,
-    module: route25
+    module: route30
+  },
+  "routes/app.premium-features": {
+    id: "routes/app.premium-features",
+    parentId: "routes/app",
+    path: "premium-features",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route31
   },
   "routes/app.additional": {
     id: "routes/app.additional",
@@ -16695,7 +17324,7 @@ const routes = {
     path: "additional",
     index: void 0,
     caseSensitive: void 0,
-    module: route26
+    module: route32
   },
   "routes/app.products": {
     id: "routes/app.products",
@@ -16703,7 +17332,7 @@ const routes = {
     path: "products",
     index: void 0,
     caseSensitive: void 0,
-    module: route27
+    module: route33
   },
   "routes/app.settings": {
     id: "routes/app.settings",
@@ -16711,7 +17340,15 @@ const routes = {
     path: "settings",
     index: void 0,
     caseSensitive: void 0,
-    module: route28
+    module: route34
+  },
+  "routes/app.billing": {
+    id: "routes/app.billing",
+    parentId: "routes/app",
+    path: "billing",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route35
   },
   "routes/app._index": {
     id: "routes/app._index",
@@ -16719,7 +17356,7 @@ const routes = {
     path: void 0,
     index: true,
     caseSensitive: void 0,
-    module: route29
+    module: route36
   },
   "routes/app.logs": {
     id: "routes/app.logs",
@@ -16727,7 +17364,7 @@ const routes = {
     path: "logs",
     index: void 0,
     caseSensitive: void 0,
-    module: route30
+    module: route37
   }
 };
 export {
