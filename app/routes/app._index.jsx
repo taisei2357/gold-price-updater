@@ -124,31 +124,33 @@ export default function Dashboard() {
             {/* 金価格 */}
             <Card>
               <div style={{
-                padding: '32px', 
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-                borderRadius: '12px',
-                boxShadow: '0 8px 32px rgba(245, 158, 11, 0.2)'
+                padding: '24px', 
+                background: 'white', 
+                border: '2px solid #f59e0b',
+                borderRadius: '8px'
               }}>
                 <InlineStack align="space-between" blockAlign="center">
-                  <BlockStack gap="400">
+                  <BlockStack gap="300">
                     <InlineStack gap="300" blockAlign="center">
                       <div style={{
-                        width: '48px',
-                        height: '48px',
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
+                        width: '40px',
+                        height: '40px',
+                        background: '#f59e0b',
+                        borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '24px'
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        color: 'white'
                       }}>
                         AU
                       </div>
                       <BlockStack gap="100">
-                        <Text variant="headingLg" as="h2" tone="text-inverse">
+                        <Text variant="headingLg" as="h2">
                           金価格
                         </Text>
-                        <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                        <Text variant="bodySm" tone="subdued">
                           田中貴金属工業
                         </Text>
                       </BlockStack>
@@ -156,45 +158,32 @@ export default function Dashboard() {
                     
                     {goldPrice ? (
                       <>
-                        <Text variant="heading2xl" as="p" tone="text-inverse" style={{
+                        <Text variant="heading2xl" as="p" style={{
                           fontWeight: '700',
-                          letterSpacing: '-0.5px'
+                          color: '#000'
                         }}>
                           {goldPrice.retailPriceFormatted}
                         </Text>
                         <InlineStack gap="200" blockAlign="center">
-                          <div style={{
-                            background: goldPrice.changeDirection === 'up' ? 'rgba(248, 113, 113, 0.9)' : 
-                                      goldPrice.changeDirection === 'down' ? 'rgba(34, 197, 94, 0.9)' : 
-                                      'rgba(148, 163, 184, 0.9)',
-                            color: 'white',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>
+                          <Badge 
+                            tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
+                            size="large"
+                          >
                             {goldPrice.changeDirection === 'up' ? '↗️' : goldPrice.changeDirection === 'down' ? '↘️' : '➡️'} {goldPrice.change}
-                          </div>
-                          <div style={{
-                            background: 'rgba(255, 255, 255, 0.2)',
-                            color: 'white',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>
+                          </Badge>
+                          <Badge tone="warning" size="large">
                             調整率 {goldPrice.percentage}%
-                          </div>
+                          </Badge>
                         </InlineStack>
                       </>
                     ) : (
                       <div style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: '#f3f4f6',
                         padding: '16px',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                        border: '1px solid #e5e7eb'
                       }}>
-                        <Text variant="bodyLg" tone="text-inverse">
+                        <Text variant="bodyLg">
                           📡 価格情報を取得中...
                         </Text>
                       </div>
@@ -203,16 +192,17 @@ export default function Dashboard() {
                   
                   <BlockStack gap="200" align="end">
                     <div style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
+                      background: '#f9fafb',
                       padding: '12px',
                       borderRadius: '8px',
                       textAlign: 'center',
-                      minWidth: '120px'
+                      minWidth: '120px',
+                      border: '1px solid #e5e7eb'
                     }}>
-                      <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                      <Text variant="bodySm" tone="subdued">
                         最終更新
                       </Text>
-                      <Text variant="bodyMd" tone="text-inverse" style={{fontWeight: '500', marginTop: '4px'}}>
+                      <Text variant="bodyMd" style={{fontWeight: '500', marginTop: '4px'}}>
                         {goldPrice ? new Date(goldPrice.lastUpdated).toLocaleTimeString('ja-JP', {
                           hour: '2-digit',
                           minute: '2-digit'
@@ -229,32 +219,33 @@ export default function Dashboard() {
             {/* プラチナ価格 */}
             <Card>
               <div style={{
-                padding: '32px', 
-                background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)', 
-                borderRadius: '12px',
-                boxShadow: '0 8px 32px rgba(100, 116, 139, 0.2)'
+                padding: '24px', 
+                background: 'white', 
+                border: '2px solid #64748b',
+                borderRadius: '8px'
               }}>
                 <InlineStack align="space-between" blockAlign="center">
-                  <BlockStack gap="400">
+                  <BlockStack gap="300">
                     <InlineStack gap="300" blockAlign="center">
                       <div style={{
-                        width: '48px',
-                        height: '48px',
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
+                        width: '40px',
+                        height: '40px',
+                        background: '#64748b',
+                        borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '20px',
-                        fontWeight: '700'
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: 'white'
                       }}>
                         Pt
                       </div>
                       <BlockStack gap="100">
-                        <Text variant="headingLg" as="h2" tone="text-inverse">
+                        <Text variant="headingLg" as="h2">
                           プラチナ価格
                         </Text>
-                        <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                        <Text variant="bodySm" tone="subdued">
                           田中貴金属工業
                         </Text>
                       </BlockStack>
@@ -262,45 +253,32 @@ export default function Dashboard() {
                     
                     {platinumPrice ? (
                       <>
-                        <Text variant="heading2xl" as="p" tone="text-inverse" style={{
+                        <Text variant="heading2xl" as="p" style={{
                           fontWeight: '700',
-                          letterSpacing: '-0.5px'
+                          color: '#000'
                         }}>
                           {platinumPrice.retailPriceFormatted}
                         </Text>
                         <InlineStack gap="200" blockAlign="center">
-                          <div style={{
-                            background: platinumPrice.changeDirection === 'up' ? 'rgba(248, 113, 113, 0.9)' : 
-                                      platinumPrice.changeDirection === 'down' ? 'rgba(34, 197, 94, 0.9)' : 
-                                      'rgba(148, 163, 184, 0.9)',
-                            color: 'white',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>
+                          <Badge 
+                            tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}
+                            size="large"
+                          >
                             {platinumPrice.changeDirection === 'up' ? '↗️' : platinumPrice.changeDirection === 'down' ? '↘️' : '➡️'} {platinumPrice.change}
-                          </div>
-                          <div style={{
-                            background: 'rgba(255, 255, 255, 0.2)',
-                            color: 'white',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>
+                          </Badge>
+                          <Badge tone="info" size="large">
                             調整率 {platinumPrice.percentage}%
-                          </div>
+                          </Badge>
                         </InlineStack>
                       </>
                     ) : (
                       <div style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: '#f3f4f6',
                         padding: '16px',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                        border: '1px solid #e5e7eb'
                       }}>
-                        <Text variant="bodyLg" tone="text-inverse">
+                        <Text variant="bodyLg">
                           📡 価格情報を取得中...
                         </Text>
                       </div>
@@ -309,16 +287,17 @@ export default function Dashboard() {
                   
                   <BlockStack gap="200" align="end">
                     <div style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
+                      background: '#f9fafb',
                       padding: '12px',
                       borderRadius: '8px',
                       textAlign: 'center',
-                      minWidth: '120px'
+                      minWidth: '120px',
+                      border: '1px solid #e5e7eb'
                     }}>
-                      <Text variant="bodySm" tone="text-inverse" style={{opacity: 0.8}}>
+                      <Text variant="bodySm" tone="subdued">
                         最終更新
                       </Text>
-                      <Text variant="bodyMd" tone="text-inverse" style={{fontWeight: '500', marginTop: '4px'}}>
+                      <Text variant="bodyMd" style={{fontWeight: '500', marginTop: '4px'}}>
                         {platinumPrice ? new Date(platinumPrice.lastUpdated).toLocaleTimeString('ja-JP', {
                           hour: '2-digit',
                           minute: '2-digit'
