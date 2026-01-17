@@ -292,6 +292,7 @@ async function fetchAllProducts(admin) {
                 status
                 productType
                 totalInventory
+                createdAt
                 variants(first: 250) {
                   edges {
                     node {
@@ -1178,6 +1179,62 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     }
   }, [mu.state, mu.data, addSaved, removeSaved, scheduleRevalidate]);
 
+  // ソート状態の管理
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('ascending');
+  
+  // ソート機能
+  const handleSort = useCallback((column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'ascending' ? 'descending' : 'ascending');
+    } else {
+      setSortColumn(column);
+      setSortDirection('ascending');
+    }
+  }, [sortColumn, sortDirection]);
+  
+  // 商品をソートする関数
+  const sortProducts = useCallback((products) => {
+    if (!sortColumn) return products;
+    
+    return [...products].sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortColumn) {
+        case 'name':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'inventory':
+          aValue = a.totalInventory || 0;
+          bValue = b.totalInventory || 0;
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
+          break;
+        case 'productType':
+          aValue = a.productType || '';
+          bValue = b.productType || '';
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (aValue < bValue) {
+        return sortDirection === 'ascending' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [sortColumn, sortDirection]);
+
   // 手動リロード（Shopify認証安全版）
   const handleRefresh = useCallback(() => {
     ClientCache.clear(CACHE_KEYS.PRODUCTS);
@@ -1187,8 +1244,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
     revalidator.revalidate();
   }, [revalidator]);
 
-  // 商品フィルタリング
-  const filteredProducts = filterProducts(products, searchValue, filterType);
+  // 商品フィルタリングとソート
+  const filteredProducts = sortProducts(filterProducts(products, searchValue, filterType));
 
   // Admin nodes APIを使った検証ポーリング
   const verifyVariantsOnServer = useCallback(async (variantIds, expectedPrices) => {
@@ -1780,12 +1837,37 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
               
               {/* キャッシュ状態表示 */}
               <div>
-                <Text variant="bodySm" tone="subdued" suppressHydrationWarning>
-                  最終更新: {lastUpdated ? lastUpdated.toLocaleString('ja-JP') : '読み込み中...'} 
-                  {isUsingCache && (
-                    <Badge tone="info" size="small">キャッシュ</Badge>
+                <InlineStack gap="200">
+                  <Text variant="bodySm" tone="subdued" suppressHydrationWarning>
+                    最終更新: {lastUpdated ? lastUpdated.toLocaleString('ja-JP') : '読み込み中...'} 
+                    {isUsingCache && (
+                      <Badge tone="info" size="small">キャッシュ</Badge>
+                    )}
+                  </Text>
+                  {sortColumn && (
+                    <InlineStack gap="100" blockAlign="center">
+                      <Text variant="bodySm" tone="info" suppressHydrationWarning>
+                        ソート: {
+                          sortColumn === 'name' ? '商品名' :
+                          sortColumn === 'inventory' ? '在庫数' :
+                          sortColumn === 'createdAt' ? '作成日' :
+                          sortColumn === 'productType' ? '商品タイプ' :
+                          sortColumn === 'status' ? 'ステータス' : sortColumn
+                        } ({sortDirection === 'ascending' ? '昇順' : '降順'})
+                      </Text>
+                      <Button
+                        variant="tertiary"
+                        size="micro"
+                        onClick={() => {
+                          setSortColumn(null);
+                          setSortDirection('ascending');
+                        }}
+                      >
+                        リセット
+                      </Button>
+                    </InlineStack>
                   )}
-                </Text>
+                </InlineStack>
               </div>
               
               <InlineStack gap="400">
@@ -2157,12 +2239,38 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   headings={selectionType === 'products' ? [
                     { title: '自動更新' },
                     { title: '手動更新' },
-                    { title: '商品名' },
-                    { title: 'ステータス' },
+                    { 
+                      title: '商品名',
+                      sortable: true,
+                      onSort: () => handleSort('name'),
+                      sortDirection: sortColumn === 'name' ? sortDirection : 'none'
+                    },
+                    { 
+                      title: 'ステータス',
+                      sortable: true,
+                      onSort: () => handleSort('status'),
+                      sortDirection: sortColumn === 'status' ? sortDirection : 'none'
+                    },
                     { title: '価格' },
                     { title: 'バリエーション' },
-                    { title: '在庫数' },
-                    { title: '商品タイプ' },
+                    { 
+                      title: '在庫数',
+                      sortable: true,
+                      onSort: () => handleSort('inventory'),
+                      sortDirection: sortColumn === 'inventory' ? sortDirection : 'none'
+                    },
+                    { 
+                      title: '商品タイプ',
+                      sortable: true,
+                      onSort: () => handleSort('productType'),
+                      sortDirection: sortColumn === 'productType' ? sortDirection : 'none'
+                    },
+                    { 
+                      title: '作成日',
+                      sortable: true,
+                      onSort: () => handleSort('createdAt'),
+                      sortDirection: sortColumn === 'createdAt' ? sortDirection : 'none'
+                    },
                     { title: '連動設定' }
                   ] : [
                     { title: '自動更新' },
@@ -2332,6 +2440,19 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             ) : (
                               <Text variant="bodySm" tone="subdued">未分類</Text>
                             )}
+                          </Box>
+                        </IndexTable.Cell>
+                        
+                        {/* 作成日 */}
+                        <IndexTable.Cell>
+                          <Box minWidth="140px" maxWidth="160px">
+                            <Text variant="bodySm" tone="subdued">
+                              {product.createdAt ? new Date(product.createdAt).toLocaleDateString('ja-JP', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              }) : '-'}
+                            </Text>
                           </Box>
                         </IndexTable.Cell>
                         
