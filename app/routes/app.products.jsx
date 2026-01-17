@@ -1845,27 +1845,15 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     )}
                   </Text>
                   {sortColumn && (
-                    <InlineStack gap="100" blockAlign="center">
-                      <Text variant="bodySm" tone="info" suppressHydrationWarning>
-                        ソート: {
-                          sortColumn === 'name' ? '商品名' :
-                          sortColumn === 'inventory' ? '在庫数' :
-                          sortColumn === 'createdAt' ? '作成日' :
-                          sortColumn === 'productType' ? '商品タイプ' :
-                          sortColumn === 'status' ? 'ステータス' : sortColumn
-                        } ({sortDirection === 'ascending' ? '昇順' : '降順'})
-                      </Text>
-                      <Button
-                        variant="tertiary"
-                        size="micro"
-                        onClick={() => {
-                          setSortColumn(null);
-                          setSortDirection('ascending');
-                        }}
-                      >
-                        リセット
-                      </Button>
-                    </InlineStack>
+                    <Text variant="bodySm" tone="info" suppressHydrationWarning>
+                      📊 ソート適用中: {
+                        sortColumn === 'name' ? '商品名' :
+                        sortColumn === 'inventory' ? '在庫数' :
+                        sortColumn === 'createdAt' ? '作成日' :
+                        sortColumn === 'productType' ? '商品タイプ' :
+                        sortColumn === 'status' ? 'ステータス' : sortColumn
+                      } ({sortDirection === 'ascending' ? '昇順' : '降順'})
+                    </Text>
                   )}
                 </InlineStack>
               </div>
@@ -1906,6 +1894,36 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         ]}
                         value={filterType}
                         onChange={setFilterType}
+                      />
+                    </div>
+                    <div style={{minWidth: '200px'}}>
+                      <Select
+                        label="📊 並び替え"
+                        helpText="商品の表示順序を変更できます"
+                        options={[
+                          {label: "📋 並び替えなし（デフォルト）", value: "none"},
+                          {label: "📝 商品名（A→Z）", value: "name-asc"},
+                          {label: "📝 商品名（Z→A）", value: "name-desc"},
+                          {label: "📦 在庫数（多い→少ない）", value: "inventory-desc"},
+                          {label: "📦 在庫数（少ない→多い）", value: "inventory-asc"},
+                          {label: "🆕 作成日（新しい→古い）", value: "createdAt-desc"},
+                          {label: "📅 作成日（古い→新しい）", value: "createdAt-asc"},
+                          {label: "🏷️ 商品タイプ（A→Z）", value: "productType-asc"},
+                          {label: "🏷️ 商品タイプ（Z→A）", value: "productType-desc"},
+                          {label: "✅ ステータス（A→Z）", value: "status-asc"},
+                          {label: "✅ ステータス（Z→A）", value: "status-desc"}
+                        ]}
+                        value={sortColumn && sortDirection ? `${sortColumn}-${sortDirection === 'ascending' ? 'asc' : 'desc'}` : 'none'}
+                        onChange={(value) => {
+                          if (value === 'none') {
+                            setSortColumn(null);
+                            setSortDirection('ascending');
+                          } else {
+                            const [column, direction] = value.split('-');
+                            setSortColumn(column);
+                            setSortDirection(direction === 'asc' ? 'ascending' : 'descending');
+                          }
+                        }}
                       />
                     </div>
                   </>
