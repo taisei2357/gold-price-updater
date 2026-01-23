@@ -126,6 +126,40 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
     if (changeYen === null) changeYen = extractChangeByLabel(html, /小売価格|店頭小売価格/);
     if (buyChangeYen === null) buyChangeYen = extractChangeByLabel(html, /買取価格|店頭買取価格/);
 
+    // 新しいHTML構造（テキストベース）に対応したパターン抽出
+    if (changeYen === null) {
+      // パターン: "27,929 円\n(+1,045 円)" 形式
+      const textChangeMatch = html.match(/([0-9,]+)\s*円[\s\n]*\(\s*([+\-]?\d+(?:\.\d+)?)\s*円\s*\)/);
+      if (textChangeMatch) {
+        changeYen = parseFloat(textChangeMatch[2]);
+        console.log(`${metalType} テキストベース前日比抽出成功: ${changeYen}円`);
+      }
+    }
+
+    // より広いパターンでの前日比抽出（括弧内の値）
+    if (changeYen === null) {
+      // カンマ区切り数値にも対応した括弧内パターン
+      const bracketChangeMatch = html.match(/\(\s*([+\-]?[\d,]+(?:\.\d+)?)\s*円\s*\)/);
+      if (bracketChangeMatch) {
+        changeYen = parseFloat(bracketChangeMatch[1].replace(/,/g, ''));
+        console.log(`${metalType} 括弧内前日比抽出成功: ${changeYen}円`);
+      }
+    }
+
+    // 買取価格の前日比も同様の新しいパターンで抽出
+    if (buyChangeYen === null) {
+      // カンマ区切り数値にも対応した複数の括弧パターンを抽出
+      const allBracketMatches = [...html.matchAll(/\(\s*([+\-]?[\d,]+(?:\.\d+)?)\s*円\s*\)/g)];
+      if (allBracketMatches.length >= 2) {
+        buyChangeYen = parseFloat(allBracketMatches[1][1].replace(/,/g, ''));
+        console.log(`${metalType} 買取価格前日比抽出成功: ${buyChangeYen}円`);
+      } else if (allBracketMatches.length === 1 && changeYen !== null) {
+        // 小売価格の前日比が既に取得できている場合、同じ値を買取価格にも使用
+        buyChangeYen = changeYen;
+        console.log(`${metalType} 買取価格前日比（小売価格と同じ値）: ${buyChangeYen}円`);
+      }
+    }
+
     // ラベル抽出で不足がある場合は、旧 souba/ のクラス構造にフォールバック
     if (retailPrice === null || buyPrice === null || changeYen === null || buyChangeYen === null) {
       const metalRowClass = getMetalRowClass(metalType);
@@ -161,6 +195,14 @@ export async function fetchMetalPriceData(metalType: MetalType): Promise<MetalPr
     if (changeYen === null) {
       const changeContexts = html.match(/.{0,50}前日比.{0,50}/gi);
       console.log('前日比コンテキスト:', changeContexts?.slice(0, 3));
+      
+      // 括弧内の数値パターンをすべて抽出してデバッグ
+      const bracketPatterns = html.match(/\([^)]*[0-9,]+[^)]*円[^)]*\)/gi);
+      console.log('括弧内パターン:', bracketPatterns?.slice(0, 5));
+      
+      // より具体的な前日比周辺のコンテキスト
+      const priceChangeContexts = html.match(/.{0,100}[0-9,]+\s*円[\s\S]{0,50}[+\-][0-9,]+[\s\S]{0,50}円.{0,100}/gi);
+      console.log('価格変動コンテキスト:', priceChangeContexts?.slice(0, 3));
     }
 
     // デバッグログ
