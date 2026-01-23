@@ -4,6 +4,8 @@
   "outputDirectory": "build",
   "regions": ["sin1"],
   "crons": [
-    { "path": "/api/cron", "schedule": "0 1 * * 1-5" }
+    { "path": "/api/cron", "schedule": "0 1 * * 1-5" },
+    { "path": "/api/monitoring-cron", "schedule": "0 6 * * 1-5" },
+    { "path": "/api/monitoring-cron", "schedule": "0 14 * * 1-5" }
   ]
 }

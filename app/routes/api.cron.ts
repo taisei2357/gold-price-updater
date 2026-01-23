@@ -617,6 +617,33 @@ async function updateShopPrices(shop: string, accessToken: string) {
 
 // 祝日判定機能を実装済み（scheduler.server.tsを使用）
 
+// 監視チェックを実行（価格更新後）
+async function runPostExecutionMonitoring(executionResult: any) {
+  try {
+    // 失敗があった場合はアラートを送信
+    if (executionResult.summary && executionResult.summary.totalFailed > 0) {
+      const { sendMonitoringAlert } = await import('../utils/email.server');
+      
+      const failedShops = executionResult.shops?.filter((shop: any) => !shop.success) || [];
+      const totalShops = executionResult.summary.totalShops || 0;
+      
+      await sendMonitoringAlert({
+        alertType: 'UPDATE_FAILURE',
+        timestamp: new Date().toISOString(),
+        failedShopsCount: failedShops.length,
+        totalShopsCount: totalShops,
+        errorMessage: failedShops.length > 0 ? failedShops[0].error : '価格更新失敗',
+        details: `${failedShops.length}/${totalShops} のショップで価格更新に失敗`
+      });
+      
+      console.log('📧 価格更新失敗アラートを送信しました');
+    }
+  } catch (error) {
+    console.error('監視チェック実行エラー:', error);
+    // 監視エラーは価格更新の成否には影響させない
+  }
+}
+
 // 共通の自動更新ロジック（GET/POST両方から使用）
 async function runAllShops(opts: { force?: boolean } = {}) {
   const force = !!opts.force;
@@ -753,7 +780,7 @@ async function runAllShops(opts: { force?: boolean } = {}) {
 
     console.log(`🏁 Cron実行完了: 成功 ${successCount}/${results.length}ショップ, 更新 ${totalUpdated}件, 失敗 ${totalFailed}件`);
 
-    return {
+    const executionResult = {
       message: "自動価格更新完了",
       timestamp: new Date().toISOString(),
       summary: {
@@ -764,6 +791,11 @@ async function runAllShops(opts: { force?: boolean } = {}) {
       },
       shops: results
     };
+
+    // 実行後監視チェック
+    await runPostExecutionMonitoring(executionResult);
+
+    return executionResult;
 
   } catch (error) {
     console.error("Cron実行エラー:", error);

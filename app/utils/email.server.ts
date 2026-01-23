@@ -228,6 +228,190 @@ ${data.failedCount > 0 ? `\n⚠️ ${data.failedCount}件の商品で更新に�
   }
 }
 
+// 死活監視アラートメール送信
+export interface MonitoringAlertData {
+  alertType: 'MISSED_EXECUTION' | 'UPDATE_FAILURE' | 'SYSTEM_ERROR';
+  shopDomain?: string;
+  timestamp: string;
+  lastSuccessfulExecution?: string;
+  errorMessage?: string;
+  failedShopsCount?: number;
+  totalShopsCount?: number;
+  details?: string;
+}
+
+export async function sendMonitoringAlert(
+  alertData: MonitoringAlertData
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  
+  const monitoringEmail = 't.takei@irisht.jp';
+  
+  try {
+    let subject: string;
+    let htmlContent: string;
+    let textContent: string;
+
+    switch (alertData.alertType) {
+      case 'MISSED_EXECUTION':
+        subject = '🚨 【緊急】金・プラチナ価格更新システム - 実行漏れ検知';
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #d32f2f;">🚨 価格更新システム実行漏れアラート</h2>
+            
+            <div style="background: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f44336;">
+              <h3 style="color: #c62828;">⚠️ 緊急事項</h3>
+              <p><strong>営業日に価格更新が実行されませんでした</strong></p>
+              <ul>
+                <li><strong>検知時刻:</strong> ${new Date(alertData.timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</li>
+                <li><strong>最終成功実行:</strong> ${alertData.lastSuccessfulExecution ? new Date(alertData.lastSuccessfulExecution).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '不明'}</li>
+                ${alertData.details ? `<li><strong>詳細:</strong> ${alertData.details}</li>` : ''}
+              </ul>
+            </div>
+
+            <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h3>🔧 対応が必要です</h3>
+              <ul>
+                <li>Vercel Cronの動作状況を確認</li>
+                <li>API認証エラーがないかチェック</li>
+                <li>手動で価格更新を実行することを検討</li>
+                <li>システムログを確認</li>
+              </ul>
+            </div>
+
+            <p><strong>📞 このアラートは自動送信されています。</strong></p>
+          </div>
+        `;
+        textContent = `
+🚨 【緊急】金・プラチナ価格更新システム実行漏れ
+
+営業日に価格更新が実行されませんでした。
+
+検知時刻: ${new Date(alertData.timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+最終成功実行: ${alertData.lastSuccessfulExecution ? new Date(alertData.lastSuccessfulExecution).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '不明'}
+${alertData.details ? `詳細: ${alertData.details}` : ''}
+
+対応が必要です：
+- Vercel Cronの動作状況を確認
+- API認証エラーがないかチェック  
+- 手動で価格更新を実行することを検討
+- システムログを確認
+        `;
+        break;
+
+      case 'UPDATE_FAILURE':
+        subject = '⚠️ 金・プラチナ価格更新システム - 更新失敗アラート';
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #f57c00;">⚠️ 価格更新システム失敗アラート</h2>
+            
+            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff9800;">
+              <h3>📊 失敗詳細</h3>
+              <ul>
+                <li><strong>検知時刻:</strong> ${new Date(alertData.timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</li>
+                ${alertData.shopDomain ? `<li><strong>対象ショップ:</strong> ${alertData.shopDomain}</li>` : ''}
+                ${alertData.failedShopsCount ? `<li><strong>失敗ショップ数:</strong> ${alertData.failedShopsCount}/${alertData.totalShopsCount}</li>` : ''}
+                ${alertData.errorMessage ? `<li><strong>エラー:</strong> ${alertData.errorMessage}</li>` : ''}
+              </ul>
+            </div>
+
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h3>🔧 推奨対応</h3>
+              <ul>
+                <li>エラーログの詳細を確認</li>
+                <li>API認証状況をチェック</li>
+                <li>必要に応じて手動実行</li>
+              </ul>
+            </div>
+          </div>
+        `;
+        textContent = `
+⚠️ 金・プラチナ価格更新システム失敗
+
+価格更新処理で失敗が発生しました。
+
+検知時刻: ${new Date(alertData.timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+${alertData.shopDomain ? `対象ショップ: ${alertData.shopDomain}` : ''}
+${alertData.failedShopsCount ? `失敗ショップ数: ${alertData.failedShopsCount}/${alertData.totalShopsCount}` : ''}
+${alertData.errorMessage ? `エラー: ${alertData.errorMessage}` : ''}
+
+推奨対応：
+- エラーログの詳細を確認
+- API認証状況をチェック  
+- 必要に応じて手動実行
+        `;
+        break;
+
+      case 'SYSTEM_ERROR':
+        subject = '🔥 【緊急】金・プラチナ価格更新システム - システムエラー';
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #d32f2f;">🔥 価格更新システムエラー</h2>
+            
+            <div style="background: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f44336;">
+              <h3 style="color: #c62828;">💥 システムレベルエラー</h3>
+              <ul>
+                <li><strong>検知時刻:</strong> ${new Date(alertData.timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</li>
+                ${alertData.errorMessage ? `<li><strong>エラー詳細:</strong> ${alertData.errorMessage}</li>` : ''}
+                ${alertData.details ? `<li><strong>追加情報:</strong> ${alertData.details}</li>` : ''}
+              </ul>
+            </div>
+
+            <div style="background: #ffcdd2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h3>🚨 即座の対応が必要</h3>
+              <p>システムに重大な問題が発生した可能性があります。早急な確認をお願いします。</p>
+            </div>
+          </div>
+        `;
+        textContent = `
+🔥 【緊急】金・プラチナ価格更新システムエラー
+
+システムレベルのエラーが発生しました。
+
+検知時刻: ${new Date(alertData.timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+${alertData.errorMessage ? `エラー詳細: ${alertData.errorMessage}` : ''}
+${alertData.details ? `追加情報: ${alertData.details}` : ''}
+
+即座の対応が必要です。システムに重大な問題が発生した可能性があります。
+        `;
+        break;
+
+      default:
+        throw new Error(`不明なアラートタイプ: ${alertData.alertType}`);
+    }
+
+    // メール送信（SendGrid優先）
+    let emailResult;
+    try {
+      emailResult = await sendViaSendGrid(monitoringEmail, subject, htmlContent, textContent);
+      console.log(`✅ 監視アラートメール送信成功 (SendGrid): ${monitoringEmail}`);
+    } catch (error) {
+      console.log(`⚠️ SendGrid送信失敗, Resendを試行:`, (error as Error).message);
+      
+      if (process.env.RESEND_API_KEY) {
+        emailResult = await sendViaResend(monitoringEmail, subject, htmlContent, textContent);
+        console.log(`✅ 監視アラートメール送信成功 (Resend): ${monitoringEmail}`);
+      } else {
+        // 緊急時はコンソール出力も行う
+        console.error(`🚨 監視アラートメール送信失敗: ${subject}`);
+        console.error(textContent);
+        emailResult = { messageId: 'console-emergency-fallback' };
+      }
+    }
+
+    return {
+      success: true,
+      messageId: emailResult.messageId
+    };
+
+  } catch (error) {
+    console.error('🚨 監視アラートメール送信エラー:', error);
+    return { 
+      success: false, 
+      error: `監視アラートメール送信に失敗しました: ${(error as Error).message}` 
+    };
+  }
+}
+
 // 手動テスト用のメール送信
 export async function sendTestEmail(toEmail: string): Promise<{ success: boolean; error?: string }> {
   if (!toEmail) {
@@ -244,4 +428,18 @@ export async function sendTestEmail(toEmail: string): Promise<{ success: boolean
   };
 
   return await sendPriceUpdateNotification(toEmail, testData);
+}
+
+// 監視アラートテスト用メール送信
+export async function sendTestMonitoringAlert(alertType: MonitoringAlertData['alertType'] = 'MISSED_EXECUTION'): Promise<{ success: boolean; error?: string }> {
+  const testAlertData: MonitoringAlertData = {
+    alertType,
+    timestamp: new Date().toISOString(),
+    lastSuccessfulExecution: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    errorMessage: alertType === 'SYSTEM_ERROR' ? 'テスト用システムエラーメッセージ' : undefined,
+    shopDomain: alertType === 'UPDATE_FAILURE' ? 'test-shop.myshopify.com' : undefined,
+    details: 'これはテスト送信です',
+  };
+
+  return await sendMonitoringAlert(testAlertData);
 }

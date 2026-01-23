@@ -140,6 +140,16 @@ model ProcessingQueue {
   @@index([status, priority, scheduledAt])
 }
 
+model MonitoringAlert {
+  id        String   @id @default(cuid())
+  alertType String   // 'MISSED_EXECUTION' | 'UPDATE_FAILURE' | 'SYSTEM_ERROR'
+  success   Boolean  @default(false)
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([alertType, createdAt])
+}
+
 model UsageLog {
   id             String       @id @default(cuid())
   shopDomain     String
