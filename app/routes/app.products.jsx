@@ -2392,7 +2392,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   selectable={false}
                 >
                   {selectionType === 'products' ? (
-                    filteredProducts.map((product, index) => {
+                    // スクロール表示：最初50件+「もっと見る」機能
+                    (showAllProducts ? filteredProducts : filteredProducts.slice(0, displayLimit)).map((product, index) => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
                     const variants = product.variants.edges;
                     // variantごとに表示価格を決定（オーバーレイ → 楽観的更新 → 基本価格）
