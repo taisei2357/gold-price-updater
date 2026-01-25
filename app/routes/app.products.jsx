@@ -2143,28 +2143,65 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </InlineStack>
                       </InlineStack>
                       
-                      <BlockStack gap="200">
-                        {selectedProducts.map((product, index) => {
-                          const metalType = productMetalTypes[product.id];
-                          return (
-                            <InlineStack key={`selected-${product.id}-${index}`} gap="200" blockAlign="center">
-                              <span style={{ fontSize: '14px' }}>
-                                {metalType === 'gold' ? '🥇' : metalType === 'platinum' ? '🥈' : '⚠️'}
-                              </span>
-                              <Text variant="bodySm">{product.title}</Text>
-                              {metalType ? (
-                                <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
-                                  {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
-                                </Badge>
-                              ) : (
-                                <Badge tone="critical" size="small">
-                                  金属種別未選択
-                                </Badge>
-                              )}
-                            </InlineStack>
-                          );
-                        })}
-                      </BlockStack>
+                      {/* スクロール表示：選択中の商品 */}
+                      <div style={{ 
+                        maxHeight: selectedProducts.length > displayLimit ? '400px' : 'auto', 
+                        overflowY: selectedProducts.length > displayLimit ? 'auto' : 'visible',
+                        border: selectedProducts.length > displayLimit ? '1px solid #e1e3e5' : 'none',
+                        borderRadius: '8px',
+                        padding: selectedProducts.length > displayLimit ? '12px' : '0'
+                      }}>
+                        <BlockStack gap="200">
+                          {(showAllProducts ? selectedProducts : selectedProducts.slice(0, displayLimit)).map((product, index) => {
+                            const metalType = productMetalTypes[product.id];
+                            return (
+                              <InlineStack key={`selected-${product.id}-${index}`} gap="200" blockAlign="center">
+                                <span style={{ fontSize: '14px' }}>
+                                  {metalType === 'gold' ? '🥇' : metalType === 'platinum' ? '🥈' : '⚠️'}
+                                </span>
+                                <Text variant="bodySm">{product.title}</Text>
+                                {metalType ? (
+                                  <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+                                    {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
+                                  </Badge>
+                                ) : (
+                                  <Badge tone="critical" size="small">
+                                    金属種別未選択
+                                  </Badge>
+                                )}
+                              </InlineStack>
+                            );
+                          })}
+                        </BlockStack>
+                        
+                        {/* スクロール制御ボタン */}
+                        {selectedProducts.length > displayLimit && (
+                          <div style={{ 
+                            marginTop: '16px', 
+                            textAlign: 'center', 
+                            borderTop: '1px solid #e1e3e5',
+                            paddingTop: '12px'
+                          }}>
+                            {!showAllProducts ? (
+                              <Button onClick={() => setShowAllProducts(true)} variant="tertiary">
+                                さらに {selectedProducts.length - displayLimit} 件の選択商品を表示
+                              </Button>
+                            ) : (
+                              <Button onClick={() => setShowAllProducts(false)} variant="tertiary">
+                                最初の {displayLimit} 件のみ表示
+                              </Button>
+                            )}
+                            <div style={{ marginTop: '8px' }}>
+                              <Text variant="bodySm" tone="subdued">
+                                {showAllProducts 
+                                  ? `全 ${selectedProducts.length} 件を表示中` 
+                                  : `${Math.min(displayLimit, selectedProducts.length)} / ${selectedProducts.length} 件を表示`
+                                }
+                              </Text>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       
                       {selectedProducts.filter(p => !productMetalTypes[p.id]).length > 0 && (
                         <Banner tone="warning">
@@ -2392,8 +2429,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   selectable={false}
                 >
                   {selectionType === 'products' ? (
-                    // スクロール表示：最初50件+「もっと見る」機能
-                    (showAllProducts ? filteredProducts : filteredProducts.slice(0, displayLimit)).map((product, index) => {
+                    filteredProducts.map((product, index) => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
                     const variants = product.variants.edges;
                     // variantごとに表示価格を決定（オーバーレイ → 楽観的更新 → 基本価格）
@@ -2719,32 +2755,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   )}
                 </IndexTable>
                 
-                {/* スクロール表示制御ボタン */}
-                {selectionType === 'products' && filteredProducts.length > displayLimit && (
-                  <div style={{ padding: '16px', textAlign: 'center', borderTop: '1px solid #e1e3e5' }}>
-                    {!showAllProducts ? (
-                      <Button onClick={() => setShowAllProducts(true)} size="large">
-                        さらに {filteredProducts.length - displayLimit} 件の商品を表示
-                      </Button>
-                    ) : (
-                      <Button onClick={() => {
-                        setShowAllProducts(false);
-                        // ページトップにスクロール
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }} variant="secondary">
-                        最初の {displayLimit} 件のみ表示に戻る
-                      </Button>
-                    )}
-                    <div style={{ marginTop: '8px' }}>
-                      <Text variant="bodySm" tone="subdued">
-                        {showAllProducts 
-                          ? `全 ${filteredProducts.length} 件を表示中` 
-                          : `${Math.min(displayLimit, filteredProducts.length)} / ${filteredProducts.length} 件を表示`
-                        }
-                      </Text>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </Card>
