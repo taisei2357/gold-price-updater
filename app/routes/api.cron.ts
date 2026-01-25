@@ -300,27 +300,90 @@ async function updateShopPrices(shop: string, accessToken: string) {
       };
     }
 
-    // 4) 価格更新処理（金属種別ごと）
+    // 4) 価格更新処理（金属種別ごと、バッチサイズ制限付き）
     const entries: any[] = [];
     let updated = 0, failed = 0;
     const details: any[] = [];
     
+    // 動的レート制限管理クラス
+    class DynamicRateLimiter {
+      private baseDelay = 100;
+      private currentDelay = 100;
+      private consecutiveErrors = 0;
+      
+      async delay() {
+        await new Promise(r => setTimeout(r, this.currentDelay));
+      }
+      
+      adjustForSuccess(responseTime: number) {
+        // API応答時間が速い場合は間隔を短縮
+        if (responseTime < 500 && this.consecutiveErrors === 0) {
+          this.currentDelay = Math.max(this.baseDelay * 0.8, 50);
+        }
+        this.consecutiveErrors = 0;
+      }
+      
+      adjustForError() {
+        this.consecutiveErrors++;
+        // エラー時は指数的に間隔を延長
+        this.currentDelay = Math.min(this.baseDelay * Math.pow(2, this.consecutiveErrors), 5000);
+      }
+      
+      getCurrentDelay() { return this.currentDelay; }
+    }
+    
+    const rateLimiter = new DynamicRateLimiter();
+    
+    // バッチ処理関数
+    async function processBatch(targets: any[], metalType: string, ratio: number) {
+      const BATCH_SIZE = 500; // 最大500商品/バッチ
+      const totalBatches = Math.ceil(targets.length / BATCH_SIZE);
+      
+      console.log(`${shop}: ${metalType}商品をバッチ処理 (${totalBatches}バッチ, 各最大${BATCH_SIZE}商品)`);
+      
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const start = batchIndex * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, targets.length);
+        const batch = targets.slice(start, end);
+        
+        console.log(`${shop}: ${metalType} バッチ ${batchIndex + 1}/${totalBatches} (${batch.length}商品) 処理中...`);
+        
+        for (const target of batch) {
+          const startTime = Date.now();
+          
+          try {
+            await processProduct(target, ratio, metalType, admin, entries, details, minPct01);
+            
+            // 成功時の動的調整
+            const responseTime = Date.now() - startTime;
+            rateLimiter.adjustForSuccess(responseTime);
+          } catch (error) {
+            console.error(`商品処理エラー: ${target.productId}`, error);
+            rateLimiter.adjustForError();
+          }
+          
+          // 動的間隔での待機
+          await rateLimiter.delay();
+        }
+        
+        // バッチ間の長めの待機（API負荷軽減）
+        if (batchIndex < totalBatches - 1) {
+          console.log(`${shop}: バッチ間待機 (現在のレート制限: ${rateLimiter.getCurrentDelay()}ms)`);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+    }
+    
     // 金商品の処理
     if (ratios.gold !== null && goldTargets.length > 0) {
-      console.log(`${shop}: 金商品価格更新開始（変動率: ${(ratios.gold * 100).toFixed(2)}%）`);
-      for (const target of goldTargets) {
-        await processProduct(target, ratios.gold, 'gold', admin, entries, details, minPct01);
-        await new Promise(r => setTimeout(r, 100)); // レート制限対策
-      }
+      console.log(`${shop}: 金商品価格更新開始（変動率: ${(ratios.gold * 100).toFixed(2)}%, 商品数: ${goldTargets.length}）`);
+      await processBatch(goldTargets, 'gold', ratios.gold);
     }
 
     // プラチナ商品の処理
     if (ratios.platinum !== null && platinumTargets.length > 0) {
-      console.log(`${shop}: プラチナ商品価格更新開始（変動率: ${(ratios.platinum * 100).toFixed(2)}%）`);
-      for (const target of platinumTargets) {
-        await processProduct(target, ratios.platinum, 'platinum', admin, entries, details, minPct01);
-        await new Promise(r => setTimeout(r, 100)); // レート制限対策
-      }
+      console.log(`${shop}: プラチナ商品価格更新開始（変動率: ${(ratios.platinum * 100).toFixed(2)}%, 商品数: ${platinumTargets.length}）`);
+      await processBatch(platinumTargets, 'platinum', ratios.platinum);
     }
 
     if (!entries.length) {
@@ -478,8 +541,8 @@ async function updateShopPrices(shop: string, accessToken: string) {
           }
         }
 
-        // レート制限対策
-        await new Promise(r => setTimeout(r, 200));
+        // 動的レート制限対策（既にバッチ処理内で調整済み）
+        await new Promise(r => setTimeout(r, 100));
       } catch (error) {
         console.error(`商品 ${productId} の更新でエラー:`, error);
         for (const variant of variants) {
