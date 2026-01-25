@@ -2713,6 +2713,33 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     }) || []
                   )}
                 </IndexTable>
+                
+                {/* スクロール表示制御ボタン */}
+                {selectionType === 'products' && filteredProducts.length > displayLimit && (
+                  <div style={{ padding: '16px', textAlign: 'center', borderTop: '1px solid #e1e3e5' }}>
+                    {!showAllProducts ? (
+                      <Button onClick={() => setShowAllProducts(true)} size="large">
+                        さらに {filteredProducts.length - displayLimit} 件の商品を表示
+                      </Button>
+                    ) : (
+                      <Button onClick={() => {
+                        setShowAllProducts(false);
+                        // ページトップにスクロール
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }} variant="secondary">
+                        最初の {displayLimit} 件のみ表示に戻る
+                      </Button>
+                    )}
+                    <div style={{ marginTop: '8px' }}>
+                      <Text variant="bodySm" tone="subdued">
+                        {showAllProducts 
+                          ? `全 ${filteredProducts.length} 件を表示中` 
+                          : `${Math.min(displayLimit, filteredProducts.length)} / ${filteredProducts.length} 件を表示`
+                        }
+                      </Text>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -2880,9 +2907,6 @@ export default function Products() {
                     </div>
                   </InlineStack>
                   
-                  <div>
-                    <p><strong>価格調整率: {goldPrice.percentage}%</strong>（この変動率で商品価格を自動調整します）</p>
-                  </div>
                     
                     <p suppressHydrationWarning>最終更新: {new Date(goldPrice.lastUpdated).toLocaleString('ja-JP')}</p>
                   </BlockStack>

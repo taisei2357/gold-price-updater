@@ -171,9 +171,6 @@ export default function Dashboard() {
                           >
                             {goldPrice.changeDirection === 'up' ? '↗️' : goldPrice.changeDirection === 'down' ? '↘️' : '➡️'} {goldPrice.change}
                           </Badge>
-                          <Badge tone="warning" size="large">
-                            調整率 {goldPrice.percentage}%
-                          </Badge>
                         </InlineStack>
                       </>
                     ) : (
@@ -265,9 +262,6 @@ export default function Dashboard() {
                             size="large"
                           >
                             {platinumPrice.changeDirection === 'up' ? '↗️' : platinumPrice.changeDirection === 'down' ? '↘️' : '➡️'} {platinumPrice.change}
-                          </Badge>
-                          <Badge tone="info" size="large">
-                            調整率 {platinumPrice.percentage}%
                           </Badge>
                         </InlineStack>
                       </>
