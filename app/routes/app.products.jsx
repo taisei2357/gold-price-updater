@@ -920,6 +920,10 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   const [isUsingCache, setIsUsingCache] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   
+  // ページネーション用のstate
+  const [displayLimit, setDisplayLimit] = useState(50);
+  const [showAllProducts, setShowAllProducts] = useState(false);
+  
   // コレクション選択用のstate（初期値をDBから設定）
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
   const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {}); // { [collectionId]: 'gold'|'platinum' }
