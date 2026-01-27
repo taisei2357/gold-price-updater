@@ -1736,11 +1736,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             田中貴金属工業
                           </Text>
                         </InlineStack>
-                        <Badge tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                          {goldPrice.changeDirection === 'up' ? '↗️ 上昇' : goldPrice.changeDirection === 'down' ? '↘️ 下落' : '➡️ 変動なし'}
-                        </Badge>
                       </InlineStack>
-                      
+
                       <InlineStack gap="200" wrap>
                         <div style={{
                           background: '#f9fafb',
@@ -1764,9 +1761,17 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           <Text variant="bodyXs" tone="subdued">
                             前日比
                           </Text>
-                          <Text variant="bodyMd" style={{ fontWeight: '600', marginTop: '2px' }}>
-                            {goldPrice.change}
-                          </Text>
+                          <InlineStack gap="100" blockAlign="center">
+                            <Badge
+                              tone={goldPrice.changeDirection === 'up' ? 'critical' : goldPrice.changeDirection === 'down' ? 'success' : 'info'}
+                              size="small"
+                            >
+                              {goldPrice.changeDirection === 'up' ? '↗️ 上昇' : goldPrice.changeDirection === 'down' ? '↘️ 下落' : '➡️'}
+                            </Badge>
+                            <Text variant="bodyMd" style={{ fontWeight: '600' }}>
+                              {goldPrice.change}
+                            </Text>
+                          </InlineStack>
                         </div>
                       </InlineStack>
                       
@@ -1828,11 +1833,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             田中貴金属工業
                           </Text>
                         </InlineStack>
-                        <Badge tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}>
-                          {platinumPrice.changeDirection === 'up' ? '↗️ 上昇' : platinumPrice.changeDirection === 'down' ? '↘️ 下落' : '➡️ 変動なし'}
-                        </Badge>
                       </InlineStack>
-                      
+
                       <InlineStack gap="200" wrap>
                         <div style={{
                           background: '#f9fafb',
@@ -1856,9 +1858,17 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           <Text variant="bodyXs" tone="subdued">
                             前日比
                           </Text>
-                          <Text variant="bodyMd" style={{ fontWeight: '600', marginTop: '2px' }}>
-                            {platinumPrice.change}
-                          </Text>
+                          <InlineStack gap="100" blockAlign="center">
+                            <Badge
+                              tone={platinumPrice.changeDirection === 'up' ? 'critical' : platinumPrice.changeDirection === 'down' ? 'success' : 'info'}
+                              size="small"
+                            >
+                              {platinumPrice.changeDirection === 'up' ? '↗️ 上昇' : platinumPrice.changeDirection === 'down' ? '↘️ 下落' : '➡️'}
+                            </Badge>
+                            <Text variant="bodyMd" style={{ fontWeight: '600' }}>
+                              {platinumPrice.change}
+                            </Text>
+                          </InlineStack>
                         </div>
                       </InlineStack>
                       
