@@ -12,12 +12,10 @@ import {
   Badge,
   Icon,
   Banner,
-  Divider,
 } from "@shopify/polaris";
 import {
   ClockIcon,
   ProductIcon,
-  SettingsIcon,
   NotificationIcon,
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
@@ -344,46 +342,9 @@ export default function Dashboard() {
           </Layout.Section>
         </Layout>
 
-        {/* アクション & 最新ログ */}
+        {/* 最新ログ */}
         <Layout>
           <Layout.Section>
-            <Card>
-              <BlockStack gap="500">
-                <InlineStack align="space-between" blockAlign="center">
-                  <Text variant="headingMd" as="h3">クイックアクション</Text>
-                  <InlineStack gap="200">
-                    <RemixLink to="/app/settings">
-                      <Button icon={SettingsIcon}>設定</Button>
-                    </RemixLink>
-                  </InlineStack>
-                </InlineStack>
-                
-                <InlineStack gap="300">
-                  <RemixLink to="/app/products">
-                    <Button variant="primary" size="large">
-                      商品価格を調整
-                    </Button>
-                  </RemixLink>
-                  <RemixLink to="/app/logs">
-                    <Button>実行ログを確認</Button>
-                  </RemixLink>
-                </InlineStack>
-
-                {stats.lastExecution && (
-                  <>
-                    <Divider />
-                    <BlockStack gap="200">
-                      <Text variant="bodyMd" tone="subdued">
-                        最終実行: {new Date(stats.lastExecution).toLocaleString('ja-JP')}
-                      </Text>
-                    </BlockStack>
-                  </>
-                )}
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-
-          <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h3">最近の実行ログ</Text>
