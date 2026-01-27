@@ -1921,6 +1921,128 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           )}
         </Layout.Section>
 
+        {/* 選択中の商品セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>選択中の商品</h3>
+                  {selectedProducts.length > 0 && (
+                    <Badge tone="info">{selectedProducts.length}件選択中</Badge>
+                  )}
+                </InlineStack>
+
+                {/* 選択中の商品表示 */}
+                {selectedProducts.length > 0 ? (
+                  <Card>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between">
+                        <Text variant="headingSm" as="h4">商品一覧</Text>
+                        <InlineStack gap="200">
+                          <Badge tone="warning">
+                            🥇 金: {selectedProducts.filter(p => productMetalTypes[p.id] === 'gold').length}件
+                          </Badge>
+                          <Badge tone="info">
+                            🥈 プラチナ: {selectedProducts.filter(p => productMetalTypes[p.id] === 'platinum').length}件
+                          </Badge>
+                          <Badge tone="critical">
+                            ⚠️ 未設定: {selectedProducts.filter(p => !productMetalTypes[p.id]).length}件
+                          </Badge>
+                        </InlineStack>
+                      </InlineStack>
+                      
+                      {/* スクロール表示：選択中の商品 */}
+                      <div style={{ 
+                        maxHeight: selectedProducts.length > displayLimit ? '400px' : 'auto', 
+                        overflowY: selectedProducts.length > displayLimit ? 'auto' : 'visible',
+                        border: selectedProducts.length > displayLimit ? '1px solid #e1e3e5' : 'none',
+                        borderRadius: '8px',
+                        padding: selectedProducts.length > displayLimit ? '12px' : '0'
+                      }}>
+                        <BlockStack gap="200">
+                          {(showAllProducts ? selectedProducts : selectedProducts.slice(0, displayLimit)).map((product, index) => {
+                            const metalType = productMetalTypes[product.id];
+                            return (
+                              <InlineStack key={`selected-${product.id}-${index}`} gap="200" blockAlign="center">
+                                <span style={{ fontSize: '14px' }}>
+                                  {metalType === 'gold' ? '🥇' : metalType === 'platinum' ? '🥈' : '⚠️'}
+                                </span>
+                                <Text variant="bodySm">{product.title}</Text>
+                                {metalType ? (
+                                  <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
+                                    {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
+                                  </Badge>
+                                ) : (
+                                  <Badge tone="critical" size="small">
+                                    金属種別未選択
+                                  </Badge>
+                                )}
+                              </InlineStack>
+                            );
+                          })}
+                        </BlockStack>
+                        
+                        {/* スクロール制御ボタン */}
+                        {selectedProducts.length > displayLimit && (
+                          <div style={{ 
+                            marginTop: '16px', 
+                            textAlign: 'center', 
+                            borderTop: '1px solid #e1e3e5',
+                            paddingTop: '12px'
+                          }}>
+                            {!showAllProducts ? (
+                              <Button onClick={() => setShowAllProducts(true)} variant="tertiary">
+                                さらに {selectedProducts.length - displayLimit} 件の選択商品を表示
+                              </Button>
+                            ) : (
+                              <Button onClick={() => setShowAllProducts(false)} variant="tertiary">
+                                最初の {displayLimit} 件のみ表示
+                              </Button>
+                            )}
+                            <div style={{ marginTop: '8px' }}>
+                              <Text variant="bodySm" tone="subdued">
+                                {showAllProducts 
+                                  ? `全 ${selectedProducts.length} 件を表示中` 
+                                  : `${Math.min(displayLimit, selectedProducts.length)} / ${selectedProducts.length} 件を表示`
+                                }
+                              </Text>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {selectedProducts.filter(p => !productMetalTypes[p.id]).length > 0 && (
+                        <Banner tone="warning">
+                          <strong>金属種別未選択の商品があります。</strong> 
+                          各商品の金属種別（金価格 または プラチナ価格）を選択してから保存してください。
+                        </Banner>
+                      )}
+                        </BlockStack>
+                      </Card>
+                      ) : (
+                        <Banner tone="info">
+                          選択中の商品がありません。商品選択タブで商品を選択してください。
+                        </Banner>
+                      )}
+                      
+                      {selectedProductIds && selectedProductIds.length > 0 && (
+                        <Banner tone="success">
+                          現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
+                        </Banner>
+                      )}
+                      
+                {/* 保存結果メッセージ */}
+                {mu.data?.message && (
+                  <Banner tone="success">
+                    {mu.data.message}
+                  </Banner>
+                )}
+              </BlockStack>
+            </div>
+          </Card>
+        </Layout.Section>
+
         <Layout.Section>
           {/* 商品検索・選択セクション */}
           <Card>
@@ -2088,125 +2210,234 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           </Card>
         </Layout.Section>
 
-        {/* 選択中の商品セクション */}
+        {/* 価格下限設定セクション */}
         <Layout.Section>
           <Card>
             <div style={{ padding: '20px' }}>
               <BlockStack gap="400">
                 <InlineStack align="space-between">
-                  <h3>選択中の商品</h3>
+                  <h3>価格下限設定</h3>
+                  <Badge tone="warning">価格更新時の最低価格を制限</Badge>
+                </InlineStack>
+
+                <Card>
+                  <BlockStack gap="300">
+                    <Text variant="bodyMd" as="p">
+                      自動価格更新時に、現在価格から下がり過ぎないように最低価格の割合を設定できます。
+                    </Text>
+
+                    <TextField
+                      label="価格下限設定 (%)"
+                      type="number"
+                      value={minPriceRate.toString()}
+                      onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
+                      suffix="%"
+                      helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
+                      min="50"
+                      max="100"
+                    />
+
+                    <Banner tone="info">
+                      設定値が93%の場合、金価格が下落しても現在価格の93%までしか下がりません（最大7%の値下げ）
+                    </Banner>
+                  </BlockStack>
+                </Card>
+              </BlockStack>
+            </div>
+          </Card>
+        </Layout.Section>
+
+        {/* 一括金属種別設定セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>一括金属種別設定</h3>
                   {selectedProducts.length > 0 && (
-                    <Badge tone="info">{selectedProducts.length}件選択中</Badge>
+                    <Badge tone="info">
+                      新規選択: {selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件
+                    </Badge>
                   )}
                 </InlineStack>
 
-                {/* 選択中の商品表示 */}
                 {selectedProducts.length > 0 ? (
                   <Card>
                     <BlockStack gap="300">
-                      <InlineStack align="space-between">
-                        <Text variant="headingSm" as="h4">商品一覧</Text>
-                        <InlineStack gap="200">
-                          <Badge tone="warning">
-                            🥇 金: {selectedProducts.filter(p => productMetalTypes[p.id] === 'gold').length}件
-                          </Badge>
-                          <Badge tone="info">
-                            🥈 プラチナ: {selectedProducts.filter(p => productMetalTypes[p.id] === 'platinum').length}件
-                          </Badge>
-                          <Badge tone="critical">
-                            ⚠️ 未設定: {selectedProducts.filter(p => !productMetalTypes[p.id]).length}件
-                          </Badge>
-                        </InlineStack>
+                      <Text variant="bodyMd" as="p">
+                        新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括で金属種別を設定できます
+                      </Text>
+
+                      <InlineStack gap="300" blockAlign="center" wrap>
+                        <Button
+                          onClick={() => handleBulkMetalTypeChange('gold')}
+                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                          tone="warning"
+                          size="large"
+                        >
+                          🥇 選択した全ての商品を金価格に設定
+                        </Button>
+                        <Button
+                          onClick={() => handleBulkMetalTypeChange('platinum')}
+                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                          tone="info"
+                          size="large"
+                        >
+                          🥈 選択した全ての商品をプラチナ価格に設定
+                        </Button>
                       </InlineStack>
-                      
-                      {/* スクロール表示：選択中の商品 */}
-                      <div style={{ 
-                        maxHeight: selectedProducts.length > displayLimit ? '400px' : 'auto', 
-                        overflowY: selectedProducts.length > displayLimit ? 'auto' : 'visible',
-                        border: selectedProducts.length > displayLimit ? '1px solid #e1e3e5' : 'none',
-                        borderRadius: '8px',
-                        padding: selectedProducts.length > displayLimit ? '12px' : '0'
-                      }}>
-                        <BlockStack gap="200">
-                          {(showAllProducts ? selectedProducts : selectedProducts.slice(0, displayLimit)).map((product, index) => {
-                            const metalType = productMetalTypes[product.id];
-                            return (
-                              <InlineStack key={`selected-${product.id}-${index}`} gap="200" blockAlign="center">
-                                <span style={{ fontSize: '14px' }}>
-                                  {metalType === 'gold' ? '🥇' : metalType === 'platinum' ? '🥈' : '⚠️'}
-                                </span>
-                                <Text variant="bodySm">{product.title}</Text>
-                                {metalType ? (
-                                  <Badge tone={metalType === 'gold' ? 'warning' : 'info'} size="small">
-                                    {metalType === 'gold' ? '金価格' : 'プラチナ価格'}
-                                  </Badge>
-                                ) : (
-                                  <Badge tone="critical" size="small">
-                                    金属種別未選択
-                                  </Badge>
-                                )}
-                              </InlineStack>
-                            );
-                          })}
-                        </BlockStack>
-                        
-                        {/* スクロール制御ボタン */}
-                        {selectedProducts.length > displayLimit && (
-                          <div style={{ 
-                            marginTop: '16px', 
-                            textAlign: 'center', 
-                            borderTop: '1px solid #e1e3e5',
-                            paddingTop: '12px'
-                          }}>
-                            {!showAllProducts ? (
-                              <Button onClick={() => setShowAllProducts(true)} variant="tertiary">
-                                さらに {selectedProducts.length - displayLimit} 件の選択商品を表示
-                              </Button>
-                            ) : (
-                              <Button onClick={() => setShowAllProducts(false)} variant="tertiary">
-                                最初の {displayLimit} 件のみ表示
-                              </Button>
-                            )}
-                            <div style={{ marginTop: '8px' }}>
-                              <Text variant="bodySm" tone="subdued">
-                                {showAllProducts 
-                                  ? `全 ${selectedProducts.length} 件を表示中` 
-                                  : `${Math.min(displayLimit, selectedProducts.length)} / ${selectedProducts.length} 件を表示`
-                                }
-                              </Text>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {selectedProducts.filter(p => !productMetalTypes[p.id]).length > 0 && (
-                        <Banner tone="warning">
-                          <strong>金属種別未選択の商品があります。</strong> 
-                          各商品の金属種別（金価格 または プラチナ価格）を選択してから保存してください。
-                        </Banner>
-                      )}
-                        </BlockStack>
-                      </Card>
-                      ) : (
+
+                      {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
                         <Banner tone="info">
-                          選択中の商品がありません。商品選択タブで商品を選択してください。
+                          既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
                         </Banner>
                       )}
-                      
-                      {selectedProductIds && selectedProductIds.length > 0 && (
-                        <Banner tone="success">
-                          現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
-                        </Banner>
-                      )}
-                      
-                {/* 保存結果メッセージ */}
-                {mu.data?.message && (
-                  <Banner tone="success">
-                    {mu.data.message}
+                    </BlockStack>
+                  </Card>
+                ) : (
+                  <Banner tone="info">
+                    商品を選択すると、一括で金属種別を設定できます
                   </Banner>
                 )}
               </BlockStack>
             </div>
+          </Card>
+        </Layout.Section>
+
+        {/* 手動価格更新セクション */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between">
+                <h3>手動価格更新</h3>
+                <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
+              </InlineStack>
+              
+              {/* 成功メッセージ */}
+              {successMessage && (
+                <Banner tone="success" onDismiss={() => setSuccessMessage('')}>
+                  {successMessage}
+                </Banner>
+              )}
+              
+              <InlineStack gap="400" wrap>
+                {/* ±選択 */}
+                <div style={{ minWidth: '120px' }}>
+                  <Text variant="bodyMd" as="p">価格調整方向</Text>
+                  <InlineStack gap="200" blockAlign="center">
+                    <div key="plus-radio">
+                      <input
+                        type="radio"
+                        id="plus"
+                        name="direction"
+                        value="plus"
+                        checked={manualUpdateDirection === 'plus'}
+                        onChange={() => setManualUpdateDirection('plus')}
+                      />
+                      <label htmlFor="plus">+ 値上げ</label>
+                    </div>
+                    
+                    <div key="minus-radio">
+                      <input
+                        type="radio"
+                        id="minus"
+                        name="direction"
+                        value="minus"
+                        checked={manualUpdateDirection === 'minus'}
+                        onChange={() => setManualUpdateDirection('minus')}
+                      />
+                      <label htmlFor="minus">- 値下げ</label>
+                    </div>
+                  </InlineStack>
+                </div>
+                
+                {/* パーセンテージ入力 */}
+                <div style={{ minWidth: '150px' }}>
+                  <TextField
+                    label="調整率"
+                    value={manualUpdatePercentage.toString()}
+                    onChange={(value) => {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
+                        setManualUpdatePercentage(numValue);
+                      } else if (value === '' || value === '0') {
+                        setManualUpdatePercentage(0);
+                      }
+                    }}
+                    type="number"
+                    suffix="%"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    helpText="0〜10%の範囲で入力"
+                  />
+                </div>
+                
+                <div>
+                  <Text variant="bodyMd" as="p" tone="subdued">
+                    調整例: {manualUpdateDirection === 'plus' ? '+' : '-'}{manualUpdatePercentage}% 
+                    （¥10,000 → ¥{(10000 * (1 + (manualUpdateDirection === 'plus' ? manualUpdatePercentage : -manualUpdatePercentage) / 100)).toLocaleString()}）
+                  </Text>
+                </div>
+              </InlineStack>
+              
+              <InlineStack gap="300">
+                <Button 
+                  onClick={() => handleManualSelectAll(true)}
+                  disabled={filteredProducts.length === 0}
+                >
+                  すべて選択
+                </Button>
+                <Button 
+                  onClick={() => handleManualSelectAll(false)}
+                  disabled={manualSelectedProducts.length === 0}
+                >
+                  選択解除
+                </Button>
+                <Button 
+                  onClick={() => {
+                    console.log("🔘 Manual update button clicked", { isManualUpdating, selectedCount: manualSelectedProducts.length });
+                    executeManualPriceUpdate();
+                  }}
+                  disabled={manualSelectedProducts.length === 0 || isManualUpdating}
+                  variant="primary"
+                  tone="critical"
+                  loading={isManualUpdating}
+                >
+                  {isManualUpdating
+                    ? "価格更新中..." 
+                    : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
+                  }
+                </Button>
+              </InlineStack>
+              
+              {manualSelectedProducts.length > 0 && (
+                <Card>
+                  <BlockStack gap="200">
+                    <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      <BlockStack gap="100">
+                        {manualSelectedProducts.map((productId, index) => {
+                          const product = products.find(p => p.id === productId);
+                          return product ? (
+                            <InlineStack key={`manual-${productId}-${index}`} gap="200" blockAlign="center">
+                              <Checkbox
+                                checked={true}
+                                onChange={(checked) => handleManualProductSelect(productId, checked)}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <Text variant="bodySm">{product.title}</Text>
+                                <Text variant="caption" tone="subdued">{productId}</Text>
+                              </div>
+                            </InlineStack>
+                          ) : null;
+                        })}
+                      </BlockStack>
+                    </div>
+                  </BlockStack>
+                </Card>
+              )}
+            </BlockStack>
           </Card>
         </Layout.Section>
 
@@ -2614,239 +2845,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
               </div>
             </div>
           </Card>
-        </Layout.Section>
-
-        {/* 価格下限設定セクション */}
-        <Layout.Section>
-          <Card>
-            <div style={{ padding: '20px' }}>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <h3>価格下限設定</h3>
-                  <Badge tone="warning">価格更新時の最低価格を制限</Badge>
-                </InlineStack>
-
-                <Card>
-                  <BlockStack gap="300">
-                    <Text variant="bodyMd" as="p">
-                      自動価格更新時に、現在価格から下がり過ぎないように最低価格の割合を設定できます。
-                    </Text>
-
-                    <TextField
-                      label="価格下限設定 (%)"
-                      type="number"
-                      value={minPriceRate.toString()}
-                      onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
-                      suffix="%"
-                      helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
-                      min="50"
-                      max="100"
-                    />
-
-                    <Banner tone="info">
-                      設定値が93%の場合、金価格が下落しても現在価格の93%までしか下がりません（最大7%の値下げ）
-                    </Banner>
-                  </BlockStack>
-                </Card>
-              </BlockStack>
-            </div>
-          </Card>
-        </Layout.Section>
-
-        {/* 一括金属種別設定セクション */}
-        <Layout.Section>
-          <Card>
-            <div style={{ padding: '20px' }}>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <h3>一括金属種別設定</h3>
-                  {selectedProducts.length > 0 && (
-                    <Badge tone="info">
-                      新規選択: {selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件
-                    </Badge>
-                  )}
-                </InlineStack>
-
-                {selectedProducts.length > 0 ? (
-                  <Card>
-                    <BlockStack gap="300">
-                      <Text variant="bodyMd" as="p">
-                        新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括で金属種別を設定できます
-                      </Text>
-
-                      <InlineStack gap="300" blockAlign="center" wrap>
-                        <Button
-                          onClick={() => handleBulkMetalTypeChange('gold')}
-                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
-                          tone="warning"
-                          size="large"
-                        >
-                          🥇 選択した全ての商品を金価格に設定
-                        </Button>
-                        <Button
-                          onClick={() => handleBulkMetalTypeChange('platinum')}
-                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
-                          tone="info"
-                          size="large"
-                        >
-                          🥈 選択した全ての商品をプラチナ価格に設定
-                        </Button>
-                      </InlineStack>
-
-                      {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
-                        <Banner tone="info">
-                          既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
-                        </Banner>
-                      )}
-                    </BlockStack>
-                  </Card>
-                ) : (
-                  <Banner tone="info">
-                    商品を選択すると、一括で金属種別を設定できます
-                  </Banner>
-                )}
-              </BlockStack>
-            </div>
-          </Card>
-        </Layout.Section>
-
-        {/* 手動価格更新セクション */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between">
-                <h3>手動価格更新</h3>
-                <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
-              </InlineStack>
-              
-              {/* 成功メッセージ */}
-              {successMessage && (
-                <Banner tone="success" onDismiss={() => setSuccessMessage('')}>
-                  {successMessage}
-                </Banner>
-              )}
-              
-              <InlineStack gap="400" wrap>
-                {/* ±選択 */}
-                <div style={{ minWidth: '120px' }}>
-                  <Text variant="bodyMd" as="p">価格調整方向</Text>
-                  <InlineStack gap="200" blockAlign="center">
-                    <div key="plus-radio">
-                      <input
-                        type="radio"
-                        id="plus"
-                        name="direction"
-                        value="plus"
-                        checked={manualUpdateDirection === 'plus'}
-                        onChange={() => setManualUpdateDirection('plus')}
-                      />
-                      <label htmlFor="plus">+ 値上げ</label>
-                    </div>
-                    
-                    <div key="minus-radio">
-                      <input
-                        type="radio"
-                        id="minus"
-                        name="direction"
-                        value="minus"
-                        checked={manualUpdateDirection === 'minus'}
-                        onChange={() => setManualUpdateDirection('minus')}
-                      />
-                      <label htmlFor="minus">- 値下げ</label>
-                    </div>
-                  </InlineStack>
-                </div>
-                
-                {/* パーセンテージ入力 */}
-                <div style={{ minWidth: '150px' }}>
-                  <TextField
-                    label="調整率"
-                    value={manualUpdatePercentage.toString()}
-                    onChange={(value) => {
-                      const numValue = parseFloat(value);
-                      if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
-                        setManualUpdatePercentage(numValue);
-                      } else if (value === '' || value === '0') {
-                        setManualUpdatePercentage(0);
-                      }
-                    }}
-                    type="number"
-                    suffix="%"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    helpText="0〜10%の範囲で入力"
-                  />
-                </div>
-                
-                <div>
-                  <Text variant="bodyMd" as="p" tone="subdued">
-                    調整例: {manualUpdateDirection === 'plus' ? '+' : '-'}{manualUpdatePercentage}% 
-                    （¥10,000 → ¥{(10000 * (1 + (manualUpdateDirection === 'plus' ? manualUpdatePercentage : -manualUpdatePercentage) / 100)).toLocaleString()}）
-                  </Text>
-                </div>
-              </InlineStack>
-              
-              <InlineStack gap="300">
-                <Button 
-                  onClick={() => handleManualSelectAll(true)}
-                  disabled={filteredProducts.length === 0}
-                >
-                  すべて選択
-                </Button>
-                <Button 
-                  onClick={() => handleManualSelectAll(false)}
-                  disabled={manualSelectedProducts.length === 0}
-                >
-                  選択解除
-                </Button>
-                <Button 
-                  onClick={() => {
-                    console.log("🔘 Manual update button clicked", { isManualUpdating, selectedCount: manualSelectedProducts.length });
-                    executeManualPriceUpdate();
-                  }}
-                  disabled={manualSelectedProducts.length === 0 || isManualUpdating}
-                  variant="primary"
-                  tone="critical"
-                  loading={isManualUpdating}
-                >
-                  {isManualUpdating
-                    ? "価格更新中..." 
-                    : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
-                  }
-                </Button>
-              </InlineStack>
-              
-              {manualSelectedProducts.length > 0 && (
-                <Card>
-                  <BlockStack gap="200">
-                    <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
-                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                      <BlockStack gap="100">
-                        {manualSelectedProducts.map((productId, index) => {
-                          const product = products.find(p => p.id === productId);
-                          return product ? (
-                            <InlineStack key={`manual-${productId}-${index}`} gap="200" blockAlign="center">
-                              <Checkbox
-                                checked={true}
-                                onChange={(checked) => handleManualProductSelect(productId, checked)}
-                              />
-                              <div style={{ flex: 1 }}>
-                                <Text variant="bodySm">{product.title}</Text>
-                                <Text variant="caption" tone="subdued">{productId}</Text>
-                              </div>
-                            </InlineStack>
-                          ) : null;
-                        })}
-                      </BlockStack>
-                    </div>
-                  </BlockStack>
-                </Card>
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-        {/* 価格プレビューモーダル */}
+        </Layout.Section>        {/* 価格プレビューモーダル */}
         <Modal
           open={showPreview}
           onClose={() => setShowPreview(false)}
