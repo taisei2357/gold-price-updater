@@ -1768,19 +1768,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                             {goldPrice.change}
                           </Text>
                         </div>
-                        <div style={{
-                          background: '#fef9c3',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #ffd700'
-                        }}>
-                          <Text variant="bodyXs" tone="subdued">
-                            調整率
-                          </Text>
-                          <Text variant="bodyMd" style={{ fontWeight: '600', marginTop: '2px' }}>
-                            {goldPrice.percentage}%
-                          </Text>
-                        </div>
                       </InlineStack>
                       
                       <div style={{
@@ -1871,19 +1858,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           </Text>
                           <Text variant="bodyMd" style={{ fontWeight: '600', marginTop: '2px' }}>
                             {platinumPrice.change}
-                          </Text>
-                        </div>
-                        <div style={{
-                          background: '#f1f5f9',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #64748b'
-                        }}>
-                          <Text variant="bodyXs" tone="subdued">
-                            調整率
-                          </Text>
-                          <Text variant="bodyMd" style={{ fontWeight: '600', marginTop: '2px' }}>
-                            {platinumPrice.percentage}%
                           </Text>
                         </div>
                       </InlineStack>
