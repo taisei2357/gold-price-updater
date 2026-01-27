@@ -924,10 +924,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   // ページネーション用のstate
   const [displayLimit, setDisplayLimit] = useState(50);
   const [showAllProducts, setShowAllProducts] = useState(false);
-  
-  // タブ管理用のstate
-  const [activeTab, setActiveTab] = useState('selection'); // 'selection' or 'selected'
-  
+
   // コレクション選択用のstate（初期値をDBから設定）
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
   const [collectionMetalTypes, setCollectionMetalTypes] = useState(savedCollectionTypeMap || {}); // { [collectionId]: 'gold'|'platinum' }
@@ -1925,26 +1922,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         </Layout.Section>
 
         <Layout.Section>
-          {/* タブ構造 */}
+          {/* 商品検索・選択セクション */}
           <Card>
-            <Tabs 
-              tabs={[
-                {
-                  id: 'selection',
-                  content: '商品選択',
-                  badge: selectedProducts.length > 0 ? `${selectedProducts.length}` : undefined
-                },
-                {
-                  id: 'selected',
-                  content: '選択中の商品',
-                  badge: selectedProducts.length > 0 ? `${selectedProducts.length}` : undefined
-                }
-              ]}
-              selected={activeTab}
-              onSelect={setActiveTab}
-            >
-              {activeTab === 'selection' && (
-                <div style={{ padding: '20px' }}>
+            <div style={{ padding: '20px' }}>
                   <BlockStack gap="400">
                     <InlineStack align="space-between">
                       <h3>商品検索・選択</h3>
@@ -2297,17 +2277,27 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 </BlockStack>
               </BlockStack>
             </div>
-          )}
-                
-                {activeTab === 'selected' && (
-                  <div style={{ padding: '20px' }}>
-                    <BlockStack gap="400">
-                      {/* 選択中の商品表示 */}
-                      {selectedProducts.length > 0 ? (
+          </Card>
+        </Layout.Section>
+
+        {/* 選択中の商品セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>選択中の商品</h3>
+                  {selectedProducts.length > 0 && (
+                    <Badge tone="info">{selectedProducts.length}件選択中</Badge>
+                  )}
+                </InlineStack>
+
+                {/* 選択中の商品表示 */}
+                {selectedProducts.length > 0 ? (
                   <Card>
                     <BlockStack gap="300">
                       <InlineStack align="space-between">
-                        <h4>選択中の商品 ({selectedProducts.length}件)</h4>
+                        <Text variant="headingSm" as="h4">商品一覧</Text>
                         <InlineStack gap="200">
                           <Badge tone="warning">
                             🥇 金: {selectedProducts.filter(p => productMetalTypes[p.id] === 'gold').length}件
@@ -2401,16 +2391,14 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                         </Banner>
                       )}
                       
-                      {/* 保存結果メッセージ */}
-                      {mu.data?.message && (
-                        <Banner tone="success">
-                          {mu.data.message}
-                        </Banner>
-                      )}
-                    </BlockStack>
-                  </div>
+                {/* 保存結果メッセージ */}
+                {mu.data?.message && (
+                  <Banner tone="success">
+                    {mu.data.message}
+                  </Banner>
                 )}
-            </Tabs>
+              </BlockStack>
+            </div>
           </Card>
         </Layout.Section>
 
