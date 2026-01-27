@@ -2040,19 +2040,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                   </div>
                 )}
               </InlineStack>
-              
-              <TextField
-                label="価格下限設定 (%)"
-                type="number"
-                value={minPriceRate.toString()}
-                onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
-                suffix="%"
-                helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
-                min="50"
-                max="100"
-              />
 
-                <BlockStack gap="300">
+              <BlockStack gap="300">
                   <InlineStack gap="300">
                     <Button 
                       key="select-all"
@@ -2216,6 +2205,43 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     {mu.data.message}
                   </Banner>
                 )}
+              </BlockStack>
+            </div>
+          </Card>
+        </Layout.Section>
+
+        {/* 価格下限設定セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>価格下限設定</h3>
+                  <Badge tone="warning">価格更新時の最低価格を制限</Badge>
+                </InlineStack>
+
+                <Card>
+                  <BlockStack gap="300">
+                    <Text variant="bodyMd" as="p">
+                      自動価格更新時に、現在価格から下がり過ぎないように最低価格の割合を設定できます。
+                    </Text>
+
+                    <TextField
+                      label="価格下限設定 (%)"
+                      type="number"
+                      value={minPriceRate.toString()}
+                      onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
+                      suffix="%"
+                      helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
+                      min="50"
+                      max="100"
+                    />
+
+                    <Banner tone="info">
+                      設定値が93%の場合、金価格が下落しても現在価格の93%までしか下がりません（最大7%の値下げ）
+                    </Banner>
+                  </BlockStack>
+                </Card>
               </BlockStack>
             </div>
           </Card>
