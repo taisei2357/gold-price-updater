@@ -2295,8 +2295,8 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     </BlockStack>
                   </Card>
                 </BlockStack>
-                  </div>
-                )}
+                </div>
+              )}
                 
                 {activeTab === 'selected' && (
                   <div style={{ padding: '20px' }}>
@@ -2409,7 +2409,7 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                     </BlockStack>
                   </div>
                 )}
-              </Tabs>
+            </Tabs>
           </Card>
         </Layout.Section>
 
