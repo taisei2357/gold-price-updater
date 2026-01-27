@@ -23,6 +23,7 @@ import {
   Box,
   Text,
   Tooltip,
+  Tabs,
 } from "@shopify/polaris";
 import {
   ProductIcon,
@@ -923,6 +924,9 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
   // ページネーション用のstate
   const [displayLimit, setDisplayLimit] = useState(50);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  
+  // タブ管理用のstate
+  const [activeTab, setActiveTab] = useState('selection'); // 'selection' or 'selected'
   
   // コレクション選択用のstate（初期値をDBから設定）
   const [selectedCollections, setSelectedCollections] = useState(selectedCollectionIds || []); // collectionId[]
@@ -1921,19 +1925,38 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
         </Layout.Section>
 
         <Layout.Section>
+          {/* タブ構造 */}
           <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between">
-                <h3>商品検索・選択</h3>
-                <Button 
-                  icon={RefreshIcon} 
-                  variant="tertiary" 
-                  onClick={handleRefresh}
-                  loading={revalidator.state === "loading"}
-                >
-                  商品を再読み込み
-                </Button>
-              </InlineStack>
+            <Tabs 
+              tabs={[
+                {
+                  id: 'selection',
+                  content: '商品選択',
+                  badge: selectedProducts.length > 0 ? `${selectedProducts.length}` : undefined
+                },
+                {
+                  id: 'selected',
+                  content: '選択中の商品',
+                  badge: selectedProducts.length > 0 ? `${selectedProducts.length}` : undefined
+                }
+              ]}
+              selected={activeTab}
+              onSelect={setActiveTab}
+            >
+              {activeTab === 'selection' && (
+                <div style={{ padding: '20px' }}>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <h3>商品検索・選択</h3>
+                      <Button 
+                        icon={RefreshIcon} 
+                        variant="tertiary" 
+                        onClick={handleRefresh}
+                        loading={revalidator.state === "loading"}
+                      >
+                        商品を再読み込み
+                      </Button>
+                    </InlineStack>
               
               {/* キャッシュ状態表示 */}
               <div>
@@ -2122,10 +2145,164 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       </BlockStack>
                     </Card>
                   )}
+                  
+                  {/* 手動価格更新セクション */}
+                  <Card>
+                    <BlockStack gap="400">
+                      <InlineStack align="space-between">
+                        <h4>手動価格更新</h4>
+                        <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
+                      </InlineStack>
+                      
+                      {/* 成功メッセージ */}
+                      {successMessage && (
+                        <Banner tone="success" onDismiss={() => setSuccessMessage('')}>
+                          {successMessage}
+                        </Banner>
+                      )}
+                      
+                      <InlineStack gap="300" blockAlign="center" wrap>
+                        <Text variant="bodyMd" as="span">手動価格更新対象:</Text>
+                        <Button
+                          onClick={() => {
+                            const newSelection = filteredProducts.map(p => p.id);
+                            setManualSelectedProducts(newSelection);
+                          }}
+                          disabled={filteredProducts.length === 0}
+                          size="small"
+                        >
+                          全選択
+                        </Button>
+                        <Button
+                          onClick={() => setManualSelectedProducts([])}
+                          disabled={manualSelectedProducts.length === 0}
+                          size="small"
+                        >
+                          選択解除
+                        </Button>
+                      </InlineStack>
+                      
+                      {manualSelectedProducts.length > 0 && (
+                        <Card>
+                          <BlockStack gap="200">
+                            <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
+                            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                              <BlockStack gap="100">
+                                {manualSelectedProducts.map((productId, index) => {
+                                  const product = products.find(p => p.id === productId);
+                                  return product ? (
+                                    <InlineStack key={`manual-${productId}-${index}`} gap="200" blockAlign="center">
+                                      <Checkbox
+                                        checked={true}
+                                        onChange={(checked) => handleManualProductSelect(productId, checked)}
+                                      />
+                                      <Text variant="bodyXs">
+                                        {product.title}
+                                      </Text>
+                                    </InlineStack>
+                                  ) : null;
+                                })}
+                              </BlockStack>
+                            </div>
+                          </BlockStack>
+                        </Card>
+                      )}
+                      
+                      <InlineStack gap="400" wrap>
+                        {/* ±選択 */}
+                        <div style={{ minWidth: '120px' }}>
+                          <Text variant="bodyMd" as="p">価格調整方向</Text>
+                          <InlineStack gap="200" blockAlign="center">
+                            <div key="plus-radio">
+                              <input
+                                type="radio"
+                                id="plus"
+                                name="direction"
+                                value="plus"
+                                checked={manualUpdateDirection === 'plus'}
+                                onChange={() => setManualUpdateDirection('plus')}
+                              />
+                              <label htmlFor="plus">+ 値上げ</label>
+                            </div>
+                            
+                            <div key="minus-radio">
+                              <input
+                                type="radio"
+                                id="minus"
+                                name="direction"
+                                value="minus"
+                                checked={manualUpdateDirection === 'minus'}
+                                onChange={() => setManualUpdateDirection('minus')}
+                              />
+                              <label htmlFor="minus">- 値下げ</label>
+                            </div>
+                          </InlineStack>
+                        </div>
+                        
+                        {/* パーセンテージ入力 */}
+                        <div style={{ minWidth: '150px' }}>
+                          <TextField
+                            label="調整率 (%)"
+                            type="number"
+                            value={manualUpdatePercentage.toString()}
+                            onChange={(value) => {
+                              const num = parseFloat(value) || 0;
+                              setManualUpdatePercentage(Math.min(Math.max(num, 0.1), 50));
+                            }}
+                            suffix="%"
+                            min="0.1"
+                            max="50"
+                            step="0.1"
+                            helpText="0.1-50%の範囲で入力"
+                          />
+                        </div>
+                        
+                        {/* 実行ボタン */}
+                        <Button
+                          variant="primary"
+                          tone={manualUpdateDirection === 'plus' ? 'critical' : 'success'}
+                          onClick={() => {
+                            if (manualSelectedProducts.length === 0) {
+                              alert('更新する商品を選択してください');
+                              return;
+                            }
+                            
+                            const adjustmentRatio = manualUpdateDirection === 'plus' 
+                              ? manualUpdatePercentage / 100 
+                              : -(manualUpdatePercentage / 100);
+                              
+                            const formData = new FormData();
+                            formData.append('action', 'manualPriceUpdate');
+                            formData.append('adjustmentRatio', adjustmentRatio.toString());
+                            manualSelectedProducts.forEach(id => {
+                              formData.append('selectedProductIds', id);
+                            });
+                            
+                            setIsManualUpdating(true);
+                            updater.submit(formData, { method: 'post' });
+                          }}
+                          disabled={
+                            isManualUpdating || 
+                            manualSelectedProducts.length === 0 || 
+                            updater.state === "submitting"
+                          }
+                          loading={isManualUpdating && updater.state === "submitting"}
+                        >
+                          {manualUpdateDirection === 'plus' ? '↗️' : '↘️'} 
+                          {manualSelectedProducts.length}件の商品価格を{manualUpdatePercentage}%{manualUpdateDirection === 'plus' ? '値上げ' : '値下げ'}
+                        </Button>
+                      </InlineStack>
+                    </BlockStack>
+                  </Card>
                 </BlockStack>
+                  </div>
+                )}
                 
-                {/* 選択状態の表示 */}
-                {selectedProducts.length > 0 && (
+                {activeTab === 'selected' && (
+                  <div style={{ padding: '20px' }}>
+                    <BlockStack gap="400">
+                      {/* 選択中の商品表示 */}
+                      {selectedProducts.length > 0 ? (
                   <Card>
                     <BlockStack gap="300">
                       <InlineStack align="space-between">
@@ -2209,23 +2386,30 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                           各商品の金属種別（金価格 または プラチナ価格）を選択してから保存してください。
                         </Banner>
                       )}
+                        </BlockStack>
+                      </Card>
+                      ) : (
+                        <Banner tone="info">
+                          選択中の商品がありません。商品選択タブで商品を選択してください。
+                        </Banner>
+                      )}
+                      
+                      {selectedProductIds && selectedProductIds.length > 0 && (
+                        <Banner tone="success">
+                          現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
+                        </Banner>
+                      )}
+                      
+                      {/* 保存結果メッセージ */}
+                      {mu.data?.message && (
+                        <Banner tone="success">
+                          {mu.data.message}
+                        </Banner>
+                      )}
                     </BlockStack>
-                  </Card>
+                  </div>
                 )}
-                
-                {selectedProductIds && selectedProductIds.length > 0 && (
-                  <Banner tone="success">
-                    現在 <strong>{selectedProductIds.length}件</strong> の商品が自動更新対象として保存されています
-                  </Banner>
-                )}
-                
-                {/* 保存結果メッセージ */}
-                {mu.data?.message && (
-                  <Banner tone="success">
-                    {mu.data.message}
-                  </Banner>
-                )}
-              </BlockStack>
+              </Tabs>
           </Card>
         </Layout.Section>
 
