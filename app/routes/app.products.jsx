@@ -2093,38 +2093,6 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                       選択を保存
                     </Button>
                   </InlineStack>
-                  
-                  {/* 一括金属種別設定 */}
-                  {selectedProducts.length > 0 && (
-                    <Card>
-                      <BlockStack gap="200">
-                        <InlineStack gap="300" blockAlign="center">
-                          <Text variant="bodyMd" as="span">
-                            新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括設定:
-                          </Text>
-                          <Button 
-                            onClick={() => handleBulkMetalTypeChange('gold')}
-                            disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
-                            tone="warning"
-                          >
-                            🥇 選択した全ての商品を金価格に設定
-                          </Button>
-                          <Button 
-                            onClick={() => handleBulkMetalTypeChange('platinum')}
-                            disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
-                            tone="info"
-                          >
-                            🥈 選択した全ての商品をプラチナ価格に設定
-                          </Button>
-                        </InlineStack>
-                        {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
-                          <Text variant="bodySm" tone="subdued">
-                            ※既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
-                          </Text>
-                        )}
-                      </BlockStack>
-                    </Card>
-                  )}
                 </BlockStack>
               </BlockStack>
             </div>
@@ -2246,6 +2214,63 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
                 {mu.data?.message && (
                   <Banner tone="success">
                     {mu.data.message}
+                  </Banner>
+                )}
+              </BlockStack>
+            </div>
+          </Card>
+        </Layout.Section>
+
+        {/* 一括金属種別設定セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>一括金属種別設定</h3>
+                  {selectedProducts.length > 0 && (
+                    <Badge tone="info">
+                      新規選択: {selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件
+                    </Badge>
+                  )}
+                </InlineStack>
+
+                {selectedProducts.length > 0 ? (
+                  <Card>
+                    <BlockStack gap="300">
+                      <Text variant="bodyMd" as="p">
+                        新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括で金属種別を設定できます
+                      </Text>
+
+                      <InlineStack gap="300" blockAlign="center" wrap>
+                        <Button
+                          onClick={() => handleBulkMetalTypeChange('gold')}
+                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                          tone="warning"
+                          size="large"
+                        >
+                          🥇 選択した全ての商品を金価格に設定
+                        </Button>
+                        <Button
+                          onClick={() => handleBulkMetalTypeChange('platinum')}
+                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                          tone="info"
+                          size="large"
+                        >
+                          🥈 選択した全ての商品をプラチナ価格に設定
+                        </Button>
+                      </InlineStack>
+
+                      {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
+                        <Banner tone="info">
+                          既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
+                        </Banner>
+                      )}
+                    </BlockStack>
+                  </Card>
+                ) : (
+                  <Banner tone="info">
+                    商品を選択すると、一括で金属種別を設定できます
                   </Banner>
                 )}
               </BlockStack>
