@@ -2210,239 +2210,20 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           </Card>
         </Layout.Section>
 
-        {/* 価格下限設定セクション */}
+        {/* 商品リスト */}
         <Layout.Section>
           <Card>
-            <div style={{ padding: '20px' }}>
-              <BlockStack gap="400">
+            <div style={{ padding: '20px 20px 0 20px' }}>
+              <BlockStack gap="300">
                 <InlineStack align="space-between">
-                  <h3>価格下限設定</h3>
-                  <Badge tone="warning">価格更新時の最低価格を制限</Badge>
-                </InlineStack>
-
-                <Card>
-                  <BlockStack gap="300">
-                    <Text variant="bodyMd" as="p">
-                      自動価格更新時に、現在価格から下がり過ぎないように最低価格の割合を設定できます。
-                    </Text>
-
-                    <TextField
-                      label="価格下限設定 (%)"
-                      type="number"
-                      value={minPriceRate.toString()}
-                      onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
-                      suffix="%"
-                      helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
-                      min="50"
-                      max="100"
-                    />
-
-                    <Banner tone="info">
-                      設定値が93%の場合、金価格が下落しても現在価格の93%までしか下がりません（最大7%の値下げ）
-                    </Banner>
-                  </BlockStack>
-                </Card>
-              </BlockStack>
-            </div>
-          </Card>
-        </Layout.Section>
-
-        {/* 一括金属種別設定セクション */}
-        <Layout.Section>
-          <Card>
-            <div style={{ padding: '20px' }}>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <h3>一括金属種別設定</h3>
-                  {selectedProducts.length > 0 && (
-                    <Badge tone="info">
-                      新規選択: {selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件
-                    </Badge>
+                  <h3>商品リスト</h3>
+                  {filteredProducts.length > 0 && (
+                    <Badge tone="info">{filteredProducts.length}件の商品</Badge>
                   )}
                 </InlineStack>
-
-                {selectedProducts.length > 0 ? (
-                  <Card>
-                    <BlockStack gap="300">
-                      <Text variant="bodyMd" as="p">
-                        新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括で金属種別を設定できます
-                      </Text>
-
-                      <InlineStack gap="300" blockAlign="center" wrap>
-                        <Button
-                          onClick={() => handleBulkMetalTypeChange('gold')}
-                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
-                          tone="warning"
-                          size="large"
-                        >
-                          🥇 選択した全ての商品を金価格に設定
-                        </Button>
-                        <Button
-                          onClick={() => handleBulkMetalTypeChange('platinum')}
-                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
-                          tone="info"
-                          size="large"
-                        >
-                          🥈 選択した全ての商品をプラチナ価格に設定
-                        </Button>
-                      </InlineStack>
-
-                      {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
-                        <Banner tone="info">
-                          既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
-                        </Banner>
-                      )}
-                    </BlockStack>
-                  </Card>
-                ) : (
-                  <Banner tone="info">
-                    商品を選択すると、一括で金属種別を設定できます
-                  </Banner>
-                )}
               </BlockStack>
             </div>
-          </Card>
-        </Layout.Section>
 
-        {/* 手動価格更新セクション */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between">
-                <h3>手動価格更新</h3>
-                <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
-              </InlineStack>
-              
-              {/* 成功メッセージ */}
-              {successMessage && (
-                <Banner tone="success" onDismiss={() => setSuccessMessage('')}>
-                  {successMessage}
-                </Banner>
-              )}
-              
-              <InlineStack gap="400" wrap>
-                {/* ±選択 */}
-                <div style={{ minWidth: '120px' }}>
-                  <Text variant="bodyMd" as="p">価格調整方向</Text>
-                  <InlineStack gap="200" blockAlign="center">
-                    <div key="plus-radio">
-                      <input
-                        type="radio"
-                        id="plus"
-                        name="direction"
-                        value="plus"
-                        checked={manualUpdateDirection === 'plus'}
-                        onChange={() => setManualUpdateDirection('plus')}
-                      />
-                      <label htmlFor="plus">+ 値上げ</label>
-                    </div>
-                    
-                    <div key="minus-radio">
-                      <input
-                        type="radio"
-                        id="minus"
-                        name="direction"
-                        value="minus"
-                        checked={manualUpdateDirection === 'minus'}
-                        onChange={() => setManualUpdateDirection('minus')}
-                      />
-                      <label htmlFor="minus">- 値下げ</label>
-                    </div>
-                  </InlineStack>
-                </div>
-                
-                {/* パーセンテージ入力 */}
-                <div style={{ minWidth: '150px' }}>
-                  <TextField
-                    label="調整率"
-                    value={manualUpdatePercentage.toString()}
-                    onChange={(value) => {
-                      const numValue = parseFloat(value);
-                      if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
-                        setManualUpdatePercentage(numValue);
-                      } else if (value === '' || value === '0') {
-                        setManualUpdatePercentage(0);
-                      }
-                    }}
-                    type="number"
-                    suffix="%"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    helpText="0〜10%の範囲で入力"
-                  />
-                </div>
-                
-                <div>
-                  <Text variant="bodyMd" as="p" tone="subdued">
-                    調整例: {manualUpdateDirection === 'plus' ? '+' : '-'}{manualUpdatePercentage}% 
-                    （¥10,000 → ¥{(10000 * (1 + (manualUpdateDirection === 'plus' ? manualUpdatePercentage : -manualUpdatePercentage) / 100)).toLocaleString()}）
-                  </Text>
-                </div>
-              </InlineStack>
-              
-              <InlineStack gap="300">
-                <Button 
-                  onClick={() => handleManualSelectAll(true)}
-                  disabled={filteredProducts.length === 0}
-                >
-                  すべて選択
-                </Button>
-                <Button 
-                  onClick={() => handleManualSelectAll(false)}
-                  disabled={manualSelectedProducts.length === 0}
-                >
-                  選択解除
-                </Button>
-                <Button 
-                  onClick={() => {
-                    console.log("🔘 Manual update button clicked", { isManualUpdating, selectedCount: manualSelectedProducts.length });
-                    executeManualPriceUpdate();
-                  }}
-                  disabled={manualSelectedProducts.length === 0 || isManualUpdating}
-                  variant="primary"
-                  tone="critical"
-                  loading={isManualUpdating}
-                >
-                  {isManualUpdating
-                    ? "価格更新中..." 
-                    : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
-                  }
-                </Button>
-              </InlineStack>
-              
-              {manualSelectedProducts.length > 0 && (
-                <Card>
-                  <BlockStack gap="200">
-                    <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
-                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                      <BlockStack gap="100">
-                        {manualSelectedProducts.map((productId, index) => {
-                          const product = products.find(p => p.id === productId);
-                          return product ? (
-                            <InlineStack key={`manual-${productId}-${index}`} gap="200" blockAlign="center">
-                              <Checkbox
-                                checked={true}
-                                onChange={(checked) => handleManualProductSelect(productId, checked)}
-                              />
-                              <div style={{ flex: 1 }}>
-                                <Text variant="bodySm">{product.title}</Text>
-                                <Text variant="caption" tone="subdued">{productId}</Text>
-                              </div>
-                            </InlineStack>
-                          ) : null;
-                        })}
-                      </BlockStack>
-                    </div>
-                  </BlockStack>
-                </Card>
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Card>
             {selectionType === "collections" && (collections?.length ?? 0) === 0 && (
               <Banner tone="info">コレクションが見つかりません。</Banner>
             )}
@@ -2835,6 +2616,236 @@ function ProductsContent({ products, collections, goldPrice, platinumPrice, sele
           </Card>
         </Layout.Section>
 
+        {/* 価格下限設定セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>価格下限設定</h3>
+                  <Badge tone="warning">価格更新時の最低価格を制限</Badge>
+                </InlineStack>
+
+                <Card>
+                  <BlockStack gap="300">
+                    <Text variant="bodyMd" as="p">
+                      自動価格更新時に、現在価格から下がり過ぎないように最低価格の割合を設定できます。
+                    </Text>
+
+                    <TextField
+                      label="価格下限設定 (%)"
+                      type="number"
+                      value={minPriceRate.toString()}
+                      onChange={(value) => setMinPriceRate(parseInt(value) || 93)}
+                      suffix="%"
+                      helpText="現在価格に対する最低価格の割合（例: 93% = 7%以上は下がらない）"
+                      min="50"
+                      max="100"
+                    />
+
+                    <Banner tone="info">
+                      設定値が93%の場合、金価格が下落しても現在価格の93%までしか下がりません（最大7%の値下げ）
+                    </Banner>
+                  </BlockStack>
+                </Card>
+              </BlockStack>
+            </div>
+          </Card>
+        </Layout.Section>
+
+        {/* 一括金属種別設定セクション */}
+        <Layout.Section>
+          <Card>
+            <div style={{ padding: '20px' }}>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <h3>一括金属種別設定</h3>
+                  {selectedProducts.length > 0 && (
+                    <Badge tone="info">
+                      新規選択: {selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件
+                    </Badge>
+                  )}
+                </InlineStack>
+
+                {selectedProducts.length > 0 ? (
+                  <Card>
+                    <BlockStack gap="300">
+                      <Text variant="bodyMd" as="p">
+                        新規選択商品({selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length}件)に一括で金属種別を設定できます
+                      </Text>
+
+                      <InlineStack gap="300" blockAlign="center" wrap>
+                        <Button
+                          onClick={() => handleBulkMetalTypeChange('gold')}
+                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                          tone="warning"
+                          size="large"
+                        >
+                          🥇 選択した全ての商品を金価格に設定
+                        </Button>
+                        <Button
+                          onClick={() => handleBulkMetalTypeChange('platinum')}
+                          disabled={selectedProducts.filter(p => !selectedProductIds.includes(p.id)).length === 0}
+                          tone="info"
+                          size="large"
+                        >
+                          🥈 選択した全ての商品をプラチナ価格に設定
+                        </Button>
+                      </InlineStack>
+
+                      {selectedProducts.filter(p => selectedProductIds.includes(p.id)).length > 0 && (
+                        <Banner tone="info">
+                          既に保存済みの{selectedProducts.filter(p => selectedProductIds.includes(p.id)).length}件は一括設定の対象外です
+                        </Banner>
+                      )}
+                    </BlockStack>
+                  </Card>
+                ) : (
+                  <Banner tone="info">
+                    商品を選択すると、一括で金属種別を設定できます
+                  </Banner>
+                )}
+              </BlockStack>
+            </div>
+          </Card>
+        </Layout.Section>
+
+        {/* 手動価格更新セクション */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between">
+                <h3>手動価格更新</h3>
+                <Badge tone="info">金・プラチナ価格に関係なく手動で価格を調整</Badge>
+              </InlineStack>
+              
+              {/* 成功メッセージ */}
+              {successMessage && (
+                <Banner tone="success" onDismiss={() => setSuccessMessage('')}>
+                  {successMessage}
+                </Banner>
+              )}
+              
+              <InlineStack gap="400" wrap>
+                {/* ±選択 */}
+                <div style={{ minWidth: '120px' }}>
+                  <Text variant="bodyMd" as="p">価格調整方向</Text>
+                  <InlineStack gap="200" blockAlign="center">
+                    <div key="plus-radio">
+                      <input
+                        type="radio"
+                        id="plus"
+                        name="direction"
+                        value="plus"
+                        checked={manualUpdateDirection === 'plus'}
+                        onChange={() => setManualUpdateDirection('plus')}
+                      />
+                      <label htmlFor="plus">+ 値上げ</label>
+                    </div>
+                    
+                    <div key="minus-radio">
+                      <input
+                        type="radio"
+                        id="minus"
+                        name="direction"
+                        value="minus"
+                        checked={manualUpdateDirection === 'minus'}
+                        onChange={() => setManualUpdateDirection('minus')}
+                      />
+                      <label htmlFor="minus">- 値下げ</label>
+                    </div>
+                  </InlineStack>
+                </div>
+                
+                {/* パーセンテージ入力 */}
+                <div style={{ minWidth: '150px' }}>
+                  <TextField
+                    label="調整率"
+                    value={manualUpdatePercentage.toString()}
+                    onChange={(value) => {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
+                        setManualUpdatePercentage(numValue);
+                      } else if (value === '' || value === '0') {
+                        setManualUpdatePercentage(0);
+                      }
+                    }}
+                    type="number"
+                    suffix="%"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    helpText="0〜10%の範囲で入力"
+                  />
+                </div>
+                
+                <div>
+                  <Text variant="bodyMd" as="p" tone="subdued">
+                    調整例: {manualUpdateDirection === 'plus' ? '+' : '-'}{manualUpdatePercentage}% 
+                    （¥10,000 → ¥{(10000 * (1 + (manualUpdateDirection === 'plus' ? manualUpdatePercentage : -manualUpdatePercentage) / 100)).toLocaleString()}）
+                  </Text>
+                </div>
+              </InlineStack>
+              
+              <InlineStack gap="300">
+                <Button 
+                  onClick={() => handleManualSelectAll(true)}
+                  disabled={filteredProducts.length === 0}
+                >
+                  すべて選択
+                </Button>
+                <Button 
+                  onClick={() => handleManualSelectAll(false)}
+                  disabled={manualSelectedProducts.length === 0}
+                >
+                  選択解除
+                </Button>
+                <Button 
+                  onClick={() => {
+                    console.log("🔘 Manual update button clicked", { isManualUpdating, selectedCount: manualSelectedProducts.length });
+                    executeManualPriceUpdate();
+                  }}
+                  disabled={manualSelectedProducts.length === 0 || isManualUpdating}
+                  variant="primary"
+                  tone="critical"
+                  loading={isManualUpdating}
+                >
+                  {isManualUpdating
+                    ? "価格更新中..." 
+                    : `選択商品の価格を手動更新 (${manualSelectedProducts.length}件)`
+                  }
+                </Button>
+              </InlineStack>
+              
+              {manualSelectedProducts.length > 0 && (
+                <Card>
+                  <BlockStack gap="200">
+                    <Text variant="bodyMd" as="p">選択中の商品 ({manualSelectedProducts.length}件)</Text>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      <BlockStack gap="100">
+                        {manualSelectedProducts.map((productId, index) => {
+                          const product = products.find(p => p.id === productId);
+                          return product ? (
+                            <InlineStack key={`manual-${productId}-${index}`} gap="200" blockAlign="center">
+                              <Checkbox
+                                checked={true}
+                                onChange={(checked) => handleManualProductSelect(productId, checked)}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <Text variant="bodySm">{product.title}</Text>
+                                <Text variant="caption" tone="subdued">{productId}</Text>
+                              </div>
+                            </InlineStack>
+                          ) : null;
+                        })}
+                      </BlockStack>
+                    </div>
+                  </BlockStack>
+                </Card>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
         {/* 価格プレビューモーダル */}
         <Modal
           open={showPreview}
